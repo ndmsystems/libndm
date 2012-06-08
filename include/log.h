@@ -13,8 +13,8 @@ typedef enum
 
 #define LOG_MESSAGE_SIZE			512
 
-#define ndmLog_info(...) ndm_log(LINFO,__VA_ARGS__)
-#define ndmLog_warn(...) ndm_log(LWARNING,__VA_ARGS__)
-#define ndmLog_error(...) ndm_log(LERROR,__VA_ARGS__)
+#define ndmLog_info(...) ndm_log(__FUNCTION__,LINFO,__VA_ARGS__)
+#define ndmLog_warn(...) ndm_log(__FUNCTION__,LWARNING,__VA_ARGS__)
+#define ndmLog_error(...) ndm_log(__FUNCTION__,LERROR,__VA_ARGS__)
 
 #endif /* NDM_LOG_H */

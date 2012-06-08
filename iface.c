@@ -55,7 +55,7 @@ int ndmIface_get_mac(const char *const iface_name, uint8_t *hwaddr)
 
 		if (__ifr_ioctl(SIOCGIFHWADDR, &ifr) != 0) {
 			ndmLog_error(
-				"Failed to get \"%s\" interface index: %s.\n",
+				"Failed to get \"%s\" interface hwaddr: %s.\n",
 						iface_name, ndm_strerror(errno));
 		}
 		else {

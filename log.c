@@ -1,6 +1,6 @@
 #include "ndm_common.h"
 
-void ndm_log(const MSG_TYPE type, char const *fmt, ...)
+void ndm_log(const char *__ident, const MSG_TYPE type, char const *fmt, ...)
 {
 	va_list vargs;
 	char message[LOG_MESSAGE_SIZE];
