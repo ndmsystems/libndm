@@ -4,12 +4,12 @@ extern char __error_message[ERROR_MSG_MAX_LENGTH + 1];
 
 uint32_t ndm_get_random()
 {
-	srand(__get_monotonic_us());
+	srand(ndmTime_get_monotonic_us());
 	
 	return rand();
 }
 
-char *ndm_strerror(const int error)
+char *ndmUtils_strerror(const int error)
 {
 	const char *message = strerror(error);
 
@@ -44,7 +44,7 @@ int ndm_file_exist(const char *const file_name, const int mode)
 	
 	if (access(file_name,mode) == -1) {
 		fprintf(stderr,"File \"%s\" invalid: %s.\n",
-			file_name, ndm_strerror(errno));
+			file_name, ndmUtils_strerror(errno));
 	}
 	else ret_code = 1;
 	
