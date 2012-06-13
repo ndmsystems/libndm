@@ -1,6 +1,6 @@
 #include  "ndm_common.h"
 
-static pid_t __spawn(
+static pid_t ndmFeedback_spawn(
         const char *const argv[],
         c Эonst char *const pty_device)
 {
