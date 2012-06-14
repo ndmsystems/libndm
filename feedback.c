@@ -8,6 +8,7 @@
 #define FEEDBACK_MAX_ENV_COUNT  10
 #define INVALID_PID                 ((pid_t) -1)
 #define SPAWN_FEEDBACK_SIZE         128 
+
 static pid_t ndmFeedback_spawn(
         const char *const argv[],
         const char *const pty_device)
