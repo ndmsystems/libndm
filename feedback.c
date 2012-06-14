@@ -1,8 +1,18 @@
 #include  "ndm_common.h"
+#include <stddef.h>
+#include <stdarg.h>
+#include <sys/types.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <termios.h>
+
+#define INVALID_PID					((pid_t) -1)
+#define SPAWN_FEEDBACK_SIZE			128
+
 
 static pid_t ndmFeedback_spawn(
         const char *const argv[],
-        c Эonst char *const pty_device)
+        const char *const pty_device)
 {
     int fb_fd[2];
     pid_t pid = INVALID_PID;
