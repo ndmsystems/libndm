@@ -1,7 +1,7 @@
 LIB = libndm.so
-OBJS = iface.o log.o parse.o socket.o time.o utils.o
+OBJS = iface.o log.o feedback.o parse.o socket.o time.o utils.o
 
-CFLAGS += -Iinclude
+CFLAGS += -Iinclude -fPIC
 all: ${LIB}
 
 ${LIB}: ${OBJS}
