@@ -1,4 +1,4 @@
-#include  "ndm_common.h"
+#include "ndm_common.h"
 #include <stddef.h>
 #include <stdarg.h>
 #include <sys/types.h>
@@ -9,133 +9,118 @@
 #define INVALID_PID                 ((pid_t) -1)
 #define SPAWN_FEEDBACK_SIZE         128 
 
+
+typedef enum {
+    STDIO_ENABLED,
+    STDIO_DISABLED
+} SPAWN_STDIO_MODE;
+
 static pid_t ndmFeedback_spawn(
-        const char *const argv[],
-        const char *const pty_device)
+ 	const char *const argv[],
+        const char *const envp[],
+        const SPAWN_STDIO_MODE mode)
 {
     int fb_fd[2];
-    pid_t pid = INVALID_PID;
+    pid_t pid = (pid_t) -1;
     char feedback[SPAWN_FEEDBACK_SIZE] = "";
-    int flags;
-    int fd = -1;
-    int slave_pty = -1;
-    sigset_t set;
-    ssize_t n;
-    ssize_t left;
-    struct termios term;
-
-    /* flush all opened streams */
-    fflush(NULL);
 
     if (pipe(fb_fd) != 0) {
-        ndmLog_error(
-            "can't create an execution feedback pipe: %s.",
-            ndmUtils_strerror(errno));
-    } else
-    if (((flags = fcntl(fb_fd[1], F_GETFD)) == -1) ||
-        (fcntl(fb_fd[1], F_SETFD, flags | FD_CLOEXEC) == -1))
-    {
-       ndmLog_error(
-            "can't initialize a feedback pipe: %s.", ndmUtils_strerror(errno));
-    } else
-    if ((pid = fork()) < 0) {
-        ndmLog_error("can't fork a process: %s.", ndmUtils_strerror(errno));
-        pid = INVALID_PID;
-    } else
-    if (pid == 0) {
-        fd = sysconf(_SC_OPEN_MAX) - 1;
-
-        while (fd > STDERR_FILENO) {
-            if (fd != fb_fd[1]) {
-                close(fd);
-            }
-
-            --fd;
-        }
-
-        slave_pty = open(pty_device, O_RDWR);
-
-        if (slave_pty < 0) {
-            snprintf(feedback, sizeof(feedback),
-                "failed to open a slave terminal device: %s",
-                   ndmUtils_strerror(errno));
-        } else
-        if (setsid() == -1) {
-            snprintf(feedback, sizeof(feedback),
-                "unable to create a new session: %s", ndmUtils_strerror(errno));
-        } else
-        if (dup2(slave_pty, STDIN_FILENO) < 0 ||
-            dup2(slave_pty, STDOUT_FILENO) < 0 ||
-            dup2(slave_pty, STDERR_FILENO) < 0)
-        {
-            snprintf(feedback, sizeof(feedback),
-                "unable to clone an I/O descriptor: %s", ndmUtils_strerror(errno));
-        } else
-        if ((sigfillset(&set) == -1) ||
-            (sigprocmask(SIG_UNBLOCK, &set, NULL) == -1))
-        {
-            snprintf(feedback, sizeof(feedback),
-                "unable to unmask signals: %s", ndmUtils_strerror(errno));
-        } else
-        if (tcgetattr(STDIN_FILENO, &term) != 0) {
-            snprintf(feedback, sizeof(feedback),
-                "failed to get terminal attributes: %s", ndmUtils_strerror(errno));
-        } else {
-            close(slave_pty);
-            slave_pty = -1;
-
-            term.c_lflag |= ECHO;
-            term.c_oflag |= ONLCR | TAB3;
-            term.c_iflag |= ICRNL;
-            term.c_iflag &= ~IXOFF;
-
-            tcsetattr(STDIN_FILENO, TCSANOW, &term);
-
-            execvp(argv[0], (char *const *) &argv[0]);
-            snprintf(feedback, sizeof(feedback),
-                "could not execute: %s", ndmUtils_strerror(errno));
-        }
-
-        close(slave_pty);
-
-        n = 0;
-        left = sizeof(feedback);
-
-        while (n >= 0 && left > 0) {
-            n = write(fb_fd[1], feedback + sizeof(feedback) - left, left);
-            left -= n;
-        }
-
-        /* terminate a child without a successfull execvp call */
-
-        _exit(EXIT_FAILURE);
+       ndmLog_error("can't create an execution feedback pipe.");
     } else {
-        close(fb_fd[1]);
+        int flags;
 
-        left = sizeof(feedback);
+        if (((flags = fcntl(fb_fd[1], F_GETFD)) == -1) ||
+            (fcntl(fb_fd[1], F_SETFD, flags | FD_CLOEXEC) == -1))
+        {
+            ndmLog_error("can't initialize a feedback pipe.");
+        } else
+        if ((pid = fork()) < 0) {
+            ndmLog_error("can't fork a process.");
+        } else 
+        if (pid == 0) {
+            // Make sure all opened descriptors are closed,
+            // except STDIO ones and fb_fd[1] which 
+            // will be closed automatically.
 
-        do {
-            n = read(fb_fd[0], feedback + sizeof(feedback) - left, left);
-            left -= n;
-        } while (n > 0 && left > 0);
+            int fd = sysconf(_SC_OPEN_MAX) - 1;
+            const int first_fd = (mode == STDIO_ENABLED) ? STDERR_FILENO : 0;
 
-        close(fb_fd[0]);
+            while (fd > first_fd) {
+                if (fd != fb_fd[1]) {
+                    close(fd);
+                }
 
-        if (n != 0) {
-            if (n < 0) {
-                ndmLog_error("can't read execution feedback.");
-            } else {
-                ndmLog_error("can't start a \"%s\" process (%s).",
-                    argv[0], feedback);
+                --fd;
             }
 
-            /* stop a broken child with a failed external process,
-             * ignore any error */
+            sigset_t set;
 
-            kill(pid, SIGKILL);
-            waitpid(pid, NULL, 0);
+            // Unmask all signals, detach and execute.
 
-            pid = INVALID_PID;
+            if ((sigfillset(&set) == -1) ||
+                (pthread_sigmask(SIG_UNBLOCK, &set, NULL) == -1))
+            {
+                snprintf(feedback, sizeof(feedback),
+                    "%s", "unable to unmask signals");
+            } else
+            if (setsid() == -1) {
+                snprintf(feedback, sizeof(feedback),
+                    "%s", "unable to create a new session");
+            } else {
+                extern char **environ;
+                char **self_environ = environ;
+
+                if (envp != NULL) {
+                    environ = (char **) envp;
+                }
+
+                execvp(argv[0], (char *const *)(&argv[0]));
+                environ = self_environ;
+                snprintf(feedback, sizeof(feedback),
+                    "%s", "could not execute");
+            }
+
+            ssize_t n = 0;
+            ssize_t left = sizeof(feedback);
+
+            while (n >= 0 && left > 0) {
+                n = write(fb_fd[1], feedback + 
+                    sizeof(feedback) - left, left);
+                left -= n;
+            }
+
+            // Terminate a child without a successfull execvp call.
+
+            _exit(EXIT_FAILURE);
+        } else {
+            close(fb_fd[1]);
+
+            ssize_t n;
+            ssize_t left = sizeof(feedback);
+
+            do {
+                n = read(fb_fd[0], feedback +
+                    sizeof(feedback) - left, left);
+                left -= n;
+            } while (n > 0 && left > 0);
+
+            close(fb_fd[0]);
+
+            if (n != 0) {
+                if (n < 0) {
+                    ndmLog_error("can't read execution feedback.");
+                } else {
+                   ndmLog_error("can't start a process (%s).",
+                        feedback);
+                }
+
+                // Stop a broken children with
+                // a nonexecuted external process,
+                // ignore any error.
+
+                kill(pid, SIGKILL);
+                waitpid(pid, NULL, 0);
+            }
         }
     }
 
@@ -143,10 +128,8 @@ static pid_t ndmFeedback_spawn(
 }
 
 
-typedef enum {
-    STDIO_ENABLED,
-    STDIO_DISABLED
-} SPAWN_STDIO_MODE;
+
+
 
 static void ndm_feedback(
         const char *const executable,
@@ -182,7 +165,7 @@ static void ndm_feedback(
 
         envp[i] = NULL;
 
-        pid_t pid = spawn(argv, envp, STDIO_ENABLED);
+        pid_t pid = ndmFeedback_spawn(argv, envp, STDIO_ENABLED);
 
         if (pid != INVALID_PID) {
             waitpid(pid, NULL, 0);
