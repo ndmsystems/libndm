@@ -4,6 +4,7 @@
 #include <sys/types.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <assert.h>
 #include <termios.h>
 #define FEEDBACK_MAX_ENV_COUNT  10
 #define INVALID_PID                 ((pid_t) -1)
