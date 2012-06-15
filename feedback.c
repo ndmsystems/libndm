@@ -127,11 +127,7 @@ static pid_t ndmFeedback_spawn(
     return pid;
 }
 
-
-
-
-
-static void ndm_feedback(
+void ndmFeedback(
         const char *const executable,
         const char *const env_vars,
         const int env_length)
@@ -172,3 +168,27 @@ static void ndm_feedback(
         }
     }
 }
+
+void ndmFeedback_multienv(
+        const char *const executable,
+        char *args,
+        const int arg_length)
+{
+    char *p = args;
+    char *e = args + arg_length;
+
+    while (p < e) {
+        if (*p == '\n') {
+            *p = '\0';
+        }
+
+        ++p;
+    }
+
+   ndmFeedback(executable, args, arg_length);
+}
+
+
+
+
+
