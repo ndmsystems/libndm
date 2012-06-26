@@ -59,7 +59,7 @@ static pid_t ndmFeedback_spawn(
             // Unmask all signals, detach and execute.
 
             if ((sigfillset(&set) == -1) ||
-                (pthread_sigmask(SIG_UNBLOCK, &set, NULL) == -1))
+                (sigprocmask(SIG_UNBLOCK, &set, NULL) == -1))
             {
                 snprintf(feedback, sizeof(feedback),
                     "%s", "unable to unmask signals");
