@@ -20,6 +20,6 @@
 
 #define DOTS						"[...]"
 #define ERROR_MSG_MAX_LENGTH		64			/* > sizeof(DOTS)	*/
-#define FEEDBACK_MAX_ENV_SIZE	1024
+#define FEEDBACK_MAX_ENV_SIZE	4096
 int ndmSocket_wait_for(const int s,const short mode,const unsigned long ms);
 unsigned ndmTime_get_monotonic_s();
