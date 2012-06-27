@@ -75,7 +75,8 @@ static pid_t ndmFeedback_spawn(
                     environ = (char **) envp;
                 }
 
-                execvp(argv[0], (char *const *)(&argv[0]));
+                //execvp(argv[0], (char *const *)(&argv[0]));
+                execvp(argv[0], argv);
                 environ = self_environ;
                 snprintf(feedback, sizeof(feedback),
                     "%s", "could not execute");
@@ -130,6 +131,7 @@ static pid_t ndmFeedback_spawn(
 
 void ndmFeedback(
         const char *const executable,
+        const char *const arg,
         const char *const env_vars,
         const int env_length)
 {
@@ -141,6 +143,7 @@ void ndmFeedback(
     if (env_length >= 0) {
         const char *argv[] = {
             executable,
+            arg,
             NULL
         };
         const char *envp[FEEDBACK_MAX_ENV_COUNT + 1];
@@ -172,11 +175,12 @@ void ndmFeedback(
 
 void ndmFeedback_multienv(
         const char *const executable,
-        char *args,
-        const int arg_length)
+        const char *const arg,
+        char *envs,
+        const int env_length)
 {
-    char *p = args;
-    char *e = args + arg_length;
+    char *p = envs;
+    char *e = envs + env_length;
 
     while (p < e) {
         if (*p == '\n') {
@@ -186,7 +190,7 @@ void ndmFeedback_multienv(
         ++p;
     }
 
-   ndmFeedback(executable, args, arg_length);
+   ndmFeedback(executable, arg, envs, env_length);
 }
 
 
