@@ -16,15 +16,15 @@ NDMX_MINOR := 0.0
 VERSION=$(NDMX_MAJOR).$(NDMX_MINOR)
 
 ifeq ($(CC),)
-    CC=cc
+	CC=cc
 endif
 
 ifeq ($(STRIP),)
-    STRIP=strip
+	STRIP=strip
 endif
 
 STRIPFLAGS=-s -R.comment -R.note
-CFLAGS= -Os -fPIC -ffunction-sections -fdata-sections
+CFLAGS= -Os -fPIC -ffunction-sections -fdata-sections -I$(PWD)/include/
 # -fvisibility=hidden
 LDFLAGS= -Wl,--gc-sections,--relax
 LIB=libndm.so
@@ -36,7 +36,7 @@ exec_prefix = ${prefix}
 libdir = ${exec_prefix}/lib
 includedir = ${prefix}/include
 
-OBJS = iface.o log.o parse.o socket.o time.o utils.o feedback.o
+OBJS=$(patsubst %.c,%.o,$(wildcard src/*.c))
 
 all: $(LIBV)
 
@@ -51,8 +51,8 @@ install: $(LIBS)
 	-@if [ ! -d $(exec_prefix) ]; then mkdir -p $(exec_prefix); fi
 	-@if [ ! -d $(includedir)  ]; then mkdir -p $(includedir); fi
 	-@if [ ! -d $(libdir)      ]; then mkdir -p $(libdir); fi
-	cp include/ndm_common.h $(includedir)
-	chmod 644 $(includedir)/ndm_common.h
+	cp -r include/ndm $(includedir)/ndm
+	chmod 644 $(includedir)/ndm/*.h
 	cp $(LIBS) $(libdir)
 	cd $(libdir); chmod 755 $(LIBS);
 	cd $(libdir); if test -f $(LIBV); then \
@@ -63,6 +63,6 @@ install: $(LIBS)
 	fi
 
 clean:
-	rm -f *.o *~ *.so $(LIBV) $(LIBM)
+	rm -f src/*.o *~ *.so $(LIBV) $(LIBM)
 
 %.o: %.c %.h 
