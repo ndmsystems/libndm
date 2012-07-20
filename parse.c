@@ -1,5 +1,7 @@
 #include "ndm_common.h"
 
+const char *ident = NULL;
+
 int ndm_str2long(char *string_value, unsigned long *value)
 {
 	char *e;
@@ -19,9 +21,18 @@ int ndm_str2long(char *string_value, unsigned long *value)
 	return converted;
 }
 
-char *ndm_get_ident(char *full_path)
+void ndm_get_ident(const char *full_path)
 {
-	const char *const name = strrchr(full_path, '/');
-	const char *const ident = (name == NULL) ? full_path : name + 1;
-	return ident;
+	const char *name = NULL;
+	name = strrchr(full_path, '/');
+
+/*
+	if (name)
+		name = name + 1;
+	else 
+		name = full_path;
+*/
+	ident = name ? name + 1 : full_path;
+
+	return;
 }

@@ -45,7 +45,7 @@ int ndmSocket_wait_for(
 					 * the __interrupted flag */
 				} else {
 					fprintf(stderr, "I/O error occured: %s.\n",
-						ndmUtils_strerror(errno));
+						strerror(errno));
 				}
 			}
 		}

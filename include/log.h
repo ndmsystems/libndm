@@ -11,7 +11,9 @@ typedef enum
 	LWARNING
 } MSG_TYPE;
 
-#define LOG_MESSAGE_SIZE			512
+//#define LOG_MESSAGE_SIZE			512
+
+void ndm_log(const char *__ident, const MSG_TYPE type, char const *fmt, ...);
 
 #define ndmLog_info(...) ndm_log(__FUNCTION__,LINFO,__VA_ARGS__)
 #define ndmLog_warn(...) ndm_log(__FUNCTION__,LWARNING,__VA_ARGS__)

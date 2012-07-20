@@ -1,6 +1,6 @@
 #include "ndm_common.h"
 
-extern char __error_message[ERROR_MSG_MAX_LENGTH + 1];
+char __error_message[ERROR_MSG_MAX_LENGTH + 1];
 
 uint32_t ndm_get_random()
 {
@@ -11,8 +11,9 @@ uint32_t ndm_get_random()
 
 char *ndmUtils_strerror(const int error)
 {
+#if 0
 	const char *message = strerror(error);
-
+	char *ret = "";
 	*__error_message = '\0';
 
 	if (message == NULL) {
@@ -35,7 +36,11 @@ char *ndmUtils_strerror(const int error)
 		}
 	}
 
-	return __error_message;
+	return (char *) __error_message;
+#endif
+char *msg = strerror(error);
+fprintf(stderr, "msg = %s (%p)\n", msg, msg);
+return msg;
 }
 
 int ndm_file_exist(const char *const file_name, const int mode)

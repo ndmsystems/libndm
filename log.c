@@ -1,6 +1,8 @@
 #include "ndm_common.h"
-#define LOG_MESSAGE_SIZE        256
-extern char *ident;
+
+#define LOG_MESSAGE_SIZE	256
+
+extern const char *ident;
 
 void ndm_log(const char *__ident, const MSG_TYPE type, char const *fmt, ...)
 {

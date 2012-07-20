@@ -34,7 +34,7 @@ int ndmIface_get_ifindex(const char *const iface_name, int *if_index)
 				iface_name, ndmUtils_strerror(errno));
 		}
 		else {
-			valid = 1;	
+			valid = 1;
 			*if_index = ifr.ifr_ifindex;
 		}
 	}
@@ -63,5 +63,34 @@ int ndmIface_get_mac(const char *const iface_name, uint8_t *hwaddr)
 			valid = 1;
 		}		
 	}
-	return valid;	
+	return valid;
+}
+
+int ndmIface_get_ipaddr(const char *const iface_name, uint32_t *ipaddr)
+{
+	int s = -1;
+	struct ifreq ifr;
+	struct sockaddr_in saddr;
+	int valid = 0;
+	
+	if ((iface_name != NULL) 
+			&& (strlen(iface_name) < IFNAMSIZ)
+			&& ipaddr) 
+	{
+		memset(&ifr, 0, sizeof(ifr));
+		snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", iface_name);
+
+		if (__ifr_ioctl(SIOCGIFADDR, &ifr) != 0) {
+			ndmLog_error(
+				"Failed to get \"%s\" interface hwaddr: %s.\n",
+						iface_name, ndmUtils_strerror(errno));
+		}
+		else {
+			memset((void *)&saddr, 0, sizeof(struct sockaddr_in));
+			memcpy((void *)&saddr, (void *)&ifr.ifr_addr, sizeof(struct sockaddr));
+			memcpy((void *)ipaddr, (void *)&saddr.sin_addr.s_addr, sizeof(uint32_t));
+			valid = 1;
+		}
+	}
+	return valid;
 }
