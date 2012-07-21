@@ -2,6 +2,7 @@
 #define __NDM_LOG_H__
 
 #include <stdbool.h>
+#include "macro.h"
 
 enum level_t
 {
@@ -13,28 +14,28 @@ enum level_t
 };
 
 const char *ndm_log_get_ident(
-		char *argv[]);
+		char *argv[]) NDM_WUR;
 
 bool ndm_log_init(
 		const char *const ident,
 		const char *const source,
 		const bool console_mode,
-		const bool daemon_mode);
+		const bool daemon_mode) NDM_WUR;
 
 void ndm_log(
 		const enum level_t level,
 		const char *const format,
-		...);
+		...) NDM_PRINTF(2, 3);
 
-#define NDM_LOG_INFO(fmt, ...)		ndm_log(LINFO, fmt, __VA_ARGS__)
-#define NDM_LOG_WARNING(fmt, ...) 	ndm_log(LWARNING, fmt, __VA_ARGS__)
-#define NDM_LOG_ERROR(fmt, ...)		ndm_log(LERROR, fmt, __VA_ARGS__)
-#define NDM_LOG_CRITICAL(fmt, ...)	ndm_log(LCRITICAL, fmt, __VA_ARGS__)
+#define NDM_LOG_INFO(fmt, args...)		ndm_log(LINFO, fmt, ##args)
+#define NDM_LOG_WARNING(fmt, args...) 	ndm_log(LWARNING, fmt, ##args)
+#define NDM_LOG_ERROR(fmt, args...)		ndm_log(LERROR, fmt, ##args)
+#define NDM_LOG_CRITICAL(fmt, args...)	ndm_log(LCRITICAL, fmt, ##args)
 
 #ifndef NDEBUG
-#define NDM_LOG_DEBUG(fmt, ...)		ndm_log(LDEBUG, fmt, __VA_ARGS__)
+#define NDM_LOG_DEBUG(fmt, args...)		ndm_log(LDEBUG, fmt, ##args)
 #else	/* NDEBUG */
-#define NDM_LOG_DEBUG(fmt, ...)
+#define NDM_LOG_DEBUG(fmt, args...)
 #endif	/* NDEBUG */
 
 #endif	/* __NDM_LOG_H__ */

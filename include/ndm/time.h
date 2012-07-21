@@ -5,39 +5,41 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <sys/time.h>
+#include "macro.h"
 
 extern const struct timespec NDM_TIME_ZERO;
 
-#define NDM_TIME_SEC												1
-#define NDM_TIME_MSEC												1000
-#define NDM_TIME_USEC												1000000
-#define NDM_TIME_NSEC												1000000000
+#define NDM_TIME_SEC									1
+#define NDM_TIME_MSEC									1000
+#define NDM_TIME_USEC									1000000
+#define NDM_TIME_NSEC									1000000000
+#define NDM_TIME_PREC									NDM_TIME_NSEC
 
 #define NDM_TIME_SEC_INIT(s)										\
 {																	\
 	.tv_sec = s/NDM_TIME_SEC,										\
-	.tv_nsec = (s % NDM_TIME_SEC)*(NDM_TIME_NSEC/NDM_TIME_SEC)		\
+	.tv_nsec = (s % NDM_TIME_SEC)*(NDM_TIME_PREC/NDM_TIME_SEC)		\
 }
 
 #define NDM_TIME_MSEC_INIT(s)										\
 {																	\
 	.tv_sec = s/NDM_TIME_MSEC,										\
-	.tv_nsec = (s % NDM_TIME_MSEC)*(NDM_TIME_NSEC/NDM_TIME_MSEC)	\
+	.tv_nsec = (s % NDM_TIME_MSEC)*(NDM_TIME_PREC/NDM_TIME_MSEC)	\
 }
 
 #define NDM_TIME_USEC_INIT(s)										\
 {																	\
 	.tv_sec = s/NDM_TIME_USEC,										\
-	.tv_nsec = (s % NDM_TIME_USEC)*(NDM_TIME_NSEC/NDM_TIME_USEC)	\
+	.tv_nsec = (s % NDM_TIME_USEC)*(NDM_TIME_PREC/NDM_TIME_USEC)	\
 }
 
 #define NDM_TIME_NSEC_INIT(s)										\
 {																	\
 	.tv_sec = s/NDM_TIME_NSEC,										\
-	.tv_nsec = (s % NDM_TIME_NSEC)*(NDM_TIME_NSEC/NDM_TIME_NSEC)	\
+	.tv_nsec = (s % NDM_TIME_NSEC)*(NDM_TIME_PREC/NDM_TIME_NSEC)	\
 }
 
-bool ndm_time_init();
+bool ndm_time_init() NDM_WUR;
 
 void ndm_time_get(
 		struct timespec *t);
@@ -46,27 +48,27 @@ void ndm_time_get_monotonic(
 		struct timespec *t);
 
 bool ndm_time_is_zero(
-		const struct timespec *t);
+		const struct timespec *t) NDM_WUR;
 
 bool ndm_time_equal(
 		const struct timespec *t,
-		const struct timespec *u);
+		const struct timespec *u) NDM_WUR;
 
 bool ndm_time_less(
 		const struct timespec *t,
-		const struct timespec *u);
+		const struct timespec *u) NDM_WUR;
 
 bool ndm_time_less_or_equal(
 		const struct timespec *t,
-		const struct timespec *u);
+		const struct timespec *u) NDM_WUR;
 
 bool ndm_time_greater(
 		const struct timespec *t,
-		const struct timespec *u);
+		const struct timespec *u) NDM_WUR;
 
 bool ndm_time_greater_or_equal(
 		const struct timespec *t,
-		const struct timespec *u);
+		const struct timespec *u) NDM_WUR;
 
 void ndm_time_add(
 		struct timespec *t,
@@ -85,7 +87,7 @@ void ndm_time_sub_sec(
 		const int64_t sec);
 
 int64_t ndm_time_to_sec(
-		const struct timespec *t);
+		const struct timespec *t) NDM_WUR;
 
 void ndm_time_from_sec(
 		struct timespec *t,
@@ -100,7 +102,7 @@ void ndm_time_sub_msec(
 		const int64_t msec);
 
 int64_t ndm_time_to_msec(
-		const struct timespec *t);
+		const struct timespec *t) NDM_WUR;
 
 void ndm_time_from_msec(
 		struct timespec *t,
@@ -115,7 +117,7 @@ void ndm_time_sub_usec(
 		const int64_t usec);
 
 int64_t ndm_time_to_usec(
-		const struct timespec *t);
+		const struct timespec *t) NDM_WUR;
 
 void ndm_time_from_usec(
 		struct timespec *t,
@@ -130,7 +132,7 @@ void ndm_time_sub_nsec(
 		const int64_t nsec);
 
 int64_t ndm_time_to_nsec(
-		const struct timespec *t);
+		const struct timespec *t) NDM_WUR;
 
 void ndm_time_from_nsec(
 		struct timespec *t,

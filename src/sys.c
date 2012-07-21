@@ -55,7 +55,7 @@ const char *ndm_sys_strerror(const int error)
 
 		if (!isupper(__error_message[1])) {
 			/* ignore abbreviations */
-			*__error_message = tolower(*__error_message);
+			*__error_message = (char) tolower(*__error_message);
 		}
 	}
 

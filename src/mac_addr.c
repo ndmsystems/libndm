@@ -1,11 +1,13 @@
 #include <stdio.h>
+#include <errno.h>
 #include <string.h>
 #include <inttypes.h>
 #include <net/if_arp.h>
 #include <ndm/mac_addr.h>
 
 const struct ndm_mac_addr_t NDM_MAC_ADDR_ZERO = {
-	.sa = {
+	.sa =
+	{
 		.sa_family = ARPHRD_ETHER,
 		.sa_data = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
 	},
@@ -13,9 +15,10 @@ const struct ndm_mac_addr_t NDM_MAC_ADDR_ZERO = {
 };
 
 const struct ndm_mac_addr_t NDM_MAC_ADDR_BROADCAST = {
-	.sa = {
+	.sa =
+	{
 		.sa_family = ARPHRD_ETHER,
-		.sa_data = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
+		.sa_data = {'\xff', '\xff', '\xff', '\xff', '\xff', '\xff'}
 	},
 	.str = "ff:ff:ff:ff:ff:ff"
 };
@@ -52,20 +55,22 @@ bool ndm_mac_addr_parse(
 {
 	uint8_t octets[ETH_ALEN];
 
-	if (strlen(str_addr) == sizeof(addr->str) - 1 &&
+	if (strlen(str_addr) != sizeof(addr->str) - 1 ||
 		sscanf(str_addr,
-			"%02" SCNx8 ":%02" SCNx8 ":%02" SCNx8
-			"%02" SCNx8 ":%02" SCNx8 ":%02" SCNx8,
+			 "%02" SCNx8 ":%02" SCNx8 ":%02" SCNx8
+			":%02" SCNx8 ":%02" SCNx8 ":%02" SCNx8,
 			&octets[0], &octets[1], &octets[2],
-			&octets[3], &octets[4], &octets[5]) == ETH_ALEN)
+			&octets[3], &octets[4], &octets[5]) != ETH_ALEN)
 	{
-		addr->sa.sa_family = ARPHRD_ETHER;
-		memcpy(addr->sa.sa_data, octets, ETH_ALEN);
+		errno = EINVAL;
 
-		return true;
+		return false;
 	}
 
-	return false;
+	addr->sa.sa_family = ARPHRD_ETHER;
+	memcpy(addr->sa.sa_data, octets, ETH_ALEN);
+
+	return true;
 }
 
 bool ndm_mac_addr_is_equal(

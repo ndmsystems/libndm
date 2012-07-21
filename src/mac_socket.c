@@ -35,7 +35,7 @@ struct ndm_mac_socket_t *ndm_mac_socket_open(
 
 			sa.sll_family = AF_PACKET;
 			sa.sll_protocol = s->protocol;
-			sa.sll_ifindex = iface_index;
+			sa.sll_ifindex = (int) iface_index;
 
 			if (bind(s->fd, (struct sockaddr *) &sa, sizeof(sa)) < 0) {
 				/* failed to bind */
@@ -102,7 +102,7 @@ ssize_t ndm_mac_socket_send(
 
 	sa.sll_halen = ETH_ALEN;
 	sa.sll_family = AF_PACKET;
-	sa.sll_ifindex = iface_index;
+	sa.sll_ifindex = (int) iface_index;
 
 	memcpy(sa.sll_addr, dst->sa.sa_data, sa.sll_halen);
 
@@ -124,7 +124,7 @@ ssize_t ndm_mac_socket_recv(
 		(struct sockaddr *) &address, &address_length);
 
 	if (recvb >= 0) {
-		*iface_index = address.sll_ifindex;
+		*iface_index = (unsigned int) address.sll_ifindex;
 	}
 
 	return recvb;

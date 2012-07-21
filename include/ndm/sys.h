@@ -4,15 +4,16 @@
 #include <time.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include "macro.h"
 
-const char *ndm_sys_strerror(const int error);
+const char *ndm_sys_strerror(const int error) NDM_WUR;
 
 bool ndm_sys_sleep(const struct timespec *interval);
 bool ndm_sys_sleep_msec(const int64_t msec);
 
-const struct timespec *ndm_sys_sleep_granularity();
+const struct timespec *ndm_sys_sleep_granularity() NDM_WUR;
 
-bool ndm_sys_is_interrupted();
+bool ndm_sys_is_interrupted() NDM_WUR;
 void ndm_sys_set_interrupted();
 
 #endif	/* __NDM_SYS_H__ */

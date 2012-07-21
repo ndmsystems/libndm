@@ -16,7 +16,7 @@ bool ndm_spawn_default_at_exec(
 	/* make sure all opened descriptors are closed, except STDIO
 	 * ones and console_fd which will be closed automatically. */
 	const int control_fd = *((const int *const) sys_data);
-	int fd = sysconf(_SC_OPEN_MAX) - 1;
+	int fd = (int) sysconf(_SC_OPEN_MAX) - 1;
 	sigset_t set;
 
 	while (fd > STDERR_FILENO) {
@@ -92,7 +92,8 @@ pid_t ndm_spawn_process(
 			ssize_t left = sizeof(error);
 
 			while (n >= 0 && left > 0) {
-				n = write(fb_fd[1], &error + sizeof(error) - left, left);
+				n = write(fb_fd[1],
+					&error + sizeof(error) - left, (size_t) left);
 				left -= n;
 			}
 
@@ -107,7 +108,8 @@ pid_t ndm_spawn_process(
 			close(fb_fd[1]);
 
 			do {
-				n = read(fb_fd[0], &error + sizeof(error) - left, left);
+				n = read(fb_fd[0],
+					&error + sizeof(error) - left, (size_t) left);
 				left -= n;
 			} while (n > 0 && left > 0);
 

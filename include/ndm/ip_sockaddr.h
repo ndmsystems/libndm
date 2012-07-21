@@ -8,11 +8,13 @@
 
 struct ndm_ip_sockaddr_t
 {
-	union {
+	union
+	{
 		sa_family_t family;
 		struct sockaddr_in in;
 		struct sockaddr_in6 in6;
-	};
+	} un;
+
 	socklen_t size;
 };
 

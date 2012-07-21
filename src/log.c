@@ -85,8 +85,8 @@ void ndm_log(
 			 (level == LWARNING) ?	'W' :
 			 (level == LERROR) ?	'E' :
 			 (level == LCRITICAL) ?	'C' : '-'),
-			MONTHS[t.tm_mday % __NDM_ARRAY_SIZE__(MONTHS)],
-			WEEKDAYS[t.tm_wday % __NDM_ARRAY_SIZE__(WEEKDAYS)],
+			MONTHS[((unsigned long) t.tm_mday) % NDM_ARRAY_SIZE(MONTHS)],
+			WEEKDAYS[((unsigned long) t.tm_wday) % NDM_ARRAY_SIZE(WEEKDAYS)],
 			(int) t.tm_hour, (int) t.tm_min, (int) t.tm_sec,
 			__ident,
 			(__source == NULL) ? "" : __source,

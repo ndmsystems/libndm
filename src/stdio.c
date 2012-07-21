@@ -20,11 +20,11 @@ int ndm_vasprintf(
 	if (size <= 0) {
 		errno = EINVAL;
 	} else {
-		char *str = malloc(size);
+		char *str = malloc((size_t) size);
 
 		if (str != NULL) {
 			va_copy(ap_copy, ap);
-			ret = vsnprintf(str, size, format, ap_copy);
+			ret = vsnprintf(str, (size_t) size, format, ap_copy);
 			va_end(ap_copy);
 
 			if (ret < 0) {

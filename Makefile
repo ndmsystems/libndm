@@ -1,19 +1,10 @@
-# Copyright (c) 2011 NDM Systems, Inc. http://www.ndmsystems.com/
-# This software is freely distributable, see COPYING for details.
-# 
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-# THE SOFTWARE.
+-include config.mk
 
-NDMX_MAJOR := 0
-NDMX_MINOR := 0.0
+LIBNDM_MAJOR := 0
+LIBNDM_MINOR := 0.0
 -include version.mk
 
-VERSION=$(NDMX_MAJOR).$(NDMX_MINOR)
+VERSION=$(LIBNDM_MAJOR).$(LIBNDM_MINOR)
 
 ifeq ($(CC),)
 	CC=cc
@@ -23,46 +14,73 @@ ifeq ($(STRIP),)
 	STRIP=strip
 endif
 
-STRIPFLAGS=-s -R.comment -R.note
-CFLAGS= -Os -fPIC -ffunction-sections -fdata-sections -I$(PWD)/include/
-# -fvisibility=hidden
-LDFLAGS= -Wl,--gc-sections,--relax
+.PHONY: all tests install clean distclean
+
+STRIPFLAGS=-s -R.comment -R.note -R.eh_frame -R.eh_frame_hdr
+CFLAGS=\
+	-g3 -pipe -fPIC -std=c99 \
+	-D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 \
+	-D_POSIX_C_SOURCE=199309L \
+	-ffunction-sections -fdata-sections -fstack-protector-all -Wempty-body \
+	-Wall -Winit-self -Wswitch-enum -Wundef -Wunsafe-loop-optimizations \
+	-Waddress -Wmissing-field-initializers -Wnormalized=nfkc -Wconversion \
+	-Wredundant-decls -Wvla -Wstack-protector -ftabstop=4 -Wshadow \
+	-Wpointer-arith -Wtype-limits -Wclobbered -I$(PWD)/include/
+LDFLAGS=-lrt #-Wl,--gc-sections,--relax
 LIB=libndm.so
-LIBV=libndm.so.$(VERSION)
-LIBM=libndm.so.$(NDMX_MAJOR)
-LIBS=$(LIB) $(LIBV) $(LIBM)
-prefix = /usr
-exec_prefix = ${prefix}
-libdir = ${exec_prefix}/lib
-includedir = ${prefix}/include
+
+PREFIX=/usr
+EXEC_PREFIX=$(PREFIX)
+LIB_DIR=$(EXEC_PREFIX)/lib
+INCLUDE_DIR=$(PREFIX)/include
 
 OBJS=$(patsubst %.c,%.o,$(wildcard src/*.c))
+HEADERS=$(wildcard include/ndm/*.h)
 
-all: $(LIBV)
+TEST_DIR=tests
+TEST_PREFIX=test_
+TESTS=$(patsubst %.c,%,$(wildcard $(TEST_DIR)/$(TEST_PREFIX)*.c))
+TEST_OBJ=$(TEST_DIR)/test.o
 
-$(LIBV): $(OBJS)
-	$(CC) $(LDFLAGS) -shared -o $@ $(OBJS)
+all: $(LIB) tests
+
+$(LIB): Makefile $(HEADERS) $(OBJS)
+	-@echo LD $(LIB)
+	-@$(CC) $(LDFLAGS) -shared -o $@ $(OBJS)
 #	$(STRIP) $(STRIPFLAGS) $@
-	rm -f $(LIB) $(LIBM)
-	ln -s $@ $(LIB)
-	ln -s $@ $(LIBM)
+	-@ls --block-size=K -1s $(LIB)
 
-install: $(LIBS)
-	-@if [ ! -d $(exec_prefix) ]; then mkdir -p $(exec_prefix); fi
-	-@if [ ! -d $(includedir)  ]; then mkdir -p $(includedir); fi
-	-@if [ ! -d $(libdir)      ]; then mkdir -p $(libdir); fi
-	cp -r include/ndm $(includedir)/ndm
-	chmod 644 $(includedir)/ndm/*.h
-	cp $(LIBS) $(libdir)
-	cd $(libdir); chmod 755 $(LIBS);
-	cd $(libdir); if test -f $(LIBV); then \
-	  rm -f $(LIB) $(LIBM); \
-	  ln -s $(LIBV) $(LIB); \
-	  ln -s $(LIBV) $(LIBM); \
-	  (ldconfig || true)  >/dev/null 2>&1; \
-	fi
+EXEC_TESTS=find $(TEST_DIR) -name "$(TEST_PREFIX)*" -executable -type f
+
+check: tests
+	-@for t in `$(EXEC_TESTS)`; do echo -e "\nRunning $$t..."; $$t; done
+
+tests: $(LIB) $(TESTS)
+
+install: $(LIB)
+	-@if [ ! -d $(EXEC_PREFIX) ]; then mkdir -p $(EXEC_PREFIX); fi
+	-@if [ ! -d $(INCLUDE_DIR) ]; then mkdir -p $(INCLUDE_DIR); fi
+	-@if [ ! -d $(LIB_DIR)     ]; then mkdir -p $(LIB_DIR); fi
+	cp -r include/ndm $(INCLUDE_DIR)/ndm
+	chmod 644 $(INCLUDE_DIR)/ndm/*.h
+	cp $(LIBS) $(LIB_DIR)
+	cd $(LIB_DIR); chmod 755 $(LIB); (ldconfig || true) >/dev/null 2>&1;
+
+$(TEST_OBJ): $(TEST_DIR)/test.c $(LIB)
+	-@echo "CC $<"
+	-@$(CC) $< $(CFLAGS) -c -o $@ >/dev/null
+
+$(TEST_DIR)/$(TEST_PREFIX)%: $(TEST_DIR)/$(TEST_PREFIX)%.c $(TEST_OBJ) $(LIB)
+	-@echo "CC $<"
+	-@$(CC) $< $(CFLAGS) $(TEST_OBJ) $(OBJS) $(LDFLAGS) -o $@ >/dev/null
+
+%.o: %.c ../include/ndm/%.h
+	-@echo "CC $<"
+	-@$(CC) $< $(CFLAGS) -c -o $@ >/dev/null
 
 clean:
-	rm -f src/*.o *~ *.so $(LIBV) $(LIBM)
+	rm -f src/*.o *~ *.so *.o $(LIB) $(TEST_DIR)/*.o
+	rm -f `$(EXEC_TESTS)`
 
-%.o: %.c %.h 
+distclean: clean
+

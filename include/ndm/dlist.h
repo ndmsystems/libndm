@@ -1,6 +1,8 @@
 #ifndef __NDM_DLIST_H__
 #define __NDM_DLIST_H__
 
+#include <stdbool.h>
+
 struct ndm_dlist_entry_t
 {
 	struct ndm_dlist_entry_t *next;
@@ -48,13 +50,13 @@ static inline void ndm_dlist_remove(
 {
 	entry->prev->next = entry->next;
 	entry->next->prev = entry->prev;
-	dlist_init(entry);
+	ndm_dlist_init(entry);
 }
 
-static inline int ndm_dlist_is_empty(
+static inline bool ndm_dlist_is_empty(
 		const struct ndm_dlist_entry_t *head)
 {
-	return head->next == head;
+	return (head->next == head) ? true : false;
 }
 
 #define ndm_dlist_entry(ptr, type, member)							\
