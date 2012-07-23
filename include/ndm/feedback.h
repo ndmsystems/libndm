@@ -7,7 +7,7 @@
 
 #define NDM_FEEDBACK_ENV_SEPARATOR		"\n"
 
-#define NDM_FEEDBACK_TIMEOUS_MSEC		15000	/* 15 sec.	*/
+#define NDM_FEEDBACK_TIMEOUT_MSEC		15000	/* 15 sec.	*/
 
 /**
  * #define ESEP NDM_FEEDBACK_ENV_SEPARATOR
