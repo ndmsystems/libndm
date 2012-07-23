@@ -17,7 +17,7 @@ endif
 .PHONY: all tests install clean distclean
 
 STRIPFLAGS=-s -R.comment -R.note -R.eh_frame -R.eh_frame_hdr
-CFLAGS=\
+CFLAGS ?=\
 	-g3 -pipe -fPIC -std=c99 \
 	-D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 \
 	-D_POSIX_C_SOURCE=199309L \
@@ -53,7 +53,7 @@ $(LIB): Makefile $(HEADERS) $(OBJS)
 EXEC_TESTS=find $(TEST_DIR) -name "$(TEST_PREFIX)*" -executable -type f
 
 check: tests
-	-@for t in `$(EXEC_TESTS)`; do echo -e "\nRunning $$t..."; $$t; done
+	-@for t in `$(EXEC_TESTS)`; do echo "\nRunning $$t..."; $$t; done
 
 tests: $(LIB) $(TESTS)
 
