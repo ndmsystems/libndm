@@ -21,6 +21,10 @@ struct ndm_mac_addr_t
 extern const struct ndm_mac_addr_t NDM_MAC_ADDR_ZERO;
 extern const struct ndm_mac_addr_t NDM_MAC_ADDR_BROADCAST;
 
+void ndm_mac_addr_set(
+		struct ndm_mac_addr_t *addr,
+		const uint8_t mac[ETH_ALEN]);
+
 const char *ndm_mac_addr_as_string(
 		const struct ndm_mac_addr_t *addr) NDM_WUR;
 

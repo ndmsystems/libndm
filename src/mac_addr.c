@@ -23,6 +23,15 @@ const struct ndm_mac_addr_t NDM_MAC_ADDR_BROADCAST = {
 	.str = "ff:ff:ff:ff:ff:ff"
 };
 
+void ndm_mac_addr_set(
+		struct ndm_mac_addr_t *addr,
+		const uint8_t mac[ETH_ALEN])
+{
+	memset(addr, 0, sizeof(*addr));
+	addr->sa.sa_family = ARPHRD_ETHER;
+	memcpy(addr->sa.sa_data, mac, ETH_ALEN);
+}
+
 const char *ndm_mac_addr_as_string(
 		const struct ndm_mac_addr_t *addr)
 {
