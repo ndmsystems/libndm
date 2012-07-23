@@ -178,8 +178,8 @@ void ndm_time_add_##p(											\
 {																\
 	const struct timespec u =									\
 	{															\
-		.tv_sec = p/d,											\
-		.tv_nsec = (p % d)*(NDM_TIME_PREC/d)					\
+		.tv_sec = (time_t) (p/d),								\
+		.tv_nsec = (suseconds_t) ((p % d)*(NDM_TIME_PREC/d))	\
 	};															\
 																\
 	ndm_time_add(t, &u);										\
@@ -191,8 +191,8 @@ void ndm_time_sub_##p(											\
 {																\
 	const struct timespec u =									\
 	{															\
-		.tv_sec = -p/d,											\
-		.tv_nsec = ((-p) % d)*(NDM_TIME_PREC/d)					\
+		.tv_sec = (time_t) (-p/d),								\
+		.tv_nsec = (suseconds_t) (((-p) % d)*(NDM_TIME_PREC/d))	\
 	};															\
 																\
 	ndm_time_add(t, &u);										\
@@ -202,16 +202,16 @@ int64_t ndm_time_to_##p(										\
 		const struct timespec *t)								\
 {																\
 	return														\
-		t->tv_sec*d +											\
-		(t->tv_nsec + (NDM_TIME_PREC/d)/2)/(NDM_TIME_PREC/d);	\
+		(int64_t) t->tv_sec*d +									\
+		(int64_t) ((t->tv_nsec + (NDM_TIME_PREC/d)/2)/(NDM_TIME_PREC/d));	\
 }																\
 																\
 void ndm_time_from_##p(											\
 		struct timespec *t,										\
 		const int64_t p)										\
 {																\
-	t->tv_sec = p/d;											\
-	t->tv_nsec = (p % d)*(NDM_TIME_PREC/d);						\
+	t->tv_sec = (time_t) (p/d);									\
+	t->tv_nsec = (suseconds_t) ((p % d)*(NDM_TIME_PREC/d));		\
 }
 
 NDM_TIME_FUNCS(sec,  NDM_TIME_SEC)
