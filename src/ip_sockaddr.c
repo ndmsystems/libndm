@@ -36,6 +36,22 @@ const struct ndm_ip_sockaddr_t NDM_IP6_SOCKADDR_ZERO =
 	.size = sizeof(struct sockaddr_in6)
 };
 
+void ndm_ip_sockaddr_assign(
+		struct ndm_ip_sockaddr_t *sa,
+		const struct sockaddr_in *in)
+{
+	sa->un.in = *in;
+	sa->size = sizeof(*in);
+}
+
+void ndm_ip_sockaddr_assign6(
+		struct ndm_ip_sockaddr_t *sa,
+		const struct sockaddr_in6 *in6)
+{
+	sa->un.in6 = *in6;
+	sa->size = sizeof(*in6);
+}
+
 const char *ndm_ip_sockaddr_ntop(
 		const struct ndm_ip_sockaddr_t *const sa,
 		char *const dst,

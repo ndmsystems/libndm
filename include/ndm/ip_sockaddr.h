@@ -18,6 +18,14 @@ struct ndm_ip_sockaddr_t
 	socklen_t size;
 };
 
+void ndm_ip_sockaddr_assign(
+		struct ndm_ip_sockaddr_t *sa,
+		const struct sockaddr_in *in);
+
+void ndm_ip_sockaddr_assign6(
+		struct ndm_ip_sockaddr_t *sa,
+		const struct sockaddr_in6 *in6);
+
 bool ndm_ip_sockaddr_is_equal(
 		const struct ndm_ip_sockaddr_t *const sa1,
 		const struct ndm_ip_sockaddr_t *const sa2);
