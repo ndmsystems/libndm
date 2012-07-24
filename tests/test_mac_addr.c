@@ -75,7 +75,7 @@ int main()
 	MAC_TEST("12:11:22:33:44:55", false, false, true, false, true);
 	MAC_TEST("ff:ff:ff:ff:ff:ff", false, true, false, false, true);
 
-	ndm_mac_addr_set(&m, mac);
+	ndm_mac_addr_assign(&m, mac);
 
 	NDM_TEST(strcasecmp("00:11:22:33:44:55",
 		ndm_mac_addr_as_string(&m)) == 0);

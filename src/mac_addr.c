@@ -23,7 +23,7 @@ const struct ndm_mac_addr_t NDM_MAC_ADDR_BROADCAST = {
 	.str = "ff:ff:ff:ff:ff:ff"
 };
 
-void ndm_mac_addr_set(
+void ndm_mac_addr_assign(
 		struct ndm_mac_addr_t *addr,
 		const uint8_t mac[ETH_ALEN])
 {
