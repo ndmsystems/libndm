@@ -2,7 +2,7 @@
 #define __NDM_INT_H__
 
 #include <stdbool.h>
-#include "macro.h"
+#include "attr.h"
 
 #define NDM_INT_IS_SIGNED(t)							\
 	(!((t) 0 < (t) -1))
@@ -32,11 +32,11 @@
 
 bool ndm_int_parse_long(
 		const char *const str,
-		long *value) NDM_WUR;
+		long *value) NDM_ATTR_WUR;
 
 bool ndm_int_parse_ulong(
 		const char *const str,
-		unsigned long *value) NDM_WUR;
+		unsigned long *value) NDM_ATTR_WUR;
 
 #endif	/* __NDM_INT_H__ */
 

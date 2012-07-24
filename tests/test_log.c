@@ -1,5 +1,6 @@
 #include <string.h>
 #include <ndm/log.h>
+#include <ndm/macro.h>
 #include "test.h"
 
 int main(int argc, char *argv[])

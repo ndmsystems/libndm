@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "macro.h"
+#include "attr.h"
 
 #define NDM_FEEDBACK_ENV_SEPARATOR		"\n"
 
@@ -34,7 +34,7 @@ bool ndm_feedback(
 		const int64_t timeout_msec,
 		const char *const argv[],
 		const char *const env_format,
-		...) NDM_WUR;
+		...) NDM_ATTR_WUR;
 
 #endif	/* __NDM_FEEDBACK_H__ */
 

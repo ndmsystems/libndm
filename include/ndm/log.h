@@ -2,7 +2,7 @@
 #define __NDM_LOG_H__
 
 #include <stdbool.h>
-#include "macro.h"
+#include "attr.h"
 
 enum level_t
 {
@@ -14,18 +14,18 @@ enum level_t
 };
 
 const char *ndm_log_get_ident(
-		char *argv[]) NDM_WUR;
+		char *argv[]) NDM_ATTR_WUR;
 
 bool ndm_log_init(
 		const char *const ident,
 		const char *const source,
 		const bool console_mode,
-		const bool daemon_mode) NDM_WUR;
+		const bool daemon_mode) NDM_ATTR_WUR;
 
 void ndm_log(
 		const enum level_t level,
 		const char *const format,
-		...) NDM_PRINTF(2, 3);
+		...) NDM_ATTR_PRINTF(2, 3);
 
 #define NDM_LOG_INFO(fmt, args...)		ndm_log(LINFO, fmt, ##args)
 #define NDM_LOG_WARNING(fmt, args...) 	ndm_log(LWARNING, fmt, ##args)
