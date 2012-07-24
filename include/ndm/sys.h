@@ -6,6 +6,10 @@
 #include <stdbool.h>
 #include "macro.h"
 
+bool ndm_sys_init() NDM_WUR;
+
+int ndm_sys_rand() NDM_WUR;
+
 const char *ndm_sys_strerror(const int error) NDM_WUR;
 
 bool ndm_sys_sleep(const struct timespec *interval);

@@ -18,6 +18,27 @@ static const struct timespec NDM_SLEEP_GRANULARITY_ = {
 	.tv_nsec = 200000000
 };
 
+bool ndm_sys_init()
+{
+	const bool done = ndm_time_init();
+
+	if (done) {
+		struct timespec now;
+
+		ndm_time_get_monotonic(&now);
+		srand((unsigned int)
+			((((unsigned int) getpid())*36969 +
+			  ((unsigned int) (now.tv_nsec % 1000000000)))*33317));
+	}
+
+	return done;
+}
+
+int ndm_sys_rand()
+{
+	return rand();
+}
+
 const struct timespec *ndm_sys_sleep_granularity()
 {
 	return &NDM_SLEEP_GRANULARITY_;
