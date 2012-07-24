@@ -34,16 +34,6 @@ bool ndm_sys_init()
 	return done;
 }
 
-int ndm_sys_rand()
-{
-	return rand();
-}
-
-const struct timespec *ndm_sys_sleep_granularity()
-{
-	return &NDM_SLEEP_GRANULARITY_;
-}
-
 bool ndm_sys_is_interrupted()
 {
 	return (__interrupted == 0) ? false : true;
@@ -52,6 +42,48 @@ bool ndm_sys_is_interrupted()
 void ndm_sys_set_interrupted()
 {
 	__interrupted = -1;
+}
+
+static void __ndm_sys_signal_handler(int sig)
+{
+	ndm_sys_set_interrupted();
+}
+
+bool ndm_sys_set_default_signals()
+{
+	struct sigaction terminate_action;
+	sigset_t signals;
+
+	terminate_action.sa_restorer = NULL;
+	terminate_action.sa_sigaction = NULL;
+	terminate_action.sa_handler = __ndm_sys_signal_handler;
+	terminate_action.sa_flags = 0;
+
+	return
+		sigfillset(&signals) != 0 ||
+		sigdelset(&signals, SIGINT) != 0 ||
+		sigdelset(&signals, SIGHUP) != 0 ||
+		sigdelset(&signals, SIGFPE) != 0 ||
+		sigdelset(&signals, SIGILL) != 0 ||
+		sigdelset(&signals, SIGSEGV) != 0 ||
+		sigdelset(&signals, SIGABRT) != 0 ||
+		sigdelset(&signals, SIGTERM) != 0 ||
+		sigdelset(&signals, SIGKILL) != 0 ||
+		sigdelset(&signals, SIGSTOP) != 0 ||
+		sigprocmask(SIG_BLOCK, &signals, NULL) != 0 ||
+		sigemptyset(&terminate_action.sa_mask) != 0 ||
+		sigaction(SIGINT, &terminate_action, NULL) != 0 ||
+		sigaction(SIGTERM, &terminate_action, NULL) != 0;
+}
+
+int ndm_sys_rand()
+{
+	return rand();
+}
+
+const struct timespec *ndm_sys_sleep_granularity()
+{
+	return &NDM_SLEEP_GRANULARITY_;
 }
 
 const char *ndm_sys_strerror(const int error)

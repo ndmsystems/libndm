@@ -8,6 +8,8 @@
 
 bool ndm_sys_init() NDM_WUR;
 
+bool ndm_sys_set_default_signals() NDM_WUR;
+
 int ndm_sys_rand() NDM_WUR;
 
 const char *ndm_sys_strerror(const int error) NDM_WUR;
