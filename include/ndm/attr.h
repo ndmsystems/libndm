@@ -48,5 +48,11 @@
 
 #define NDM_ATTR_WUR __attribute__((warn_unused_result))
 
+/**
+ * @def NDM_ATTR_PACKED
+ */
+
+#define NDM_ATTR_PACKED __attribute__((packed))
+
 #endif	/* __NDM_ATTR_H__ */
 
