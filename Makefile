@@ -63,7 +63,7 @@ install: $(LIB)
 	@if [ ! -d $(LIB_DIR)     ]; then mkdir -p $(LIB_DIR); fi
 	cp -r include/ndm $(INCLUDE_DIR)/ndm
 	chmod 644 $(INCLUDE_DIR)/ndm/*.h
-	cp $(LIBS) $(LIB_DIR)
+	cp $(LIB) $(LIB_DIR)
 	cd $(LIB_DIR); chmod 755 $(LIB); (ldconfig || true) >/dev/null 2>&1;
 
 $(TEST_OBJ): $(TEST_DIR)/test.c $(LIB)
