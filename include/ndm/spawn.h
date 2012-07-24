@@ -10,7 +10,7 @@
 bool ndm_spawn_default_at_exec(
 		const char *const argv[],
 		const char *const envp[],
-		const void *const sys_data,
+		const int control_fd,
 		void *user_data) NDM_WUR;
 
 pid_t ndm_spawn_process(
@@ -20,7 +20,7 @@ pid_t ndm_spawn_process(
 		bool (*at_exec)(
 			const char *const argv[],
 			const char *const envp[],
-			const void *const sys_data,
+			const int control_fd,
 			void *user_data)) NDM_WUR;
 
 pid_t ndm_spawn(

@@ -10,12 +10,11 @@
 bool ndm_spawn_default_at_exec(
 		const char *const argv[],
 		const char *const envp[],
-		const void *const sys_data,
+		const int control_fd,
 		void *user_data)
 {
 	/* make sure all opened descriptors are closed, except STDIO
 	 * ones and console_fd which will be closed automatically. */
-	const int control_fd = *((const int *const) sys_data);
 	int fd = (int) sysconf(_SC_OPEN_MAX) - 1;
 	sigset_t set;
 
@@ -49,7 +48,7 @@ pid_t ndm_spawn_process(
 		bool (*at_exec)(
 			const char *const argv[],
 			const char *const envp[],
-			const void *const sys_data,
+			const int control_fd,
 			void *user_data))
 {
 	int fb_fd[2];
@@ -78,7 +77,7 @@ pid_t ndm_spawn_process(
 			}
 
 			if (at_exec != NULL &&
-				!at_exec(argv, envp, &fb_fd[1], user_data))
+				!at_exec(argv, envp, fb_fd[1], user_data))
 			{
 				// at_exec() returned an error in errno variable
 			} else {
