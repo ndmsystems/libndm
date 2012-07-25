@@ -60,20 +60,20 @@ bool ndm_sys_set_default_signals()
 	terminate_action.sa_flags = 0;
 
 	return
-		sigfillset(&signals) != 0 ||
-		sigdelset(&signals, SIGINT) != 0 ||
-		sigdelset(&signals, SIGHUP) != 0 ||
-		sigdelset(&signals, SIGFPE) != 0 ||
-		sigdelset(&signals, SIGILL) != 0 ||
-		sigdelset(&signals, SIGSEGV) != 0 ||
-		sigdelset(&signals, SIGABRT) != 0 ||
-		sigdelset(&signals, SIGTERM) != 0 ||
-		sigdelset(&signals, SIGKILL) != 0 ||
-		sigdelset(&signals, SIGSTOP) != 0 ||
-		sigprocmask(SIG_BLOCK, &signals, NULL) != 0 ||
-		sigemptyset(&terminate_action.sa_mask) != 0 ||
-		sigaction(SIGINT, &terminate_action, NULL) != 0 ||
-		sigaction(SIGTERM, &terminate_action, NULL) != 0;
+		(sigfillset(&signals) == 0 &&
+		 sigdelset(&signals, SIGINT) == 0 &&
+		 sigdelset(&signals, SIGHUP) == 0 &&
+		 sigdelset(&signals, SIGFPE) == 0 &&
+		 sigdelset(&signals, SIGILL) == 0 &&
+		 sigdelset(&signals, SIGSEGV) == 0 &&
+		 sigdelset(&signals, SIGABRT) == 0 &&
+		 sigdelset(&signals, SIGTERM) == 0 &&
+		 sigdelset(&signals, SIGKILL) == 0 &&
+		 sigdelset(&signals, SIGSTOP) == 0 &&
+		 sigprocmask(SIG_BLOCK, &signals, NULL) == 0 &&
+		 sigemptyset(&terminate_action.sa_mask) == 0 &&
+		 sigaction(SIGINT, &terminate_action, NULL) == 0 &&
+		 sigaction(SIGTERM, &terminate_action, NULL) == 0) ? true : false;
 }
 
 int ndm_sys_rand()
