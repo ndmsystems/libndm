@@ -61,7 +61,8 @@ install: $(LIB)
 	@if [ ! -d $(EXEC_PREFIX) ]; then mkdir -p $(EXEC_PREFIX); fi
 	@if [ ! -d $(INCLUDE_DIR) ]; then mkdir -p $(INCLUDE_DIR); fi
 	@if [ ! -d $(LIB_DIR)     ]; then mkdir -p $(LIB_DIR); fi
-	cp -r include/ndm $(INCLUDE_DIR)/ndm
+	cp -r include/* $(INCLUDE_DIR)
+	chmod 755 $(INCLUDE_DIR)/ndm
 	chmod 644 $(INCLUDE_DIR)/ndm/*.h
 	cp $(LIB) $(LIB_DIR)
 	cd $(LIB_DIR); chmod 755 $(LIB); (ldconfig || true) >/dev/null 2>&1;
