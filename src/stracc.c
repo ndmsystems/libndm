@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
@@ -61,7 +62,7 @@ void ndm_stracc_append(
 					*acc->str = '\0';
 				}
 
-				strcat(acc->str, s);
+				snprintf(acc->str + acc->size, (size_t) size + 1, "%s", s);
 				acc->size += (size_t) size;
 			}
 		}

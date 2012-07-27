@@ -20,5 +20,17 @@ int main()
 
 	ndm_stracc_free(&acc);
 
+	NDM_TEST_BREAK_IF((acc = ndm_stracc_alloc()) == NULL);
+
+	ndm_stracc_append(acc, "test%c", '\0');
+	NDM_TEST(ndm_stracc_is_valid(acc));
+	NDM_TEST(ndm_stracc_size(acc) == 5);
+
+	ndm_stracc_append(acc, "test%c", '\0');
+	NDM_TEST(ndm_stracc_is_valid(acc));
+	NDM_TEST(ndm_stracc_size(acc) == 10);
+
+	ndm_stracc_free(&acc);
+
 	return NDM_TEST_RESULT;
 }
