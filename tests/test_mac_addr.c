@@ -26,7 +26,7 @@
 
 int main()
 {
-	const uint8_t mac[ETH_ALEN] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55};
+	const uint8_t mac[NDM_MAC_SIZE] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55};
 	struct ndm_mac_addr_t m;
 	struct ndm_mac_addr_t zero = NDM_MAC_ADDR_ZERO;
 	struct ndm_mac_addr_t bcast = NDM_MAC_ADDR_BROADCAST;
@@ -75,7 +75,9 @@ int main()
 	MAC_TEST("12:11:22:33:44:55", false, false, true, false, true);
 	MAC_TEST("ff:ff:ff:ff:ff:ff", false, true, false, false, true);
 
-	ndm_mac_addr_assign(&m, mac);
+	NDM_TEST(ndm_mac_addr_assign(&m, mac, NDM_MAC_SIZE));
+	NDM_TEST(!ndm_mac_addr_assign(&m, mac, NDM_MAC_SIZE - 1));
+	NDM_TEST(!ndm_mac_addr_assign(&m, mac, NDM_MAC_SIZE + 1));
 
 	NDM_TEST(strcasecmp("00:11:22:33:44:55",
 		ndm_mac_addr_as_string(&m)) == 0);

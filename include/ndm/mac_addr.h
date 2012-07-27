@@ -6,10 +6,7 @@
 #include <sys/socket.h>
 #include "attr.h"
 
-#ifndef ETH_ALEN
-#define ETH_ALEN 	6
-#endif	/* ETH_ALEN */
-
+#define NDM_MAC_SIZE 				6
 #define NDM_MAC_BUFSIZE				sizeof("00:00:00:00:00:00")
 
 struct ndm_mac_addr_t
@@ -21,9 +18,10 @@ struct ndm_mac_addr_t
 extern const struct ndm_mac_addr_t NDM_MAC_ADDR_ZERO;
 extern const struct ndm_mac_addr_t NDM_MAC_ADDR_BROADCAST;
 
-void ndm_mac_addr_assign(
+bool ndm_mac_addr_assign(
 		struct ndm_mac_addr_t *addr,
-		const uint8_t mac[ETH_ALEN]);
+		const uint8_t *mac,
+		const size_t mac_length);
 
 const char *ndm_mac_addr_as_string(
 		const struct ndm_mac_addr_t *addr) NDM_ATTR_WUR;

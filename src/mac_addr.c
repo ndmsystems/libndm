@@ -23,13 +23,24 @@ const struct ndm_mac_addr_t NDM_MAC_ADDR_BROADCAST = {
 	.str = "ff:ff:ff:ff:ff:ff"
 };
 
-void ndm_mac_addr_assign(
+bool ndm_mac_addr_assign(
 		struct ndm_mac_addr_t *addr,
-		const uint8_t mac[ETH_ALEN])
+		const uint8_t *mac,
+		const size_t mac_length)
 {
-	memset(addr, 0, sizeof(*addr));
-	addr->sa.sa_family = ARPHRD_ETHER;
-	memcpy(addr->sa.sa_data, mac, ETH_ALEN);
+	bool assigned = false;
+
+	if (mac_length != NDM_MAC_SIZE) {
+		errno = EINVAL;
+	} else {
+		memset(addr, 0, sizeof(*addr));
+		addr->sa.sa_family = ARPHRD_ETHER;
+		memcpy(addr->sa.sa_data, mac, NDM_MAC_SIZE);
+
+		assigned = true;
+	}
+
+	return assigned;
 }
 
 const char *ndm_mac_addr_as_string(
@@ -45,7 +56,7 @@ const char *ndm_mac_addr_as_string(
 		char* p = (char *) addr->str;
 		unsigned int i;
 
-		for (i = 0; i < ETH_ALEN; ++i, p += 3) {
+		for (i = 0; i < NDM_MAC_SIZE; ++i, p += 3) {
 			*(p + 0) = HEX_[((uint8_t) addr->sa.sa_data[i]) >> 4];
 			*(p + 1) = HEX_[((uint8_t) addr->sa.sa_data[i]) & 0x0f];
 			*(p + 2) = ':';
@@ -62,14 +73,14 @@ bool ndm_mac_addr_parse(
 		const char *const str_addr,
 		struct ndm_mac_addr_t *addr)
 {
-	uint8_t octets[ETH_ALEN];
+	uint8_t octets[NDM_MAC_SIZE];
 
 	if (strlen(str_addr) != sizeof(addr->str) - 1 ||
 		sscanf(str_addr,
 			 "%02" SCNx8 ":%02" SCNx8 ":%02" SCNx8
 			":%02" SCNx8 ":%02" SCNx8 ":%02" SCNx8,
 			&octets[0], &octets[1], &octets[2],
-			&octets[3], &octets[4], &octets[5]) != ETH_ALEN)
+			&octets[3], &octets[4], &octets[5]) != NDM_MAC_SIZE)
 	{
 		errno = EINVAL;
 
@@ -77,7 +88,7 @@ bool ndm_mac_addr_parse(
 	}
 
 	addr->sa.sa_family = ARPHRD_ETHER;
-	memcpy(addr->sa.sa_data, octets, ETH_ALEN);
+	memcpy(addr->sa.sa_data, octets, NDM_MAC_SIZE);
 
 	return true;
 }
@@ -89,7 +100,7 @@ bool ndm_mac_addr_is_equal(
 	return
 		addr1->sa.sa_family == ARPHRD_ETHER &&
 		addr2->sa.sa_family == ARPHRD_ETHER &&
-		memcmp(&addr1->sa.sa_data, &addr2->sa.sa_data, ETH_ALEN) == 0;
+		memcmp(&addr1->sa.sa_data, &addr2->sa.sa_data, NDM_MAC_SIZE) == 0;
 }
 
 bool ndm_mac_addr_is_zero(
