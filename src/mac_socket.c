@@ -52,7 +52,7 @@ struct ndm_mac_socket_t *ndm_mac_socket_open(
 						opened = false;
 					} else
 					if (sa.sll_family != AF_PACKET ||
-						sa.sll_halen != ETH_ALEN)
+						sa.sll_halen != NDM_MAC_SIZE)
 					{
 						/* unexpected hardware address type? */
 						errno = EADDRNOTAVAIL;
@@ -100,7 +100,7 @@ ssize_t ndm_mac_socket_send(
 
 	memset(&sa, 0, sizeof(sa));
 
-	sa.sll_halen = ETH_ALEN;
+	sa.sll_halen = NDM_MAC_SIZE;
 	sa.sll_family = AF_PACKET;
 	sa.sll_ifindex = (int) iface_index;
 
