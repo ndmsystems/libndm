@@ -72,7 +72,7 @@ void ndm_stracc_swap(
 	b->__is_valid = is_valid;
 }
 
-void ndm_stracc_append(
+bool ndm_stracc_append(
 		struct ndm_stracc_t *acc,
 		const char *const format,
 		...)
@@ -110,6 +110,8 @@ void ndm_stracc_append(
 
 		free(s);
 	}
+
+	return acc->__is_valid;
 }
 
 const char *ndm_stracc_value(const struct ndm_stracc_t *acc)

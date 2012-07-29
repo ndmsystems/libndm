@@ -35,7 +35,7 @@ void ndm_stracc_swap(
 		struct ndm_stracc_t *a,
 		struct ndm_stracc_t *b);
 
-void ndm_stracc_append(
+bool ndm_stracc_append(
 		struct ndm_stracc_t *a,
 		const char *const format,
 		...) NDM_ATTR_PRINTF(2, 3);
