@@ -18,10 +18,14 @@ struct ndm_mac_addr_t
 extern const struct ndm_mac_addr_t NDM_MAC_ADDR_ZERO;
 extern const struct ndm_mac_addr_t NDM_MAC_ADDR_BROADCAST;
 
-bool ndm_mac_addr_assign(
+void ndm_mac_addr_assign(
+		struct ndm_mac_addr_t *a,
+		const struct ndm_mac_addr_t *b);
+
+bool ndm_mac_addr_assign_array(
 		struct ndm_mac_addr_t *addr,
 		const uint8_t *mac,
-		const size_t mac_length);
+		const size_t mac_size) NDM_ATTR_WUR;
 
 const char *ndm_mac_addr_as_string(
 		const struct ndm_mac_addr_t *addr) NDM_ATTR_WUR;

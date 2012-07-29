@@ -75,12 +75,18 @@ int main()
 	MAC_TEST("12:11:22:33:44:55", false, false, true, false, true);
 	MAC_TEST("ff:ff:ff:ff:ff:ff", false, true, false, false, true);
 
-	NDM_TEST(ndm_mac_addr_assign(&m, mac, NDM_MAC_SIZE));
-	NDM_TEST(!ndm_mac_addr_assign(&m, mac, NDM_MAC_SIZE - 1));
-	NDM_TEST(!ndm_mac_addr_assign(&m, mac, NDM_MAC_SIZE + 1));
+	NDM_TEST(ndm_mac_addr_assign_array(&m, mac, NDM_MAC_SIZE));
+	NDM_TEST(!ndm_mac_addr_assign_array(&m, mac, NDM_MAC_SIZE - 1));
+	NDM_TEST(!ndm_mac_addr_assign_array(&m, mac, NDM_MAC_SIZE + 1));
 
 	NDM_TEST(strcasecmp("00:11:22:33:44:55",
 		ndm_mac_addr_as_string(&m)) == 0);
+
+	ndm_mac_addr_assign(&m, &NDM_MAC_ADDR_ZERO);
+	NDM_TEST(ndm_mac_addr_is_equal(&m, &NDM_MAC_ADDR_ZERO));
+
+	ndm_mac_addr_assign(&m, &NDM_MAC_ADDR_BROADCAST);
+	NDM_TEST(ndm_mac_addr_is_equal(&m, &NDM_MAC_ADDR_BROADCAST));
 
 	return NDM_TEST_RESULT;
 }

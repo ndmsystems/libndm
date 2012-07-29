@@ -23,14 +23,21 @@ const struct ndm_mac_addr_t NDM_MAC_ADDR_BROADCAST = {
 	.str = "ff:ff:ff:ff:ff:ff"
 };
 
-bool ndm_mac_addr_assign(
+void ndm_mac_addr_assign(
+		struct ndm_mac_addr_t *a,
+		const struct ndm_mac_addr_t *b)
+{
+	memcpy(a, b, sizeof(b));
+}
+
+bool ndm_mac_addr_assign_array(
 		struct ndm_mac_addr_t *addr,
 		const uint8_t *mac,
-		const size_t mac_length)
+		const size_t mac_size)
 {
 	bool assigned = false;
 
-	if (mac_length != NDM_MAC_SIZE) {
+	if (mac_size != NDM_MAC_SIZE) {
 		errno = EINVAL;
 	} else {
 		memset(addr, 0, sizeof(*addr));

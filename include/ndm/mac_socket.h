@@ -2,18 +2,34 @@
 #define __NDM_MAC_SOCKET_H__
 
 #include <stdint.h>
+#include <stdbool.h>
 #include "attr.h"
 #include "mac_addr.h"
 
-struct ndm_mac_socket_t;
+#define NDM_MAC_SOCKET_INIT							\
+	{.__fd = -1, .__protocol = 0}
 
-struct ndm_mac_socket_t *ndm_mac_socket_open(
+struct ndm_mac_socket_t
+{
+	int __fd;
+	uint16_t __protocol;
+};
+
+static inline void ndm_mac_socket_init(
+		struct ndm_mac_socket_t *s)
+{
+	s->__fd = -1;
+	s->__protocol = 0;
+}
+
+bool ndm_mac_socket_open(
+		struct ndm_mac_socket_t *s,
 		const uint16_t protocol,
-		const unsigned int iface_index,
+		const unsigned int *iface_index,
 		struct ndm_mac_addr_t *local) NDM_ATTR_WUR;
 
 void ndm_mac_socket_close(
-		struct ndm_mac_socket_t **sp);
+		struct ndm_mac_socket_t *p);
 
 ssize_t ndm_mac_socket_send(
 		const struct ndm_mac_socket_t *s,
@@ -30,8 +46,14 @@ ssize_t ndm_mac_socket_recv(
 		const int flags,
 		unsigned int *iface_index) NDM_ATTR_WUR;
 
-int ndm_mac_socket_fd(
+static int ndm_mac_socket_fd(
 		const struct ndm_mac_socket_t *s) NDM_ATTR_WUR;
+
+static inline int ndm_mac_socket_fd(
+		const struct ndm_mac_socket_t *s)
+{
+	return s->__fd;
+}
 
 #endif	/* __NDM_MAC_SOCKET_H__ */
 
