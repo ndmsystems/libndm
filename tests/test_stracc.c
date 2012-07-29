@@ -4,7 +4,7 @@
 
 int main()
 {
-	struct ndm_stracc_t a = NDM_STRACC_INIT;
+	struct ndm_stracc_t a = NDM_STRACC_INITIALIZER;
 	struct ndm_stracc_t b;
 	const char *s = NULL;
 

@@ -5,7 +5,7 @@
 
 int main()
 {
-	struct ndm_strvec_t v = NDM_STRVEC_INIT;
+	struct ndm_strvec_t v = NDM_STRVEC_INITIALIZER;
 
 	NDM_TEST(ndm_strarg_parse("", &v));
 	NDM_TEST(ndm_strvec_is_empty(&v));

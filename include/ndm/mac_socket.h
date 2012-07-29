@@ -6,7 +6,7 @@
 #include "attr.h"
 #include "mac_addr.h"
 
-#define NDM_MAC_SOCKET_INIT							\
+#define NDM_MAC_SOCKET_INITIALIZER							\
 	{.__fd = -1, .__protocol = 0}
 
 struct ndm_mac_socket_t

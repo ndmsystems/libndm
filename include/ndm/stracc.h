@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include "attr.h"
 
-#define NDM_STRACC_INIT							\
+#define NDM_STRACC_INITIALIZER							\
 	{.__data = NULL, .__size = 0, .__is_valid = true}
 
 struct ndm_stracc_t

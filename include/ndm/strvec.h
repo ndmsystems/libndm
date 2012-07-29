@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include "attr.h"
 
-#define NDM_STRVEC_INIT										\
+#define NDM_STRVEC_INITIALIZER									\
 	{.__data = NULL, .__size = 0}
 
 struct ndm_strvec_t

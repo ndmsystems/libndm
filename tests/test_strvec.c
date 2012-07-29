@@ -18,7 +18,7 @@ static bool __array_is_valid(const struct ndm_strvec_t *v)
 int main()
 {
 	struct ndm_strvec_t r;
-	struct ndm_strvec_t v = NDM_STRVEC_INIT;
+	struct ndm_strvec_t v = NDM_STRVEC_INITIALIZER;
 	const char *array[] = {"_test", "test0", "test1", "test2", NULL};
 
 	NDM_TEST(ndm_strvec_is_empty(&v));

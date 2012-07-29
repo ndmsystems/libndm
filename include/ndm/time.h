@@ -15,25 +15,25 @@ extern const struct timespec NDM_TIME_ZERO;
 #define NDM_TIME_NSEC									1000000000
 #define NDM_TIME_PREC									NDM_TIME_NSEC
 
-#define NDM_TIME_SEC_INIT(s)										\
+#define NDM_TIME_SEC_INITIALIZER(s)									\
 {																	\
 	.tv_sec = s/NDM_TIME_SEC,										\
 	.tv_nsec = (s % NDM_TIME_SEC)*(NDM_TIME_PREC/NDM_TIME_SEC)		\
 }
 
-#define NDM_TIME_MSEC_INIT(s)										\
+#define NDM_TIME_MSEC_INITIALIZER(s)								\
 {																	\
 	.tv_sec = s/NDM_TIME_MSEC,										\
 	.tv_nsec = (s % NDM_TIME_MSEC)*(NDM_TIME_PREC/NDM_TIME_MSEC)	\
 }
 
-#define NDM_TIME_USEC_INIT(s)										\
+#define NDM_TIME_USEC_INITIALIZER(s)								\
 {																	\
 	.tv_sec = s/NDM_TIME_USEC,										\
 	.tv_nsec = (s % NDM_TIME_USEC)*(NDM_TIME_PREC/NDM_TIME_USEC)	\
 }
 
-#define NDM_TIME_NSEC_INIT(s)										\
+#define NDM_TIME_NSEC_INITIALIZER(s)								\
 {																	\
 	.tv_sec = s/NDM_TIME_NSEC,										\
 	.tv_nsec = (s % NDM_TIME_NSEC)*(NDM_TIME_PREC/NDM_TIME_NSEC)	\
