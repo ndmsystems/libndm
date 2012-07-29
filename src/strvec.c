@@ -1,21 +1,11 @@
 #include <stdlib.h>
 #include <string.h>
+#include <ndm/string.h>
 #include <ndm/strvec.h>
 
 typedef int (*__ndm_strvec_cmp_t)(const void *, const void *);
 
 static const char *__EMPTY_ARRAY[] = {NULL};
-
-static char *__ndm_strvec_strdup(const char *const s)
-{
-	char *s_copy = malloc(strlen(s) + 1);
-
-	if (s_copy != NULL) {
-		strcpy(s_copy, s);
-	}
-
-	return s_copy;
-}
 
 const char **ndm_strvec_array(
 		const struct ndm_strvec_t *v)
@@ -49,7 +39,7 @@ const char *ndm_strvec_insert_at(
 		const size_t i,
 		const char *const s)
 {
-	char *s_copy = __ndm_strvec_strdup(s);
+	char *s_copy = ndm_string_dup(s);
 
 	if (s_copy != NULL) {
 		char **data = realloc(v->__data, sizeof(void *)*(v->__size + 2));
@@ -127,7 +117,7 @@ bool ndm_strvec_assign(
 			while (
 				v->__size < r->__size &&
 				(v->__data[v->__size] =
-					__ndm_strvec_strdup(r->__data[v->__size])) != NULL)
+					ndm_string_dup(r->__data[v->__size])) != NULL)
 			{
 				++v->__size;
 			}
