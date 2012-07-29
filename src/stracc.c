@@ -5,32 +5,71 @@
 #include <ndm/stdio.h>
 #include <ndm/stracc.h>
 
-struct ndm_stracc_t
-{
-	char *str;
-	size_t size;
-	bool is_valid;
-};
-
 static void __ndm_stracc_invalidate(struct ndm_stracc_t *acc)
 {
-	free(acc->str);
-	acc->str = NULL;
-	acc->size = 0;
-	acc->is_valid = false;
+	free(acc->__data);
+	acc->__data = NULL;
+	acc->__size = 0;
+	acc->__is_valid = false;
 }
 
-struct ndm_stracc_t *ndm_stracc_alloc()
+bool ndm_stracc_assign(
+		struct ndm_stracc_t *a,
+		const struct ndm_stracc_t *b)
 {
-	struct ndm_stracc_t *acc = malloc(sizeof(*acc));
+	bool assigned = true;
 
-	if (acc != NULL) {
-		acc->str = NULL;
-		acc->size = 0;
-		acc->is_valid = true;
+	if (b->__size == 0) {
+		ndm_stracc_clear(a);
+		a->__is_valid = b->__is_valid;
+	} else {
+		char *data = malloc(b->__size + 1);
+
+		if (data == NULL) {
+			assigned = false;
+		} else {
+			a->__data = data;
+			a->__size = b->__size;
+			a->__is_valid = b->__is_valid;
+			memcpy(a->__data, b->__data, a->__size + 1);
+		}
 	}
 
-	return acc;
+	return assigned;
+}
+
+bool ndm_stracc_is_equal(
+		const struct ndm_stracc_t *a,
+		const struct ndm_stracc_t *b)
+{
+	const bool a_valid = ndm_stracc_is_valid(a);
+	const bool b_valid = ndm_stracc_is_valid(b);
+
+	return
+		(!a_valid && !b_valid) ||
+		(a_valid && b_valid &&
+		 ndm_stracc_size(a) == ndm_stracc_size(b) &&
+		 memcmp(
+			ndm_stracc_value(a),
+			ndm_stracc_value(b),
+			ndm_stracc_size(a)) == 0);
+}
+
+void ndm_stracc_swap(
+		struct ndm_stracc_t *a,
+		struct ndm_stracc_t *b)
+{
+	char *data = a->__data;
+	const size_t size = a->__size;
+	const bool is_valid = a->__is_valid;
+
+	a->__data = b->__data;
+	a->__size = b->__size;
+	a->__is_valid = b->__is_valid;
+
+	b->__data = data;
+	b->__size = size;
+	b->__is_valid = is_valid;
 }
 
 void ndm_stracc_append(
@@ -38,7 +77,7 @@ void ndm_stracc_append(
 		const char *const format,
 		...)
 {
-	if (acc->is_valid) {
+	if (acc->__is_valid) {
 		char *s;
 		int size;
 		va_list ap;
@@ -51,19 +90,21 @@ void ndm_stracc_append(
 			__ndm_stracc_invalidate(acc);
 		} else
 		if (size > 0) {
-			char *p = realloc(acc->str, acc->size + ((size_t) size + 1));
+			char *p = realloc(acc->__data,
+				acc->__size + ((size_t) size + 1));
 
 			if (p == NULL) {
 				__ndm_stracc_invalidate(acc);
 			} else {
-				acc->str = p;
+				acc->__data = p;
 
-				if (acc->size == 0) {
-					*acc->str = '\0';
+				if (acc->__size == 0) {
+					*acc->__data = '\0';
 				}
 
-				snprintf(acc->str + acc->size, (size_t) size + 1, "%s", s);
-				acc->size += (size_t) size;
+				snprintf(acc->__data + acc->__size,
+					(size_t) size + 1, "%s", s);
+				acc->__size += (size_t) size;
 			}
 		}
 
@@ -71,29 +112,39 @@ void ndm_stracc_append(
 	}
 }
 
-bool ndm_stracc_is_valid(struct ndm_stracc_t *acc)
+const char *ndm_stracc_value(const struct ndm_stracc_t *acc)
 {
-	return acc->is_valid;
+	return (!acc->__is_valid || acc->__data == NULL) ? "" : acc->__data;
 }
 
-const char *ndm_stracc_value(struct ndm_stracc_t *acc)
+size_t ndm_stracc_size(const struct ndm_stracc_t *acc)
 {
-	return
-		(acc == NULL || !acc->is_valid || acc->str == NULL) ?
-		"" : acc->str;
+	return acc->__is_valid ? acc->__size : 0;
 }
 
-size_t ndm_stracc_size(struct ndm_stracc_t *acc)
+const char *ndm_stracc_next_cstr(
+		const struct ndm_stracc_t *acc,
+		const char **s)
 {
-	return acc->is_valid ? acc->size : 0;
-}
+	if (!acc->__is_valid ||
+		*s < acc->__data ||
+		*s >= acc->__data + acc->__size)
+	{
+		*s = NULL;
+	} else {
+		*s += strlen(*s) + 1;
 
-void ndm_stracc_free(struct ndm_stracc_t **acc)
-{
-	if (*acc != NULL) {
-		__ndm_stracc_invalidate(*acc);
-		free(*acc);
-		*acc = NULL;
+		if (*s >= acc->__data + acc->__size) {
+			*s = NULL;
+		}
 	}
+
+	return *s;
+}
+
+void ndm_stracc_clear(struct ndm_stracc_t *acc)
+{
+	__ndm_stracc_invalidate(acc);
+	acc->__is_valid = true;
 }
 
