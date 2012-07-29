@@ -18,6 +18,9 @@ struct ndm_mac_addr_t
 extern const struct ndm_mac_addr_t NDM_MAC_ADDR_ZERO;
 extern const struct ndm_mac_addr_t NDM_MAC_ADDR_BROADCAST;
 
+void ndm_mac_addr_init(
+		struct ndm_mac_addr_t *a);
+
 void ndm_mac_addr_assign(
 		struct ndm_mac_addr_t *a,
 		const struct ndm_mac_addr_t *b);

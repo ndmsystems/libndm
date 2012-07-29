@@ -23,6 +23,12 @@ const struct ndm_mac_addr_t NDM_MAC_ADDR_BROADCAST = {
 	.str = "ff:ff:ff:ff:ff:ff"
 };
 
+void ndm_mac_addr_init(
+		struct ndm_mac_addr_t *a)
+{
+	ndm_mac_addr_assign(a, &NDM_MAC_ADDR_ZERO);
+}
+
 void ndm_mac_addr_assign(
 		struct ndm_mac_addr_t *a,
 		const struct ndm_mac_addr_t *b)
