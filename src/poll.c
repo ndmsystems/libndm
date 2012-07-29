@@ -40,6 +40,11 @@ int ndm_poll(
 		}
 	} while (ret == 0 && !ndm_sys_is_interrupted() && elapsed < interval);
 
+	if (ndm_sys_is_interrupted()) {
+		ret = -1;
+		errno = EINTR;
+	}
+
 	return ret;
 }
 
