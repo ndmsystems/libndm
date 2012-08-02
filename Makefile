@@ -21,11 +21,12 @@ CFLAGS?=\
 	-g3 -pipe -fPIC -std=c99 \
 	-D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 \
 	-D_POSIX_C_SOURCE=199309L \
-	-ffunction-sections -fdata-sections -fstack-protector-all -Wempty-body \
+	-ffunction-sections -fdata-sections -fstack-protector-all \
 	-Wall -Winit-self -Wswitch-enum -Wundef -Wunsafe-loop-optimizations \
-	-Waddress -Wmissing-field-initializers -Wnormalized=nfkc -Wconversion \
-	-Wredundant-decls -Wvla -Wstack-protector -ftabstop=4 -Wshadow \
-	-Wpointer-arith -Wtype-limits -Wclobbered -I$(PWD)/include/
+	-Wmissing-field-initializers -Wnormalized=nfkc -Wconversion \
+	-Wredundant-decls -Wstack-protector -ftabstop=4 -Wshadow \
+	-Wpointer-arith -I$(PWD)/include/
+#	-Wempty-body -Wclobbered -Waddress -Wvla -Wtype-limits
 LDFLAGS=-lrt #-Wl,--gc-sections,--relax
 LIB=libndm.so
 
