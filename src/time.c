@@ -219,3 +219,20 @@ NDM_TIME_FUNCS(msec, NDM_TIME_MSEC)
 NDM_TIME_FUNCS(usec, NDM_TIME_USEC)
 NDM_TIME_FUNCS(nsec, NDM_TIME_NSEC)
 
+int64_t ndm_time_ms_to(struct timespec *deadline)
+{
+	struct timespec now;
+	int64_t ms = 0;
+
+	ndm_time_get_monotonic(&now);
+
+	if (ndm_time_less(&now, deadline)) {
+		struct timespec left = *deadline;
+
+		ndm_time_sub(&left, &now);
+		ms = ndm_time_to_msec(&left);
+	}
+
+	return ms;
+}
+

@@ -154,5 +154,8 @@ void ndm_time_from_timeval(
 		struct timespec *t,
 		const struct timeval *u);
 
+int64_t ndm_time_ms_to(
+		struct timespec *deadline) NDM_ATTR_WUR;
+
 #endif	/* __NDM_TIME_H__ */
 
