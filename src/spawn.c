@@ -2,10 +2,13 @@
 #include <errno.h>
 #include <signal.h>
 #include <stdlib.h>
+#include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
 #include <sys/wait.h>
 #include <sys/types.h>
 #include <ndm/spawn.h>
+#include <ndm/string.h>
 
 bool ndm_spawn_default_at_exec(
 		const char *const argv[],
@@ -69,20 +72,46 @@ pid_t ndm_spawn_process(
 			pid = NDM_SPAWN_INVALID_PID;
 		} else
 		if (pid == 0) {
-			extern char **environ;
-			char **self_environ = environ;
+			bool env_error = false;
 
 			if (envp != NULL) {
-				environ = (char **) envp;
+				/* append new (or replace old) environment variables */
+				unsigned long k = 0;
+
+				while (envp[k] != NULL && !env_error) {
+					char *name = ndm_string_dup(envp[k]);
+
+					if (name == NULL) {
+						env_error = true;
+					} else {
+						char *value = strchr(name, '=');
+
+						if (value == NULL) {
+							/* no '=' symbol in a environment entry */
+							errno = EINVAL;
+							env_error = true;
+						} else {
+							*value = '\0';
+							++value;
+							env_error = (setenv(name, value, 1) != 0);
+						}
+
+						free(name);
+					}
+
+					++k;
+				}
 			}
 
+			if (env_error) {
+				/* failed to setup environment variables */
+			} else
 			if (at_exec != NULL &&
 				!at_exec(argv, envp, fb_fd[1], user_data))
 			{
-				// at_exec() returned an error in errno variable
+				/* at_exec() returned an error in the "errno" variable */
 			} else {
 				execvp(argv[0], (char *const *)(&argv[0]));
-				environ = self_environ;
 				/* could not execute */
 			}
 
@@ -96,7 +125,7 @@ pid_t ndm_spawn_process(
 				left -= n;
 			}
 
-			/* terminate a child without a successfull execvp call */
+			/* terminate a child without a successfull execvp() call */
 			_exit(EXIT_FAILURE);
 		} else {
 			int error = 0;
