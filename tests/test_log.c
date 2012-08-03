@@ -9,7 +9,7 @@ int main(int argc, char *argv[])
 
 	NDM_TEST_BREAK_IF(
 		!ndm_log_init(
-			ndm_log_get_ident(argv), "source", false, false));
+			ndm_log_get_ident(argv), "source", true, false));
 
 	NDM_LOG_INFO("info %i", i++);
 	NDM_LOG_WARNING("warning %i", i++);

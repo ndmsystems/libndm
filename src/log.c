@@ -53,7 +53,7 @@ void ndm_log(
 	vsnprintf(message, sizeof(message), format, vargs);
 	va_end(vargs);
 
-	if (__console_mode) {
+	if (!__console_mode) {
 		syslog(__facility |
 			((level == LINFO)  ?	LOG_INFO :
 			 (level == LWARNING) ?	LOG_WARNING :
