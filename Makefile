@@ -43,6 +43,19 @@ TEST_PREFIX=test_
 TESTS=$(patsubst %.c,%,$(wildcard $(TEST_DIR)/$(TEST_PREFIX)*.c))
 TEST_OBJ=$(TEST_DIR)/test.o
 
+ifeq ($(filter memory_debug,$(MAKECMDGOALS)),memory_debug)
+MEM_DEBUG_OBJ:=$(TEST_DIR)/memchk.o
+MEM_DEBUG_DEFS:=-D_MEMORY_LEAK_DEBUG -D_MEMORY_OVERFLOW_DEBUG -pthread
+MEM_DEBUG_CFLAGS:=$(CFLAGS) $(MEM_DEBUG_DEFS)
+
+CFLAGS+=$(MEM_DEBUG_DEFS) -include tests/memchk.h
+OBJS+=$(MEM_DEBUG_OBJ)
+
+$(MEM_DEBUG_OBJ): $(TEST_DIR)/memchk.c
+	@echo "CC $<"
+	@$(CC) $< $(MEM_DEBUG_CFLAGS) -c -o $@ >/dev/null
+endif
+
 all: $(LIB) tests
 
 $(LIB): Makefile $(HEADERS) $(OBJS)
@@ -57,6 +70,8 @@ check: tests
 	-@for t in `$(EXEC_TESTS)`; do echo; echo "Running $$t..."; $$t; done
 
 tests: $(LIB) $(TESTS)
+
+memory_debug: check
 
 install: $(LIB)
 	@if [ ! -d $(EXEC_PREFIX) ]; then mkdir -p $(EXEC_PREFIX); fi
