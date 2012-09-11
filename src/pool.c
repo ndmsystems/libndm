@@ -9,95 +9,44 @@
 
 struct ndm_pool_block_t
 {
-	size_t size;
 	struct ndm_pool_block_t *previous;
 	char data[];
 };
 
-struct ndm_pool_t
+void ndm_pool_initialize(
+		struct ndm_pool_t *pool,
+		void *static_block,
+		const size_t static_block_size,
+		const size_t dynamic_block_size)
 {
-	const size_t initial_block_size;
-	const size_t dynamic_block_size;
-	struct ndm_pool_block_t *current;
-	size_t available;
-	size_t total_allocated;
-	size_t total_block_size;
-	bool valid;
-	struct ndm_pool_block_t initial;	/* should be the last field */
-};
-
-static void __ndm_pool_reinitialize(
-		struct ndm_pool_t *pool)
-{
-	pool->current = &pool->initial;
-	pool->available = pool->initial_block_size - sizeof(*pool);
-	pool->total_allocated = 0;
-	pool->total_block_size = pool->initial_block_size;
-	pool->valid = true;
-	pool->initial.previous = NULL;
-	pool->initial.size = pool->available;
+	*((void **) &(pool->__static_block)) = static_block;
+	*((size_t *) &(pool->__static_block_size)) = static_block_size;
+	*((size_t *) &(pool->__dynamic_block_size)) = dynamic_block_size;
+	pool->__dynamic_block = NULL;
+	pool->__available = static_block_size;
+	pool->__total_allocated = 0;
+	pool->__total_dynamic_size = 0;
+	pool->__is_valid = true;
 }
 
 void ndm_pool_clear(
 		struct ndm_pool_t *pool)
 {
-	struct ndm_pool_block_t *b = pool->current;
+	struct ndm_pool_block_t *b =
+		(struct ndm_pool_block_t *) pool->__dynamic_block;
 
-	while (b != &pool->initial) {
+	while (b != NULL) {
 		struct ndm_pool_block_t *previous = b->previous;
 
 		free(b);
 		b = previous;
 	}
 
-	__ndm_pool_reinitialize(pool);
-}
-
-bool ndm_pool_create(
-		struct ndm_pool_t **pool,
-		const size_t initial_block_size,
-		const size_t dynamic_block_size)
-{
-	static const size_t MIN_DYNAMIC_BLOCK_SIZE_ =
-		NDM_POOL_ALIGN_(sizeof(struct ndm_pool_block_t));
-	bool created = false;
-	const size_t dynamic_size = NDM_POOL_ALIGN_(dynamic_block_size);
-
-	if (pool == NULL || *pool != NULL ||
-		dynamic_size <= MIN_DYNAMIC_BLOCK_SIZE_)
-	{
-		errno = EINVAL;
-	} else {
-		const size_t initial_size = NDM_POOL_ALIGN_(
-			NDM_MAX(sizeof(**pool), initial_block_size));
-
-		if ((*pool = malloc(initial_size)) == NULL) {
-			errno = ENOMEM;
-		} else {
-			*((size_t *)(&(*pool)->initial_block_size)) = initial_size;
-			*((size_t *)(&(*pool)->dynamic_block_size)) = dynamic_size;
-			__ndm_pool_reinitialize(*pool);
-			created = true;
-		}
-	}
-
-	return created;
-}
-
-void ndm_pool_destroy(
-		struct ndm_pool_t **pool)
-{
-	if (pool != NULL && *pool != NULL) {
-		ndm_pool_clear(*pool);
-		free(*pool);
-		*pool = NULL;
-	}
-}
-
-bool ndm_pool_is_valid(
-		struct ndm_pool_t *pool)
-{
-	return pool->valid;
+	ndm_pool_initialize(
+		pool,
+		pool->__static_block,
+		pool->__static_block_size,
+		pool->__dynamic_block_size);
 }
 
 void *ndm_pool_malloc(
@@ -106,38 +55,40 @@ void *ndm_pool_malloc(
 {
 	void *p = NULL;
 
-	if (!pool->valid) {
+	if (!ndm_pool_is_valid(pool)) {
 		errno = ENOMEM;
 	} else
-	if (pool->available >= size) {
-		p = pool->current->data + pool->current->size - pool->available;
-		pool->available -= size;
-		pool->total_allocated += size;
+	if (pool->__available >= size) {
+		uint8_t *block_end = (pool->__dynamic_block == NULL) ?
+			((uint8_t *) pool->__static_block) + pool->__static_block_size :
+			((uint8_t *) pool->__dynamic_block) + pool->__dynamic_block_size;
+
+		p = block_end - pool->__available;
+		pool->__available -= size;
+		pool->__total_allocated += size;
 	} else {
+		/* new dynamic block allocation */
 		const size_t need = NDM_POOL_ALIGN_(
 			size + sizeof(struct ndm_pool_block_t));
 		const size_t alloc_size =
-			need < pool->dynamic_block_size ?
-			pool->dynamic_block_size : need;
+			need < pool->__dynamic_block_size ?
+			pool->__dynamic_block_size : need;
+		struct ndm_pool_block_t *new_block =
+			(struct ndm_pool_block_t *) malloc(alloc_size);
 
-		p = malloc(alloc_size);
-
-		if (p == NULL) {
+		if (new_block == NULL) {
 			errno = ENOMEM;
-			pool->valid = false;
+			pool->__is_valid = false;
 		} else {
-			struct ndm_pool_block_t *previous = pool->current;
+			new_block->previous =
+				(struct ndm_pool_block_t *) pool->__dynamic_block;
+			pool->__dynamic_block = new_block;
+			pool->__available = alloc_size - need;
 
-			pool->current = (struct ndm_pool_block_t *) p;
-			pool->current->previous = previous;
-			pool->current->size =
-				alloc_size - sizeof(struct ndm_pool_block_t);
-			pool->available = pool->current->size - size;
+			pool->__total_allocated += size;
+			pool->__total_dynamic_size += alloc_size;
 
-			pool->total_allocated += size;
-			pool->total_block_size += alloc_size;
-
-			p = pool->current->data;
+			p = new_block->data;
 		}
 	}
 
@@ -171,17 +122,5 @@ char *ndm_pool_strdup(
 	}
 
 	return p;
-}
-
-size_t ndm_pool_size(
-		struct ndm_pool_t *pool)
-{
-	return pool->total_allocated;
-}
-
-size_t ndm_pool_allocated(
-		struct ndm_pool_t *pool)
-{
-	return pool->total_block_size;
 }
 

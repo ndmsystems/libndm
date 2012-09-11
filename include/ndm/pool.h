@@ -5,19 +5,47 @@
 #include <stdbool.h>
 #include "attr.h"
 
-#define NDM_POOL_INITIALIZER			NULL
+struct ndm_pool_t
+{
+	void *const __static_block;
+	const size_t __static_block_size;
+	void *__dynamic_block;
+	const size_t __dynamic_block_size;
+	size_t __available;
+	size_t __total_allocated;
+	size_t __total_dynamic_size;
+	bool __is_valid;
+};
 
-struct ndm_pool_t;
+#define NDM_POOL_INITIALIZER(							\
+		static_block,									\
+		static_block_size,								\
+		dynamic_block_size)								\
+	{													\
+		.__static_block = static_block,					\
+		.__static_block_size = static_block_size,		\
+		.__dynamic_block = NULL,						\
+		.__dynamic_block_size = dynamic_block_size,		\
+		.__available = static_block_size,				\
+		.__total_allocated = 0,							\
+		.__total_dynamic_size = 0,						\
+		.__is_valid = true								\
+	}
 
-bool ndm_pool_create(
-		struct ndm_pool_t **pool,
-		const size_t initial_block_size,
-		const size_t dynamic_block_size) NDM_ATTR_WUR;
-void ndm_pool_destroy(
-		struct ndm_pool_t **pool);
+void ndm_pool_initialize(
+		struct ndm_pool_t *pool,
+		void *static_block,
+		const size_t static_block_size,
+		const size_t dynamic_block_size);
 
-bool ndm_pool_is_valid(
-		struct ndm_pool_t *pool) NDM_ATTR_WUR;
+static bool ndm_pool_is_valid(
+		const struct ndm_pool_t *pool) NDM_ATTR_WUR;
+
+static inline bool ndm_pool_is_valid(
+		const struct ndm_pool_t *pool)
+{
+	return pool->__is_valid;
+}
 
 void *ndm_pool_malloc(
 		struct ndm_pool_t *pool,
@@ -33,10 +61,23 @@ char *ndm_pool_strdup(
 void ndm_pool_clear(
 		struct ndm_pool_t *pool);
 
-size_t ndm_pool_size(
-		struct ndm_pool_t *pool) NDM_ATTR_WUR;
-size_t ndm_pool_allocated(
-		struct ndm_pool_t *pool) NDM_ATTR_WUR;
+static size_t ndm_pool_allocated(
+		const struct ndm_pool_t *pool) NDM_ATTR_WUR;
+
+static inline size_t ndm_pool_allocated(
+		const struct ndm_pool_t *pool)
+{
+	return pool->__total_allocated;
+}
+
+static size_t ndm_pool_total_dynamic_size(
+		const struct ndm_pool_t *pool) NDM_ATTR_WUR;
+
+static inline size_t ndm_pool_total_dynamic_size(
+		const struct ndm_pool_t *pool)
+{
+	return pool->__total_dynamic_size;
+}
 
 #endif	/* __NDM_POOL__ */
 
