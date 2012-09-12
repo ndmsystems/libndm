@@ -32,7 +32,7 @@ struct ndm_pool_t
 		.__is_valid = true								\
 	}
 
-void ndm_pool_initialize(
+void ndm_pool_init(
 		struct ndm_pool_t *pool,
 		void *static_block,
 		const size_t static_block_size,

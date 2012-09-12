@@ -10,10 +10,10 @@
 struct ndm_pool_block_t
 {
 	struct ndm_pool_block_t *previous;
-	char data[];
+	uint8_t data[];
 };
 
-void ndm_pool_initialize(
+void ndm_pool_init(
 		struct ndm_pool_t *pool,
 		void *static_block,
 		const size_t static_block_size,
@@ -27,26 +27,6 @@ void ndm_pool_initialize(
 	pool->__total_allocated = 0;
 	pool->__total_dynamic_size = 0;
 	pool->__is_valid = true;
-}
-
-void ndm_pool_clear(
-		struct ndm_pool_t *pool)
-{
-	struct ndm_pool_block_t *b =
-		(struct ndm_pool_block_t *) pool->__dynamic_block;
-
-	while (b != NULL) {
-		struct ndm_pool_block_t *previous = b->previous;
-
-		free(b);
-		b = previous;
-	}
-
-	ndm_pool_initialize(
-		pool,
-		pool->__static_block,
-		pool->__static_block_size,
-		pool->__dynamic_block_size);
 }
 
 void *ndm_pool_malloc(
@@ -122,5 +102,25 @@ char *ndm_pool_strdup(
 	}
 
 	return p;
+}
+
+void ndm_pool_clear(
+		struct ndm_pool_t *pool)
+{
+	struct ndm_pool_block_t *b =
+		(struct ndm_pool_block_t *) pool->__dynamic_block;
+
+	while (b != NULL) {
+		struct ndm_pool_block_t *previous = b->previous;
+
+		free(b);
+		b = previous;
+	}
+
+	ndm_pool_init(
+		pool,
+		pool->__static_block,
+		pool->__static_block_size,
+		pool->__dynamic_block_size);
 }
 

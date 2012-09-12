@@ -1,6 +1,7 @@
 #ifndef __NDM_INT_H__
 #define __NDM_INT_H__
 
+#include <limits.h>
 #include <stdbool.h>
 #include "attr.h"
 
