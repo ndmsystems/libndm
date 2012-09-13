@@ -57,6 +57,10 @@ void *ndm_pool_calloc(
 char *ndm_pool_strdup(
 		struct ndm_pool_t *pool,
 		const char *const s) NDM_ATTR_WUR;
+char *ndm_pool_strndup(
+		struct ndm_pool_t *pool,
+		const char *const s,
+		const size_t size) NDM_ATTR_WUR;
 
 void ndm_pool_clear(
 		struct ndm_pool_t *pool);

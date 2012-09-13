@@ -104,6 +104,31 @@ char *ndm_pool_strdup(
 	return p;
 }
 
+char *ndm_pool_strndup(
+		struct ndm_pool_t *pool,
+		const char *const s,
+		const size_t size)
+{
+	char *c = NULL;
+	const char *p = s;
+	const char *end = p + size;
+	size_t n = 0;
+
+	while (p < end && *p != '\0') {
+		++p;
+	}
+
+	n = (size_t) (p - s);
+	c = ndm_pool_malloc(pool, n + 1);
+
+	if (c != NULL) {
+		memcpy(c, s, n);
+		c[n] = '\0';
+	}
+
+	return c;
+}
+
 void ndm_pool_clear(
 		struct ndm_pool_t *pool)
 {

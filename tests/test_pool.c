@@ -32,6 +32,10 @@ int main()
 	NDM_TEST_BREAK_IF((s = ndm_pool_strdup(&pool, TEST_STRING2)) == NULL);
 	NDM_TEST(strcmp(s, TEST_STRING2) == 0);
 
+	NDM_TEST_BREAK_IF(
+		(s = ndm_pool_strndup(&pool, "test_string", 5)) == NULL);
+	NDM_TEST(strcmp(s, "test_") == 0);
+
 	ndm_pool_clear(&pool);
 	NDM_TEST(ndm_pool_allocated(&pool) == 0);
 
