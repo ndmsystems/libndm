@@ -591,7 +591,7 @@ __ndm_xml_parser_parse_node_attributes(
 	return code;
 }
 
-enum ndm_xml_document_parse_error_t
+static enum ndm_xml_document_parse_error_t
 __ndm_xml_parser_parse_xml_declaration(
 		struct ndm_xml_document_t *doc,
 		char **ptext,
@@ -1779,6 +1779,13 @@ enum ndm_xml_document_parse_error_t ndm_xml_document_parse(
 	}
 
 	return code;
+}
+
+void *ndm_xml_document_alloc(
+		struct ndm_xml_document_t *doc,
+		const size_t size)
+{
+	return ndm_pool_malloc(&doc->__pool, size);
 }
 
 struct ndm_xml_node_t *ndm_xml_document_alloc_root(

@@ -105,6 +105,10 @@ enum ndm_xml_document_parse_error_t ndm_xml_document_parse(
 		char *text,
 		const enum ndm_xml_document_parse_flags_t flags) NDM_ATTR_WUR;
 
+void *ndm_xml_document_alloc(
+		struct ndm_xml_document_t *doc,
+		const size_t size) NDM_ATTR_WUR;
+
 struct ndm_xml_node_t *ndm_xml_document_alloc_root(
 		struct ndm_xml_document_t *doc) NDM_ATTR_WUR;
 
