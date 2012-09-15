@@ -278,6 +278,10 @@ int main()
 
 	fp = fopen("test.xml", "r");
 
+	if (fp == NULL) {
+		fp = fopen("tests/test.xml", "r");
+	}
+
 	NDM_TEST_BREAK_IF(fp == NULL);
 
 	NDM_TEST(fseek(fp, 0, SEEK_END) == 0);
