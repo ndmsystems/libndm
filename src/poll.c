@@ -3,48 +3,58 @@
 #include <ndm/sys.h>
 #include <ndm/time.h>
 
+static void __ndm_poll_calculate_msec_deadline(
+		struct timespec *deadline,
+		const int timeout)
+{
+	ndm_time_get_monotonic(deadline);
+	ndm_time_add_msec(deadline, timeout);
+}
+
+static int __ndm_poll_msec_to_deadline(
+		const struct timespec *deadline)
+{
+	struct timespec now;
+	struct timespec left = *deadline;
+
+	ndm_time_get_monotonic(&now);
+	ndm_time_sub(&left, &now);
+
+	return (int) ndm_time_to_msec(&left);
+}
+
 /* interruptible poll */
 int ndm_poll(
 		struct pollfd *fds,
 		const nfds_t nfds,
 		const int interval)
 {
-	const int SLEEP_GRANULARITY = (int)
-		ndm_time_to_msec(ndm_sys_sleep_granularity());
-	struct timespec start;
-	int elapsed = 0;
-	int ret = 0;
+	struct timespec deadline;
+	int left = 0;
+	int n = 0;
 
-	ndm_time_get_monotonic(&start);
+	__ndm_poll_calculate_msec_deadline(&deadline, interval);
 
 	do {
-		struct timespec now;
-		int period = 1;
+		left = (interval < 0) ?
+			NDM_SYS_SLEEP_GRANULARITY_MSEC :
+			__ndm_poll_msec_to_deadline(&deadline);
 
-		ndm_time_get_monotonic(&now);
-		ndm_time_sub(&now, &start);
-		elapsed = (int) ndm_time_to_msec(&now);
+		n = poll(fds, nfds,
+			(left < 0) ? 0 :
+			(left < NDM_SYS_SLEEP_GRANULARITY_MSEC) ? left :
+				NDM_SYS_SLEEP_GRANULARITY_MSEC);
 
-		if (elapsed < interval) {
-			const int left = interval - elapsed;
-
-			period =
-				(left < SLEEP_GRANULARITY) ?
-				 left : SLEEP_GRANULARITY;
+		if (n < 0 && (errno == EINTR || errno == EAGAIN)) {
+			n = 0;
 		}
 
-		ret = poll(fds, nfds, period);
-
-		if (ret < 0 && (errno == EINTR || errno == EAGAIN)) {
-			ret = 0;
+		if (ndm_sys_is_interrupted()) {
+			n = -1;
+			errno = EINTR;
 		}
-	} while (ret == 0 && !ndm_sys_is_interrupted() && elapsed < interval);
+	} while (n == 0 && left > 0);
 
-	if (ndm_sys_is_interrupted()) {
-		ret = -1;
-		errno = EINTR;
-	}
-
-	return ret;
+	return n;
 }
 
