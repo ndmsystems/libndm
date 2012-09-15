@@ -6,6 +6,8 @@
 #include <stdbool.h>
 #include "attr.h"
 
+#define NDM_SYS_SLEEP_GRANULARITY_MSEC			333
+
 bool ndm_sys_init() NDM_ATTR_WUR;
 
 bool ndm_sys_set_default_signals() NDM_ATTR_WUR;

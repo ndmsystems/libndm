@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <ndm/sys.h>
 #include <ndm/time.h>
 
 #define SYS_DOTS_					"[...]"
@@ -13,10 +14,8 @@
 
 static volatile int __interrupted = 0;
 static char __error_message[SYS_ERROR_MSG_MAX_LENGTH_ + 1];
-static const struct timespec NDM_SLEEP_GRANULARITY_ = {
-	.tv_sec = 0,
-	.tv_nsec = 200000000
-};
+static const struct timespec NDM_SLEEP_GRANULARITY_ =
+	NDM_TIME_MSEC_INITIALIZER(NDM_SYS_SLEEP_GRANULARITY_MSEC);
 
 bool ndm_sys_init()
 {
