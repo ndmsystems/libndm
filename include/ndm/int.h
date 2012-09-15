@@ -31,6 +31,14 @@
 		NDM_INT_MAX_BUFSIZE(intmax_t),					\
 		NDM_INT_MAX_BUFSIZE(uintmax_t))
 
+#define NDM_INT_IS_POWER_OF2(n)							\
+	(((n) != 0) && !((n) & ((n) - 1)))
+
+#define NDM_INT_ALIGN(n, align)							\
+	(NDM_INT_IS_POWER_OF2(align) ?						\
+	 (((n) + (align) - 1) & ~((align) - 1))	:			\
+	 (((n - ((n) % (align))) + (((n) % (align)) == 0 ? 0 : (align)))))
+
 bool ndm_int_parse_long(
 		const char *const str,
 		long *value) NDM_ATTR_WUR;
