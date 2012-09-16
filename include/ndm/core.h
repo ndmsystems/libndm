@@ -51,6 +51,9 @@ bool ndm_core_event_connection_close(
 int ndm_core_event_connection_fd(
 		const struct ndm_core_event_connection_t *connection) NDM_ATTR_WUR;
 
+bool ndm_core_event_connection_has_events(
+		struct ndm_core_event_connection_t *connection) NDM_ATTR_WUR;
+
 struct ndm_core_event_t *ndm_core_event_connection_get(
 		struct ndm_core_event_connection_t *connection) NDM_ATTR_WUR;
 

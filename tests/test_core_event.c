@@ -10,6 +10,8 @@
 #include <ndm/macro.h>
 #include "test.h"
 
+#define MAX_HANDLED_EVENTS		10
+
 #define KEY_ESC					27
 
 int main()
@@ -51,37 +53,45 @@ int main()
 			}
 
 			if (key != KEY_ESC && n >= 0) {
-				if (pfd[1].revents & POLLIN) {
+				if (ndm_core_event_connection_has_events(econn) ||
+					pfd[1].revents & POLLIN)
+				{
+					size_t events_handled = 0;
 
-					struct ndm_core_event_t *e =
-						ndm_core_event_connection_get(econn);
+					do {
+						struct ndm_core_event_t *e =
+							ndm_core_event_connection_get(econn);
 
-					if (e == NULL) {
-						NDM_TEST(false);
-						n = -1;
-					} else {
-						const struct timespec raise_time =
-							ndm_core_event_raise_time(e);
-						const struct ndm_xml_node_t *r =
-							ndm_core_event_root(e);
-						const struct ndm_xml_node_t *v =
-							ndm_xml_node_first_child(r, NULL);
+						if (e == NULL) {
+							NDM_TEST(false);
+							n = -1;
+						} else {
+							const struct timespec raise_time =
+								ndm_core_event_raise_time(e);
+							const struct ndm_xml_node_t *r =
+								ndm_core_event_root(e);
+							const struct ndm_xml_node_t *v =
+								ndm_xml_node_first_child(r, NULL);
 
-						printf("event: \"%s\" at %li.%06li%s\n",
-							ndm_core_event_type(e),
-							(long) raise_time.tv_sec,
-							(long) raise_time.tv_nsec/NDM_TIME_MSEC,
-							(v == NULL) ? "." : ", first level tags:");
+							printf("event: \"%s\" at %li.%06li%s\n",
+								ndm_core_event_type(e),
+								(long) raise_time.tv_sec,
+								(long) raise_time.tv_nsec/NDM_TIME_MSEC,
+								(v == NULL) ? "." : ", first level tags:");
 
-						while (v != NULL) {
-							printf("\t%s: \"%s\"\n",
-								ndm_xml_node_name(v),
-								ndm_xml_node_value(v));
-							v = ndm_xml_node_next_sibling(v, NULL);
+							while (v != NULL) {
+								printf("\t%s: \"%s\"\n",
+									ndm_xml_node_name(v),
+									ndm_xml_node_value(v));
+								v = ndm_xml_node_next_sibling(v, NULL);
+							}
+
+							ndm_core_event_free(&e);
+							++events_handled;
 						}
-
-						ndm_core_event_free(&e);
-					}
+					} while (
+						events_handled < MAX_HANDLED_EVENTS &&
+						ndm_core_event_connection_has_events(econn));
 				} else
 				if (pfd[0].revents & (POLLERR | POLLNVAL | POLLHUP)) {
 					NDM_TEST(false);

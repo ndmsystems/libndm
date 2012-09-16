@@ -112,6 +112,12 @@ static void __ndm_core_buffer_init(
 	buffer->putp = buffer->start;
 }
 
+static inline bool __ndm_core_buffer_is_empty(
+		const struct ndm_core_buffer_t *buffer)
+{
+	return buffer->getp == buffer->putp;
+}
+
 static bool __ndm_core_buffer_read_all(
 		struct ndm_core_buffer_t *buffer,
 		const int fd,
@@ -124,7 +130,7 @@ static bool __ndm_core_buffer_read_all(
 	bool error = false;
 
 	while (s != 0 && !error) {
-		if (buffer->putp == buffer->getp) {
+		if (__ndm_core_buffer_is_empty(buffer)) {
 			/* there is no data in a buffer */
 			const int delay = __ndm_core_msec_to_deadline(deadline);
 
@@ -480,6 +486,12 @@ int ndm_core_event_connection_fd(
 		const struct ndm_core_event_connection_t *connection)
 {
 	return connection->fd;
+}
+
+bool ndm_core_event_connection_has_events(
+		struct ndm_core_event_connection_t *connection)
+{
+	return !__ndm_core_buffer_is_empty(&connection->buffer);
 }
 
 struct ndm_core_event_t *ndm_core_event_connection_get(
