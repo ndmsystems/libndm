@@ -42,6 +42,7 @@ TEST_DIR=tests
 TEST_PREFIX=test_
 TESTS=$(patsubst %.c,%,$(wildcard $(TEST_DIR)/$(TEST_PREFIX)*.c))
 TEST_OBJ=$(TEST_DIR)/test.o
+TEST_NO_AUTOEXEC=core core_event
 
 ifeq ($(filter memory_debug,$(MAKECMDGOALS)),memory_debug)
 MEM_DEBUG_OBJ:=$(TEST_DIR)/memchk.o
@@ -64,10 +65,13 @@ $(LIB): Makefile $(HEADERS) $(OBJS)
 #	$(STRIP) $(STRIPFLAGS) $@
 	-@ls --block-size=K -1s $(LIB)
 
-EXEC_TESTS=find $(TEST_DIR) -name "$(TEST_PREFIX)*" -executable -type f
+EXEC_TESTS_ALL=\
+	$(shell find $(TEST_DIR) -name "$(TEST_PREFIX)*" -executable -type f)
+EXEC_TESTS=$(filter-out $(addprefix \
+	$(TEST_DIR)/$(TEST_PREFIX),$(TEST_NO_AUTOEXEC)),$(EXEC_TESTS_ALL))
 
 check: tests
-	-@for t in `$(EXEC_TESTS)`; do echo; echo "Running $$t..."; $$t; done
+	-@for t in $(EXEC_TESTS); do echo; echo "Running $$t..."; $$t; done
 
 tests: $(LIB) $(TESTS)
 
@@ -97,7 +101,7 @@ $(TEST_DIR)/$(TEST_PREFIX)%: $(TEST_DIR)/$(TEST_PREFIX)%.c $(TEST_OBJ) $(LIB)
 
 clean:
 	rm -f src/*.o *~ *.so *.o $(LIB) $(TEST_DIR)/*.o
-	rm -f `$(EXEC_TESTS)`
+	rm -f $(EXEC_TESTS_ALL)
 
 distclean: clean
 
