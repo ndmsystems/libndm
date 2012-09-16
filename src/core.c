@@ -147,7 +147,7 @@ static bool __ndm_core_buffer_read_all(
 						(size_t) (buffer->bound - buffer->start), 0);
 
 					if (n > 0) {
-						NDM_HEX_DUMP(buffer->putp, n);
+						/* NDM_HEX_DUMP(buffer->putp, n); */
 						buffer->putp += n;
 					} else
 					if (n == 0) {
@@ -282,6 +282,7 @@ static bool __ndm_core_read_xml_children(
 	struct ndm_xml_node_t *root = NULL;
 	size_t ctrl_index = 0;
 	bool error = false;
+	bool stopped = false;
 
 	do {
 		ndm_core_ctrl_t ctrl = NDM_CORE_CTRL_END_;
@@ -399,13 +400,14 @@ static bool __ndm_core_read_xml_children(
 			}
 		} else
 		if (ctrl == NDM_CORE_CTRL_END_) {
+			stopped = (node == root) || (ndm_xml_node_parent(node) == root);
 			node = parent;
 		} else {
 			/* bad binary XML command */
 			error = true;
 			errno = EBADMSG;
 		}
-	} while (!error && (ctrl_index == 1 || node != root));
+	} while (!error && !stopped);
 
 	return !error;
 }
@@ -590,6 +592,12 @@ static void __ndm_core_cache_init(
 	/**/
 }
 
+void ndm_core_cache_clear(
+		struct ndm_core_t *core)
+{
+	/**/
+}
+
 /**
  * Core connection functions.
  */
@@ -674,12 +682,6 @@ int ndm_core_fd(
 		const struct ndm_core_t *core)
 {
 	return core->fd;
-}
-
-void ndm_core_cache_clear(
-		struct ndm_core_t *core)
-{
-	//
 }
 
 void ndm_core_set_timeout(
@@ -878,6 +880,7 @@ static struct ndm_core_response_t *__ndm_core_do_request(
 						request_size - offs, 0);
 
 					if (n > 0) {
+						/* NDM_HEX_DUMP(buffer + offs, request_size - offs); */
 						offs += (size_t) n;
 					}
 				}
@@ -949,11 +952,13 @@ bool ndm_core_authenticate(
 		const char *const user,
 		const char *const password,
 		const char *const realm,
+		const char *const tag,
 		bool *authenticated)
 {
 	bool done = false;
 	uint8_t request_buffer[NDM_CORE_REQUEST_STATIC_SIZE_];
 	struct ndm_xml_document_t request;
+	struct ndm_xml_node_t *hello_node = NULL;
 	struct ndm_xml_node_t *request_node =
 		__ndm_core_request_document_init(&request,
 			request_buffer, sizeof(request_buffer),
@@ -962,12 +967,11 @@ bool ndm_core_authenticate(
 	*authenticated = false;
 
 	if (request_node != NULL &&
-		ndm_xml_node_append_child_str(
-			request_node, "hello", password) != NULL &&
-		ndm_xml_node_append_attr_str(
-			request_node, "name", user) != NULL &&
-		ndm_xml_node_append_attr_str(
-			request_node, "realm", realm) != NULL)
+		(hello_node = ndm_xml_node_append_child_str(
+			request_node, "hello", password)) != NULL &&
+		ndm_xml_node_append_attr_str(hello_node, "name", user) != NULL &&
+		ndm_xml_node_append_attr_str(hello_node, "realm", realm) != NULL &&
+		ndm_xml_node_append_attr_str(hello_node, "tag", tag) != NULL)
 	{
 		struct ndm_core_response_t *response =
 			__ndm_core_do_request(core,
@@ -1003,12 +1007,13 @@ static struct ndm_core_response_t *__ndm_core_get(
 		__ndm_core_request_document_init(&request,
 			request_buffer, sizeof(request_buffer),
 			core->agent);
-	struct ndm_xml_node_t *config_node = NULL;
+	struct ndm_xml_node_t *tag_node = NULL;
 	struct ndm_core_response_t *response = NULL;
 
 	if (request_node != NULL &&
-		(config_node = ndm_xml_node_append_child_str(
-			request_node, tag, command)) != NULL)
+		(tag_node = ndm_xml_node_append_child_str(
+			request_node, tag, NULL)) != NULL &&
+		ndm_xml_node_append_attr_str(tag_node, "name", command) != NULL)
 	{
 		if (args != NULL) {
 			size_t i = 0;
@@ -1017,7 +1022,7 @@ static struct ndm_core_response_t *__ndm_core_get(
 				args[i] != NULL &&
 				args[i + 1] != NULL &&
 				ndm_xml_node_append_child_str(
-					config_node, args[i], args[i + 1]) != NULL)
+					tag_node, args[i], args[i + 1]) != NULL)
 			{
 				i += 2;
 			}
@@ -1029,11 +1034,11 @@ static struct ndm_core_response_t *__ndm_core_get(
 					/* ENOMEM */
 				}
 
-				config_node = NULL;
+				tag_node = NULL;
 			}
 		}
 
-		if (config_node != NULL) {
+		if (tag_node != NULL) {
 			response = __ndm_core_do_request(core, cache_mode, request_node);
 		}
 	}
@@ -1058,7 +1063,7 @@ struct ndm_core_response_t *ndm_core_execute(
 		const char *const command,
 		const char *const args[])
 {
-	return __ndm_core_get(core, cache_mode, "execute", command, args);
+	return __ndm_core_get(core, cache_mode, "command", command, args);
 }
 
 static struct ndm_core_response_t *__ndm_core_get_one_tag(
@@ -1135,25 +1140,10 @@ struct ndm_core_response_t *ndm_core_parse(
 struct ndm_core_response_t *ndm_core_continue(
 		struct ndm_core_t *core)
 {
-	uint8_t request_buffer[NDM_CORE_REQUEST_STATIC_SIZE_];
-	struct ndm_xml_document_t request;
-	struct ndm_xml_node_t *request_node =
-		__ndm_core_request_document_init(&request,
-			request_buffer, sizeof(request_buffer),
-			core->agent);
-	struct ndm_core_response_t *response = NULL;
+	va_list ap; /* not initialized for an empty format */
 
-	if (request_node != NULL &&
-		ndm_xml_node_append_child_str(
-			request_node, "continue", NULL) != NULL)
-	{
-		response = __ndm_core_do_request(core,
-			NDM_CORE_MODE_NO_CACHE, request_node);
-	}
-
-	ndm_xml_document_clear(&request);
-
-	return response;
+	return __ndm_core_get_one_tag(core,
+		NDM_CORE_MODE_NO_CACHE, "continue", "", ap);
 }
 
 void ndm_core_response_free(

@@ -100,6 +100,7 @@ bool ndm_core_authenticate(
 		const char *const user,
 		const char *const password,
 		const char *const realm,
+		const char *const tag,
 		bool *authenticated) NDM_ATTR_WUR;
 
 struct ndm_core_response_t *ndm_core_get_config(
