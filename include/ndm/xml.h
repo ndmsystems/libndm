@@ -160,7 +160,13 @@ enum ndm_xml_node_type_t ndm_xml_node_type(
 const char *ndm_xml_node_name(
 		const struct ndm_xml_node_t *node) NDM_ATTR_WUR;
 
+size_t ndm_xml_node_name_size(
+		const struct ndm_xml_node_t *node) NDM_ATTR_WUR;
+
 const char *ndm_xml_node_value(
+		const struct ndm_xml_node_t *node) NDM_ATTR_WUR;
+
+size_t ndm_xml_node_value_size(
 		const struct ndm_xml_node_t *node) NDM_ATTR_WUR;
 
 struct ndm_xml_node_t *ndm_xml_node_parent(
@@ -291,7 +297,13 @@ void ndm_xml_node_remove_all_attr(
 const char *ndm_xml_attr_name(
 		const struct ndm_xml_attr_t *attr) NDM_ATTR_WUR;
 
+size_t ndm_xml_attr_name_size(
+		const struct ndm_xml_attr_t *attr) NDM_ATTR_WUR;
+
 const char *ndm_xml_attr_value(
+		const struct ndm_xml_attr_t *attr) NDM_ATTR_WUR;
+
+size_t ndm_xml_attr_value_size(
 		const struct ndm_xml_attr_t *attr) NDM_ATTR_WUR;
 
 void ndm_xml_attr_set_name(

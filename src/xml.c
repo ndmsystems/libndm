@@ -31,7 +31,9 @@
 struct ndm_xml_node_t
 {
 	const char *name;
+	size_t name_size;
 	const char *value;
+	size_t value_size;
 	enum ndm_xml_node_type_t type;
 	struct ndm_xml_document_t *document;
 	struct ndm_xml_node_t *parent;
@@ -46,7 +48,9 @@ struct ndm_xml_node_t
 struct ndm_xml_attr_t
 {
 	const char *name;
+	size_t name_size;
 	const char *value;
+	size_t value_size;
 	struct ndm_xml_document_t *document;
 	struct ndm_xml_node_t *node;
 	struct ndm_xml_attr_t *next;
@@ -1916,10 +1920,22 @@ const char *ndm_xml_node_name(
 	return node->name;
 }
 
+size_t ndm_xml_node_name_size(
+		const struct ndm_xml_node_t *node)
+{
+	return node->name_size;
+}
+
 const char *ndm_xml_node_value(
 		const struct ndm_xml_node_t *node)
 {
 	return node->value;
+}
+
+size_t ndm_xml_node_value_size(
+		const struct ndm_xml_node_t *node)
+{
+	return node->value_size;
 }
 
 struct ndm_xml_node_t *ndm_xml_node_parent(
@@ -1933,6 +1949,7 @@ void ndm_xml_node_set_name(
 		const char *const name)
 {
 	node->name = (name == NULL) ? "" : name;
+	node->name_size = strlen(node->name);
 }
 
 void ndm_xml_node_set_value(
@@ -1940,6 +1957,7 @@ void ndm_xml_node_set_value(
 		const char *const value)
 {
 	node->value = (value == NULL) ? "" : value;
+	node->value_size = strlen(node->value);
 }
 
 struct ndm_xml_document_t *ndm_xml_node_document(
@@ -2424,10 +2442,22 @@ const char *ndm_xml_attr_name(
 	return attr->name;
 }
 
+size_t ndm_xml_attr_name_size(
+		const struct ndm_xml_attr_t *attr)
+{
+	return attr->name_size;
+}
+
 const char *ndm_xml_attr_value(
 		const struct ndm_xml_attr_t *attr)
 {
 	return attr->value;
+}
+
+size_t ndm_xml_attr_value_size(
+		const struct ndm_xml_attr_t *attr)
+{
+	return attr->value_size;
 }
 
 void ndm_xml_attr_set_name(
@@ -2435,6 +2465,7 @@ void ndm_xml_attr_set_name(
 		const char *const name)
 {
 	attr->name = (name == NULL) ? "" : name;
+	attr->name_size = strlen(attr->name);
 }
 
 void ndm_xml_attr_set_value(
@@ -2442,6 +2473,7 @@ void ndm_xml_attr_set_value(
 		const char *const value)
 {
 	attr->value = (value == NULL) ? "" : value;
+	attr->value_size = strlen(attr->value);
 }
 
 struct ndm_xml_node_t *ndm_xml_attr_node(
