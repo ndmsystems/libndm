@@ -44,6 +44,12 @@ bool ndm_time_init() NDM_ATTR_WUR;
 void ndm_time_get(
 		struct timespec *t);
 
+void ndm_time_get_max(
+		struct timespec *t);
+
+void ndm_time_get_min(
+		struct timespec *t);
+
 void ndm_time_get_monotonic(
 		struct timespec *t);
 

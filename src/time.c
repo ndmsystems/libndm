@@ -1,6 +1,7 @@
 #include <unistd.h>
 #include <assert.h>
 #include <sys/time.h>
+#include <ndm/int.h>
 #include <ndm/time.h>
 
 #if !defined (_POSIX_TIMERS) || (_POSIX_TIMERS <= 0) ||	\
@@ -26,6 +27,20 @@ void ndm_time_get(
 		struct timespec *t)
 {
 	clock_gettime(CLOCK_REALTIME, t);
+}
+
+void ndm_time_get_max(
+		struct timespec *t)
+{
+	t->tv_sec = NDM_INT_MAX(time_t);
+	t->tv_nsec = (NDM_TIME_PREC - 1);
+}
+
+void ndm_time_get_min(
+		struct timespec *t)
+{
+	t->tv_sec = NDM_INT_MIN(time_t);
+	t->tv_nsec = -(NDM_TIME_PREC - 1);
 }
 
 void ndm_time_get_monotonic(

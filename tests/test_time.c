@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <ndm/sys.h>
 #include <ndm/time.h>
 #include "test.h"
@@ -8,6 +9,8 @@ int main()
 	struct timespec s;
 	struct timespec u;
 	struct timeval v;
+	struct timespec min;
+	struct timespec max;
 
 	NDM_TEST_BREAK_IF(!ndm_time_init());
 
@@ -150,6 +153,13 @@ int main()
 
 	ndm_time_from_timeval(&u, &v);
 	NDM_TEST(u.tv_sec == 11 && u.tv_nsec == 889300000);
+
+	ndm_time_get_min(&min);
+	ndm_time_get_max(&max);
+
+	NDM_TEST(min.tv_sec - 1 == max.tv_sec);
+	NDM_TEST(llabs(min.tv_nsec) < NDM_TIME_PREC);
+	NDM_TEST(llabs(max.tv_nsec) < NDM_TIME_PREC);
 
 	return NDM_TEST_RESULT;
 }
