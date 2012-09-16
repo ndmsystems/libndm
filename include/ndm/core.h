@@ -86,7 +86,8 @@ int ndm_core_fd(
 		const struct ndm_core_t *core) NDM_ATTR_WUR;
 
 void ndm_core_cache_clear(
-		struct ndm_core_t *core);
+		struct ndm_core_t *core,
+		const bool remove_all);
 
 void ndm_core_set_timeout(
 		struct ndm_core_t *core,

@@ -10,6 +10,7 @@
 #include <ndm/time.h>
 #include <ndm/poll.h>
 #include <ndm/pool.h>
+#include <ndm/dlist.h>
 #include <ndm/macro.h>
 #include <ndm/stdio.h>
 #include <ndm/string.h>
@@ -53,11 +54,24 @@ struct ndm_core_buffer_t
 	uint8_t *putp;
 };
 
+struct ndm_core_cache_entry_t
+{
+	struct ndm_dlist_entry_t list;
+	struct ndm_core_response_t *response;
+	struct timespec expiration_time;
+	struct ndm_core_cache_t *owner;
+	size_t request_size;
+	uint8_t request[];
+};
+
 struct ndm_core_cache_t
 {
-	const int max_ttl_ms;
+	const int ttl_ms;
 	const size_t max_size;
 	const size_t dynamic_block_size;
+	struct timespec next_expiration_time;
+	size_t size;
+	struct ndm_dlist_entry_t entries;
 };
 
 struct ndm_core_t
@@ -595,19 +609,118 @@ void ndm_core_event_free(
  * Core cache functions.
  **/
 
+static struct ndm_core_response_t *__ndm_core_response_copy(
+		const struct ndm_core_response_t *response) NDM_ATTR_WUR;
+
 static void __ndm_core_cache_init(
 		struct ndm_core_cache_t *cache,
 		const int ttl_ms,
 		const size_t max_size,
 		const size_t dynamic_block_size)
 {
-	/**/
+	*((int *) &cache->ttl_ms) = ttl_ms;
+	*((size_t *) &cache->max_size) = max_size;
+	*((size_t *) &cache->dynamic_block_size) = dynamic_block_size;
+	ndm_time_get_max(&cache->next_expiration_time);
+	cache->size = sizeof(*cache);
+	ndm_dlist_init(&cache->entries);
 }
 
-void ndm_core_cache_clear(
-		struct ndm_core_t *core)
+static void __ndm_core_cache_clear(
+		struct ndm_core_cache_t *cache,
+		const bool remove_all)
 {
-	/**/
+	struct timespec now;
+
+	ndm_time_get_monotonic(&now);
+
+	if (remove_all || ndm_time_less(&cache->next_expiration_time, &now)) {
+		struct ndm_core_cache_entry_t *e;
+		struct ndm_core_cache_entry_t *n;
+
+		ndm_time_get_max(&cache->next_expiration_time);
+
+		ndm_dlist_foreach_entry_safe(e,
+			struct ndm_core_cache_entry_t,
+			list, &cache->entries, n)
+		{
+			if (remove_all || ndm_time_less(&e->expiration_time, &now)) {
+				/* remove and free an expired entry */
+				ndm_dlist_remove(&e->list);
+				cache->size -= ndm_xml_document_size(&e->response->doc);
+				cache->size -= e->request_size;
+				cache->size -= sizeof(*e);
+				ndm_core_response_free(&e->response);
+				free(e);
+			} else
+			if (ndm_time_greater(
+					&cache->next_expiration_time,
+					&e->expiration_time))
+			{
+				cache->next_expiration_time = e->expiration_time;
+			}
+		}
+	}
+}
+
+static struct ndm_core_cache_entry_t *__ndm_core_cache_find(
+		struct ndm_core_cache_t *cache,
+		const uint8_t *request,
+		const size_t request_size)
+{
+	struct ndm_core_cache_entry_t *e;
+	struct ndm_core_cache_entry_t *n;
+
+	ndm_dlist_foreach_entry_safe(e,
+		struct ndm_core_cache_entry_t,
+		list, &cache->entries, n)
+	{
+		if (e->request_size == request_size &&
+			memcmp(e->request, request, request_size) == 0)
+		{
+			/* move this entry to a head of a list */
+			ndm_dlist_remove(&e->list);
+			ndm_dlist_insert_after(&cache->entries, &e->list);
+
+			return e;
+		}
+	}
+
+	return NULL;
+}
+
+static struct ndm_core_response_t *__ndm_core_cache_get(
+		struct ndm_core_cache_t *cache,
+		const uint8_t *request,
+		const size_t request_size)
+{
+	struct ndm_core_cache_entry_t *e = NULL;
+
+	__ndm_core_cache_clear(cache, false);
+
+	e = __ndm_core_cache_find(cache, request, request_size);
+
+	if (e != NULL) {
+		/* cache hit; a response may remain the NULL on copying error */
+		return __ndm_core_response_copy(e->response);
+	}
+
+	return NULL;
+}
+
+static void __ndm_core_cache(
+		struct ndm_core_cache_t *cache,
+		const uint8_t *request,
+		const size_t request_size,
+		const struct ndm_core_response_t *response)
+{
+	struct ndm_core_cache_entry_t *e = NULL;
+
+	__ndm_core_cache_clear(cache, false);
+
+	e = __ndm_core_cache_find(cache, request, request_size);
+
+	/* no real caching now */
 }
 
 /**
@@ -676,14 +789,17 @@ bool ndm_core_close(
 	int n = 0;
 
 	if (core != NULL && *core != NULL) {
-		if ((*core)->fd >= 0) {
+		struct ndm_core_t *c = *core;
+
+		if (c->fd >= 0) {
 			do {
-				n = close((*core)->fd);
+				n = close(c->fd);
 			} while (n != 0 && errno == EINTR);
 		}
 
-		free((void *) (*core)->agent);
-		free(*core);
+		ndm_core_cache_clear(c, true);
+		free((void *) c->agent);
+		free(c);
 		*core = NULL;
 	}
 
@@ -694,6 +810,13 @@ int ndm_core_fd(
 		const struct ndm_core_t *core)
 {
 	return core->fd;
+}
+
+void ndm_core_cache_clear(
+		struct ndm_core_t *core,
+		const bool remove_all)
+{
+	__ndm_core_cache_clear(&core->cache, remove_all);
 }
 
 void ndm_core_set_timeout(
@@ -867,62 +990,78 @@ static struct ndm_core_response_t *__ndm_core_do_request(
 		errno = EILSEQ;
 	} else {
 		/* a request sequence is ready */
-		ssize_t n = 0;
-		size_t offs = 0;
 
-		do {
-			const int delay = __ndm_core_msec_to_deadline(&deadline);
+		if (cache_mode == NDM_CORE_MODE_CACHE) {
+			response = __ndm_core_cache_get(
+				&core->cache, buffer, request_size);
+		}
 
-			if (delay < 0) {
-				errno = ETIMEDOUT;
-				n = -1;
-			} else {
-				struct pollfd pfd =
-				{
-					.fd = core->fd,
-					.events = POLLOUT | POLLERR | POLLHUP | POLLNVAL,
-					.revents = 0
-				};
+		if (response == NULL) {
+			/* cache miss, cache copy error or noncached mode */
 
-				n = ndm_poll(&pfd, 1, delay);
+			ssize_t n = 0;
+			size_t offs = 0;
 
-				if (n > 0) {
-					n = send(
-						core->fd, buffer + offs,
-						request_size - offs, 0);
+			do {
+				const int delay = __ndm_core_msec_to_deadline(&deadline);
+
+				if (delay < 0) {
+					errno = ETIMEDOUT;
+					n = -1;
+				} else {
+					struct pollfd pfd =
+					{
+						.fd = core->fd,
+						.events = POLLOUT | POLLERR | POLLHUP | POLLNVAL,
+						.revents = 0
+					};
+
+					n = ndm_poll(&pfd, 1, delay);
 
 					if (n > 0) {
-						/* NDM_HEX_DUMP(buffer + offs, request_size - offs); */
-						offs += (size_t) n;
+						n = send(
+							core->fd, buffer + offs,
+							request_size - offs, 0);
+
+						if (n > 0) {
+							/* NDM_HEX_DUMP(
+							 * 	buffer + offs,
+							 * 	request_size - offs); */
+							offs += (size_t) n;
+						}
+					}
+
+					if (ndm_sys_is_interrupted()) {
+						errno = EINTR;
+						n = -1;
 					}
 				}
+			} while (offs != request_size && n >= 0);
 
-				if (ndm_sys_is_interrupted()) {
-					errno = EINTR;
-					n = -1;
-				}
-			}
-		} while (offs != request_size && n >= 0);
+			if (offs == request_size) {
+				/* the request sequence was sent */
+				if ((response = malloc(sizeof(*response))) == NULL) {
+					errno = ENOMEM;
+				} else {
+					struct ndm_xml_node_t *root = NULL;
 
-		if (offs == request_size) {
-			/* the request sequence was sent */
-			if ((response = malloc(sizeof(*response))) == NULL) {
-				errno = ENOMEM;
-			} else {
-				struct ndm_xml_node_t *root = NULL;
+					ndm_xml_document_init(&response->doc,
+						response->buffer, sizeof(response->buffer),
+						NDM_CORE_RESPONSE_DYNAMIC_BLOCK_SIZE_);
 
-				ndm_xml_document_init(&response->doc,
-					response->buffer, sizeof(response->buffer),
-					NDM_CORE_RESPONSE_DYNAMIC_BLOCK_SIZE_);
-
-				if ((root = ndm_xml_document_alloc_root(
-						&response->doc)) == NULL ||
-					!__ndm_core_read_xml_children(
-						core->fd, &core->buffer, &deadline, root) ||
-					(response->root = ndm_xml_node_first_child(
-						root, "response")) == NULL)
-				{
-					ndm_core_response_free(&response);
+					if ((root = ndm_xml_document_alloc_root(
+							&response->doc)) == NULL ||
+						!__ndm_core_read_xml_children(
+							core->fd, &core->buffer, &deadline, root) ||
+						(response->root = ndm_xml_node_first_child(
+							root, "response")) == NULL)
+					{
+						ndm_core_response_free(&response);
+					} else
+					if (cache_mode == NDM_CORE_MODE_CACHE) {
+						__ndm_core_cache(&core->cache,
+							buffer, request_size, response);
+					}
 				}
 			}
 		}
@@ -1207,5 +1346,38 @@ const struct ndm_xml_node_t *ndm_core_response_root(
 		const struct ndm_core_response_t *response)
 {
 	return response->root;
+}
+
+static struct ndm_core_response_t *__ndm_core_response_copy(
+		const struct ndm_core_response_t *response)
+{
+	struct ndm_core_response_t *copy = malloc(sizeof(*response));
+
+	if (copy != NULL) {
+		bool error = false;
+
+		ndm_xml_document_init(&copy->doc,
+			copy->buffer, sizeof(copy->buffer),
+			NDM_CORE_RESPONSE_DYNAMIC_BLOCK_SIZE_);
+
+		if (!ndm_xml_document_copy(&copy->doc, &response->doc)) {
+			error = true;
+			errno = ENOMEM;
+		} else
+		if ((copy->root = ndm_xml_node_first_child(
+				ndm_xml_document_root(&copy->doc), "response")) == NULL)
+		{
+			error = true;
+			errno = EINVAL;
+		}
+
+		if (error) {
+			ndm_xml_document_clear(&copy->doc);
+			free(copy);
+			copy = NULL;
+		}
+	}
+
+	return copy;
 }
 
