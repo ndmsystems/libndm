@@ -484,7 +484,7 @@ __ndm_xml_parser_parse_node_attributes(
 			return NDM_XML_DOCUMENT_PARSE_ERROR_ATTR_NAME_EXPECTED;
 		}
 
-		a = ndm_xml_document_alloc_attr(doc, name, NULL);
+		a = ndm_xml_document_alloc_attr(doc, NULL, NULL);
 
 		if (a == NULL) {
 			*ptext = text;
@@ -514,6 +514,8 @@ __ndm_xml_parser_parse_node_attributes(
 
 		++text;
 		*end = '\0';
+
+		ndm_xml_attr_set_name(a, name);
 
 		/**
 		 * Skip whitespace after =
@@ -565,12 +567,6 @@ __ndm_xml_parser_parse_node_attributes(
 		}
 
 		/**
-		 * Set attribute value.
-		 **/
-
-		ndm_xml_attr_set_value(a, value);
-
-		/**
 		 * Make sure that end quote is present.
 		 **/
 
@@ -582,6 +578,8 @@ __ndm_xml_parser_parse_node_attributes(
 
 		++text;
 		*end = '\0';
+
+		ndm_xml_attr_set_value(a, value);
 
 		/**
 		 * Skip whitespace after attribute value.
@@ -703,7 +701,7 @@ __ndm_xml_parser_parse_comment(
 
 	if (flags & NDM_XML_DOCUMENT_PARSE_FLAGS_PARSE_COMMENT_NODES) {
 		if ((*comment = ndm_xml_document_alloc_node(
-				doc, NDM_XML_NODE_TYPE_COMMENT, NULL, value)) == NULL)
+				doc, NDM_XML_NODE_TYPE_COMMENT, NULL, NULL)) == NULL)
 		{
 			*ptext = text;
 
@@ -711,6 +709,7 @@ __ndm_xml_parser_parse_comment(
 		}
 
 		*text = '\0';
+		ndm_xml_node_set_value(*comment, value);
 	}
 
 	text += 3;	/* Skip '-->' */
@@ -786,7 +785,7 @@ __ndm_xml_parser_parse_doctype(
 
 	if (flags & NDM_XML_DOCUMENT_PARSE_FLAGS_PARSE_DOCTYPE_NODE) {
 		if ((*doctype = ndm_xml_document_alloc_node(
-				doc, NDM_XML_NODE_TYPE_DOCTYPE, NULL, value)) == NULL)
+				doc, NDM_XML_NODE_TYPE_DOCTYPE, NULL, NULL)) == NULL)
 		{
 			*ptext = text;
 
@@ -794,6 +793,7 @@ __ndm_xml_parser_parse_doctype(
 		}
 
 		*text = '\0';
+		ndm_xml_node_set_value(*doctype, value);
 	}
 
 	++text;			/* skip '>' */
@@ -851,8 +851,6 @@ __ndm_xml_parser_parse_pi(
 
 		end = text;
 
-		ndm_xml_node_set_name(*pi, name);
-
 		/**
 		 * Skip whitespace between pi target and pi.
 		 **/
@@ -884,9 +882,11 @@ __ndm_xml_parser_parse_pi(
 		 * or whitespace normalization).
 		 **/
 
-		ndm_xml_node_set_value(*pi, value);
 		*end = '\0';
 		*text = '\0';
+
+		ndm_xml_node_set_name(*pi, name);
+		ndm_xml_node_set_value(*pi, value);
 
 		/**
 		 * Skip '?>'
@@ -954,7 +954,7 @@ __ndm_xml_parser_parse_cdata(
 
 	if (!(flags & NDM_XML_DOCUMENT_PARSE_FLAGS_NO_DATA_NODES)) {
 		if ((*cdata = ndm_xml_document_alloc_node(
-				doc, NDM_XML_NODE_TYPE_CDATA, NULL, value)) == NULL)
+				doc, NDM_XML_NODE_TYPE_CDATA, NULL, NULL)) == NULL)
 		{
 			*ptext = text;
 
@@ -962,6 +962,7 @@ __ndm_xml_parser_parse_cdata(
 		}
 
 		*text = '\0';
+		ndm_xml_node_set_value(*cdata, value);
 
 		/**
 		 * Skip ]]>
@@ -1013,13 +1014,13 @@ __ndm_xml_parser_parse_element(
 
 	end = text;
 
-	ndm_xml_node_set_name(*element, name);
-
 	/**
 	 * Skip whitespace between element name and attributes or >
 	 **/
 
 	__ndm_xml_parser_skip(&text, __ndm_xml_parser_whitespace_pred);
+
+	ndm_xml_node_set_name(*element, name);
 
 	/**
 	 * Parse attributes, if any.
@@ -1041,6 +1042,9 @@ __ndm_xml_parser_parse_element(
 	if (*text == '>') {
 		++text;
 
+		*end = '\0';
+		ndm_xml_node_set_name(*element, name);
+
 		code = __ndm_xml_parser_parse_node_contents(
 			doc, &text, *element, flags);
 
@@ -1052,6 +1056,9 @@ __ndm_xml_parser_parse_element(
 	} else
 	if (*text == '/') {
 		++text;
+
+		*end = '\0';
+		ndm_xml_node_set_name(*element, name);
 
 		if (*text != '>') {
 			*ptext = text;
@@ -1343,7 +1350,7 @@ __ndm_xml_parser_parse_and_append_data(
 	if (!(flags & NDM_XML_DOCUMENT_PARSE_FLAGS_NO_DATA_NODES)) {
 		struct ndm_xml_node_t *data =
 			ndm_xml_document_alloc_node(
-				doc, NDM_XML_NODE_TYPE_DATA, NULL, value);
+				doc, NDM_XML_NODE_TYPE_DATA, NULL, NULL);
 
 		if (data == NULL) {
 			*ptext = text;
@@ -1352,16 +1359,6 @@ __ndm_xml_parser_parse_and_append_data(
 		}
 
 		ndm_xml_node_append_child(node, data);
-	}
-
-	/**
-	 * Add data to parent node if no data exists yet.
-	 **/
-
-	if (!(flags & NDM_XML_DOCUMENT_PARSE_FLAGS_NO_ELEMENT_VALUES) &&
-		__ndm_xml_name_is_empty(ndm_xml_node_name(node)))
-	{
-		ndm_xml_node_set_value(node, value);
 	}
 
 	/**
@@ -1374,6 +1371,16 @@ __ndm_xml_parser_parse_and_append_data(
 	*end = '\0';
 
 	*ptext = text;
+
+	/**
+	 * Add data to parent node if no data exists yet.
+	 **/
+
+	if (!(flags & NDM_XML_DOCUMENT_PARSE_FLAGS_NO_ELEMENT_VALUES) &&
+		__ndm_xml_name_is_empty(ndm_xml_node_name(node)))
+	{
+		ndm_xml_node_set_value(node, value);
+	}
 
 	return code;
 }
@@ -1622,7 +1629,7 @@ static enum ndm_xml_document_parse_error_t __ndm_xml_parser_do(
 
 /**
  * XML document functions.
- */
+ **/
 
 void ndm_xml_document_init(
 		struct ndm_xml_document_t *doc,
@@ -1640,10 +1647,9 @@ static struct ndm_xml_node_t *__ndm_xml_document_copy_node(
 		struct ndm_xml_document_t *dest)
 {
 	struct ndm_xml_node_t *new_node =
-		ndm_xml_document_alloc_node(dest,
-			ndm_xml_node_type(node),
-			ndm_xml_node_name(node),
-			ndm_xml_node_value(node));
+		ndm_xml_document_alloc_node(dest, ndm_xml_node_type(node),
+			ndm_xml_document_alloc_str(dest, ndm_xml_node_name(node)),
+			ndm_xml_document_alloc_str(dest, ndm_xml_node_value(node)));
 
 	if (new_node != NULL) {
 		struct ndm_xml_attr_t *attr = ndm_xml_node_first_attr(node, NULL);
@@ -1680,11 +1686,14 @@ bool ndm_xml_document_copy(
 	bool copied = true;
 
 	ndm_xml_document_clear(dest);
-	dest->__root = __ndm_xml_document_copy_node(source->__root, dest);
 
-	if (!ndm_xml_document_is_valid(dest)) {
-		ndm_xml_document_clear(dest);
-		copied = false;
+	if (!ndm_xml_document_is_empty(source)) {
+		dest->__root = __ndm_xml_document_copy_node(source->__root, dest);
+
+		if (!ndm_xml_document_is_valid(dest)) {
+			ndm_xml_document_clear(dest);
+			copied = false;
+		}
 	}
 
 	return copied;
@@ -1696,6 +1705,8 @@ static bool __ndm_xml_node_is_equal(
 {
 	bool equal =
 		ndm_xml_node_type(node) == ndm_xml_node_type(other) &&
+		ndm_xml_node_name_size(node) == ndm_xml_node_name_size(other) &&
+		ndm_xml_node_value_size(node) == ndm_xml_node_value_size(other) &&
 		strcmp(ndm_xml_node_name(node), ndm_xml_node_name(other)) == 0 &&
 		strcmp(ndm_xml_node_value(node), ndm_xml_node_value(other)) == 0;
 
@@ -1707,6 +1718,10 @@ static bool __ndm_xml_node_is_equal(
 
 		while (attr != NULL && other_attr != NULL && equal) {
 			equal =
+				ndm_xml_attr_name_size(attr) ==
+					ndm_xml_attr_name_size(other_attr) &&
+				ndm_xml_attr_value_size(attr) ==
+					ndm_xml_attr_value_size(other_attr) &&
 				(strcmp(
 					ndm_xml_attr_name(attr),
 					ndm_xml_attr_name(other_attr)) == 0) &&
