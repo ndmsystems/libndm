@@ -66,9 +66,8 @@ struct ndm_core_cache_entry_t
 
 struct ndm_core_cache_t
 {
-	const int ttl_ms;
+	const int ttl_msec;
 	const size_t max_size;
-	const size_t dynamic_block_size;
 	struct timespec next_expiration_time;
 	size_t size;
 	struct ndm_dlist_entry_t entries;
@@ -434,7 +433,7 @@ static bool __ndm_core_read_xml_children(
 
 /**
  * Core event connection functions.
- */
+ **/
 
 struct ndm_core_event_connection_t *ndm_core_event_connection_open(
 		const int timeout)
@@ -612,17 +611,38 @@ void ndm_core_event_free(
 static struct ndm_core_response_t *__ndm_core_response_copy(
 		const struct ndm_core_response_t *response) NDM_ATTR_WUR;
 
+static size_t __ndm_core_response_size(
+		const struct ndm_core_response_t *response) NDM_ATTR_WUR;
+
+static inline size_t __ndm_core_cache_entry_size(
+		const size_t request_size,
+		const struct ndm_core_response_t *response)
+{
+	return
+		request_size +
+		sizeof(struct ndm_core_cache_entry_t) +
+		__ndm_core_response_size(response);
+}
+
+static void __ndm_core_cache_entry_remove(
+		struct ndm_core_cache_entry_t *e)
+{
+	ndm_dlist_remove(&e->list);
+	e->owner->size -= __ndm_core_cache_entry_size(
+		e->request_size, e->response);
+	ndm_core_response_free(&e->response);
+	free(e);
+}
+
 static void __ndm_core_cache_init(
 		struct ndm_core_cache_t *cache,
-		const int ttl_ms,
-		const size_t max_size,
-		const size_t dynamic_block_size)
+		const int ttl_msec,
+		const size_t max_size)
 {
-	*((int *) &cache->ttl_ms) = ttl_ms;
+	*((int *) &cache->ttl_msec) = ttl_msec;
 	*((size_t *) &cache->max_size) = max_size;
-	*((size_t *) &cache->dynamic_block_size) = dynamic_block_size;
 	ndm_time_get_max(&cache->next_expiration_time);
-	cache->size = sizeof(*cache);
+	cache->size = 0;
 	ndm_dlist_init(&cache->entries);
 }
 
@@ -646,12 +666,7 @@ static void __ndm_core_cache_clear(
 		{
 			if (remove_all || ndm_time_less(&e->expiration_time, &now)) {
 				/* remove and free an expired entry */
-				ndm_dlist_remove(&e->list);
-				cache->size -= ndm_xml_document_size(&e->response->doc);
-				cache->size -= e->request_size;
-				cache->size -= sizeof(*e);
-				ndm_core_response_free(&e->response);
-				free(e);
+				__ndm_core_cache_entry_remove(e);
 			} else
 			if (ndm_time_greater(
 					&cache->next_expiration_time,
@@ -701,7 +716,7 @@ static struct ndm_core_response_t *__ndm_core_cache_get(
 	e = __ndm_core_cache_find(cache, request, request_size);
 
 	if (e != NULL) {
-		/* cache hit; a response may remain the NULL on copying error */
+		/* cache hit; a response may remain a NULL on copying error */
 		return __ndm_core_response_copy(e->response);
 	}
 
@@ -720,18 +735,74 @@ static void __ndm_core_cache(
 
 	e = __ndm_core_cache_find(cache, request, request_size);
 
-	/* no real caching now */
+	if (e != NULL) {
+		if (!ndm_xml_document_is_equal(&response->doc, &e->response->doc)) {
+			bool copied = false;
+
+			/* try to replace a cached response */
+			e->owner->size -= __ndm_core_response_size(e->response);
+			ndm_core_response_free(&e->response);
+			e->response = __ndm_core_response_copy(response);
+			e->owner->size += __ndm_core_response_size(e->response);
+
+			if (!copied) {
+				/* failed to copy a new response contents;
+				 * remove a broken entry */
+				__ndm_core_cache_entry_remove(e);
+			}
+		} else {
+			/* a response is already cached */
+		}
+	} else {
+		/* try to add a new entry */
+		const size_t need_size =
+			__ndm_core_cache_entry_size(request_size, response);
+
+		if (cache->max_size >= need_size) {
+			/* the response can be cached */
+
+			while (
+				cache->max_size - cache->size < need_size &&
+				!ndm_dlist_is_empty(&cache->entries))
+			{
+				/* remove last entries until a need free size reached */
+
+				e = ndm_dlist_entry(cache->entries.prev,
+					struct ndm_core_cache_entry_t, list);
+				__ndm_core_cache_entry_remove(e);
+			}
+
+			e = malloc(sizeof(*e) + request_size);
+
+			if (e != NULL) {
+				ndm_dlist_init(&e->list);
+				e->response = __ndm_core_response_copy(response);
+				e->owner = cache;
+				e->request_size = request_size;
+				memcpy(e->request, request, request_size);
+
+				ndm_time_get_monotonic(&e->expiration_time);
+				ndm_time_add_msec(&e->expiration_time, cache->ttl_msec);
+
+				e->owner->size += need_size;
+				ndm_dlist_insert_after(cache->entries.next, &e->list);
+
+				if (e->response == NULL) {
+					__ndm_core_cache_entry_remove(e);
+				}
+			}
+		}
+	}
 }
 
 /**
  * Core connection functions.
- */
+ **/
 
 struct ndm_core_t *ndm_core_open(
 		const char *const agent,
-		const int cache_ttl_ms,
-		const size_t cache_max_size,
-		const size_t cache_dynamic_block_size)
+		const int cache_ttl_msec,
+		const size_t cache_max_size)
 {
 	struct ndm_core_t *core = malloc(sizeof(*core));
 	const char *current_agent =
@@ -742,6 +813,15 @@ struct ndm_core_t *ndm_core_open(
 		errno = ENOMEM;
 	} else {
 		bool connected = false;
+
+		__ndm_core_buffer_init(
+			&core->buffer,
+			core->buffer_storage,
+			sizeof(core->buffer_storage));
+		__ndm_core_cache_init(
+			&core->cache,
+			cache_ttl_msec,
+			cache_max_size);
 
 		if ((core->agent = ndm_string_dup(current_agent)) == NULL) {
 			errno = ENOMEM;
@@ -763,15 +843,6 @@ struct ndm_core_t *ndm_core_open(
 			} else {
 				connected = true;
 				core->timeout = NDM_CORE_DEFAULT_TIMEOUT;
-				__ndm_core_buffer_init(
-					&core->buffer,
-					core->buffer_storage,
-					sizeof(core->buffer_storage));
-				__ndm_core_cache_init(
-					&core->cache,
-					cache_ttl_ms,
-					cache_max_size,
-					cache_dynamic_block_size);
 			}
 		}
 
@@ -1058,7 +1129,9 @@ static struct ndm_core_response_t *__ndm_core_do_request(
 					{
 						ndm_core_response_free(&response);
 					} else
-					if (cache_mode == NDM_CORE_MODE_CACHE) {
+					if (cache_mode == NDM_CORE_MODE_CACHE &&
+						!ndm_core_response_is_continued(response))
+					{
 						__ndm_core_cache(&core->cache,
 							buffer, request_size, response);
 					}
@@ -1379,5 +1452,12 @@ static struct ndm_core_response_t *__ndm_core_response_copy(
 	}
 
 	return copy;
+}
+
+static inline size_t __ndm_core_response_size(
+		const struct ndm_core_response_t *response)
+{
+	return (response == NULL) ?
+		0 : sizeof(*response) + ndm_xml_document_size(&response->doc);
 }
 

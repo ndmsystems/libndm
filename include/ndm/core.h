@@ -9,7 +9,6 @@
 #define NDM_CORE_DEFAULT_CACHE_TTL					200
 
 #define NDM_CORE_DEFAULT_CACHE_MAX_SIZE				65536
-#define NDM_CORE_DEFAULT_CACHE_DYNAMIC_BLOCK_SIZE	4096
 
 #define NDM_CORE_DEFAULT_TIMEOUT					15000
 
@@ -75,9 +74,8 @@ void ndm_core_event_free(
 
 struct ndm_core_t *ndm_core_open(
 		const char *const agent,
-		const int cache_ttl_ms,
-		const size_t cache_max_size,
-		const size_t cache_dynamic_block_size) NDM_ATTR_WUR;
+		const int cache_ttl_msec,
+		const size_t cache_max_size) NDM_ATTR_WUR;
 
 bool ndm_core_close(
 		struct ndm_core_t **core);

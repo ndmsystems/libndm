@@ -9,9 +9,12 @@
 #include <ndm/macro.h>
 #include "test.h"
 
+#define CACHE_TTL_MS			1000
+
 int main()
 {
-	struct ndm_core_t *core = ndm_core_open("test", 0, 0, 0);
+	struct ndm_core_t *core = ndm_core_open("test",
+		CACHE_TTL_MS, NDM_CORE_DEFAULT_CACHE_MAX_SIZE);
 	struct ndm_core_response_t *r = NULL;
 	bool authenticated = false;
 
@@ -102,6 +105,83 @@ int main()
 
 		ndm_core_response_free(&r);
 	}
+
+	do {
+		r = ndm_core_get_config(
+			core, NDM_CORE_MODE_CACHE,
+			"show interface", NULL);
+
+		NDM_TEST(r != NULL);
+
+		ndm_core_response_free(&r);
+	} while (0);
+
+	do {
+		r = ndm_core_get_config(
+			core, NDM_CORE_MODE_CACHE,
+			"show interface", NULL);
+
+		NDM_TEST(r != NULL);
+
+		ndm_core_response_free(&r);
+	} while (0);
+
+	do {
+		const char *args[] =
+		{
+			"name", "WifiStation0",
+			NULL
+		};
+
+		r = ndm_core_get_config(
+			core, NDM_CORE_MODE_CACHE,
+			"show interface", args);
+
+		NDM_TEST(r != NULL);
+
+		ndm_core_response_free(&r);
+	} while (0);
+
+	do {
+		r = ndm_core_get_config(
+			core, NDM_CORE_MODE_CACHE,
+			"show interface", NULL);
+
+		NDM_TEST(r != NULL);
+
+		ndm_core_response_free(&r);
+	} while (0);
+
+	do {
+		r = ndm_core_get_config(
+			core, NDM_CORE_MODE_CACHE,
+			"show running-config", NULL);
+
+		NDM_TEST(r != NULL);
+
+		ndm_core_response_free(&r);
+	} while (0);
+
+	do {
+		r = ndm_core_execute(
+			core, NDM_CORE_MODE_CACHE,
+			"show log", NULL);
+
+		NDM_TEST(r != NULL);
+		NDM_TEST(ndm_core_response_is_continued(r));
+
+		ndm_core_response_free(&r);
+	} while (0);
+
+	do {
+		r = ndm_core_get_config(
+			core, NDM_CORE_MODE_CACHE,
+			"show interface", NULL);
+
+		NDM_TEST(r != NULL);
+
+		ndm_core_response_free(&r);
+	} while (0);
 
 	ndm_core_close(&core);
 
