@@ -1162,7 +1162,7 @@ static struct ndm_xml_node_t *__ndm_core_request_document_init(
 	if ((root = ndm_xml_document_alloc_root(doc)) == NULL ||
 		(request_node = ndm_xml_node_append_child_str(
 			root, "request", NULL)) == NULL ||
-		ndm_xml_node_append_attr_str(request_node, "host", agent) == NULL)
+		ndm_xml_node_append_attr_str(request_node, "agent", agent) == NULL)
 	{
 		ndm_xml_document_clear(doc);
 		request_node = NULL;
@@ -1294,35 +1294,23 @@ static struct ndm_core_response_t *__ndm_core_get_one_tag(
 		struct ndm_core_t *core,
 		const enum ndm_core_cache_mode_t cache_mode,
 		const char *const tag,
-		const char *const format,
-		va_list ap)
+		const char *const command)
 {
-	va_list ap_copy;
-	char *command = NULL;
 	struct ndm_core_response_t *response = NULL;
+	uint8_t request_buffer[NDM_CORE_REQUEST_STATIC_SIZE_];
+	struct ndm_xml_document_t request;
+	struct ndm_xml_node_t *request_node =
+		__ndm_core_request_document_init(&request,
+			request_buffer, sizeof(request_buffer),
+			core->agent);
 
-	va_copy(ap_copy, ap);
-	ndm_vasprintf(&command, format, ap_copy);
-	va_end(ap_copy);
-
-	if (command != NULL) {
-		uint8_t request_buffer[NDM_CORE_REQUEST_STATIC_SIZE_];
-		struct ndm_xml_document_t request;
-		struct ndm_xml_node_t *request_node =
-			__ndm_core_request_document_init(&request,
-				request_buffer, sizeof(request_buffer),
-				core->agent);
-
-		if (request_node != NULL &&
-			ndm_xml_node_append_child_str(
-				request_node, tag, command) != NULL)
-		{
-			response = __ndm_core_do_request(core, cache_mode, request_node);
-		}
-
-		ndm_xml_document_clear(&request);
-		free(command);
+	if (request_node != NULL &&
+		ndm_xml_node_append_child_str(request_node, tag, command) != NULL)
+	{
+		response = __ndm_core_do_request(core, cache_mode, request_node);
 	}
+
+	ndm_xml_document_clear(&request);
 
 	return response;
 }
@@ -1334,12 +1322,17 @@ struct ndm_core_response_t *ndm_core_get_help(
 		...)
 {
 	va_list ap;
+	char *command = NULL;
 	struct ndm_core_response_t *response = NULL;
 
 	va_start(ap, format);
-	response = __ndm_core_get_one_tag(
-		core, cache_mode, "help", format, ap);
+	ndm_vasprintf(&command, format, ap);
 	va_end(ap);
+
+	if (command != NULL) {
+		response = __ndm_core_get_one_tag(core, cache_mode, "help", command);
+		free(command);
+	}
 
 	return response;
 }
@@ -1351,12 +1344,18 @@ struct ndm_core_response_t *ndm_core_parse(
 		...)
 {
 	va_list ap;
+	char *command = NULL;
 	struct ndm_core_response_t *response = NULL;
 
 	va_start(ap, format);
-	response = __ndm_core_get_one_tag(
-		core, cache_mode, "parse", format, ap);
+	ndm_vasprintf(&command, format, ap);
 	va_end(ap);
+
+	if (command != NULL) {
+		response = __ndm_core_get_one_tag(core,
+			cache_mode, "parse", command);
+		free(command);
+	}
 
 	return response;
 }
@@ -1364,10 +1363,8 @@ struct ndm_core_response_t *ndm_core_parse(
 struct ndm_core_response_t *ndm_core_continue(
 		struct ndm_core_t *core)
 {
-	va_list ap; /* not initialized for an empty format */
-
 	return __ndm_core_get_one_tag(core,
-		NDM_CORE_MODE_NO_CACHE, "continue", "", ap);
+		NDM_CORE_MODE_NO_CACHE, "continue", "");
 }
 
 void ndm_core_response_free(

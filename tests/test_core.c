@@ -13,7 +13,7 @@
 
 int main()
 {
-	struct ndm_core_t *core = ndm_core_open("test",
+	struct ndm_core_t *core = ndm_core_open("test/ci",
 		CACHE_TTL_MS, NDM_CORE_DEFAULT_CACHE_MAX_SIZE);
 	struct ndm_core_response_t *r = NULL;
 	bool authenticated = false;
