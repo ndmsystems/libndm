@@ -12,6 +12,39 @@ NDM_BUILD_ASSERT(signed_long, NDM_INT_IS_SIGNED(long));
 NDM_BUILD_ASSERT(signed_long_long, NDM_INT_IS_SIGNED(long long));
 NDM_BUILD_ASSERT(twos_complement, NDM_INT_IS_TWOS_COMPLEMENT(int));
 
+bool ndm_int_parse_int(const char *const str, int *value)
+{
+	long l;
+
+	if (ndm_int_parse_long(str, &l) &&
+		INT_MIN <= l && l <= INT_MAX)
+	{
+		*value = (int) l;
+
+		return true;
+	}
+
+	errno = EINVAL;
+
+	return false;
+}
+
+bool ndm_int_parse_uint(const char *const str, unsigned int *value)
+{
+	unsigned long l;
+
+	if (ndm_int_parse_ulong(str, &l) && l <= UINT_MAX)
+	{
+		*value = (unsigned int) l;
+
+		return true;
+	}
+
+	errno = EINVAL;
+
+	return false;
+}
+
 bool ndm_int_parse_long(const char *const str, long *value)
 {
 	char *e;

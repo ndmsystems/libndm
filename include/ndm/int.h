@@ -39,6 +39,14 @@
 	 (((n) + (align) - 1) & ~((align) - 1))	:			\
 	 (((n - ((n) % (align))) + (((n) % (align)) == 0 ? 0 : (align)))))
 
+bool ndm_int_parse_int(
+		const char *const str,
+		int *value) NDM_ATTR_WUR;
+
+bool ndm_int_parse_uint(
+		const char *const str,
+		unsigned int *value) NDM_ATTR_WUR;
+
 bool ndm_int_parse_long(
 		const char *const str,
 		long *value) NDM_ATTR_WUR;
