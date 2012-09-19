@@ -20,7 +20,8 @@ int main()
 
 	NDM_TEST_BREAK_IF(core == NULL);
 
-	r = ndm_core_parse(core, NDM_CORE_MODE_NO_CACHE, "no service http");
+	r = ndm_core_request(core, NDM_CORE_REQUEST_PARSE,
+		NDM_CORE_MODE_NO_CACHE, NULL, "no service http");
 
 	NDM_TEST(r != NULL);
 
@@ -49,9 +50,8 @@ int main()
 		ndm_core_response_free(&r);
 	}
 
-	r = ndm_core_get_config(
-		core, NDM_CORE_MODE_NO_CACHE,
-		"service http", NULL);
+	r = ndm_core_request(core, NDM_CORE_REQUEST_CONFIG,
+		NDM_CORE_MODE_NO_CACHE, NULL, "service http");
 
 	NDM_TEST(r != NULL);
 
@@ -67,7 +67,8 @@ int main()
 		ndm_core_response_free(&r);
 	}
 
-	r = ndm_core_execute(core, NDM_CORE_MODE_NO_CACHE, "service http", NULL);
+	r = ndm_core_request(core, NDM_CORE_REQUEST_EXECUTE,
+		NDM_CORE_MODE_NO_CACHE, NULL, "service http");
 
 	NDM_TEST(r != NULL);
 
@@ -76,9 +77,8 @@ int main()
 		ndm_core_response_free(&r);
 	}
 
-	r = ndm_core_get_config(
-		core, NDM_CORE_MODE_NO_CACHE,
-		"service http", NULL);
+	r = ndm_core_request(core, NDM_CORE_REQUEST_CONFIG,
+		NDM_CORE_MODE_NO_CACHE, NULL, "service http");
 
 	NDM_TEST(r != NULL);
 
@@ -107,9 +107,8 @@ int main()
 	}
 
 	do {
-		r = ndm_core_get_config(
-			core, NDM_CORE_MODE_CACHE,
-			"show interface", NULL);
+		r = ndm_core_request(core, NDM_CORE_REQUEST_CONFIG,
+			NDM_CORE_MODE_CACHE, NULL, "show interface");
 
 		NDM_TEST(r != NULL);
 
@@ -117,9 +116,8 @@ int main()
 	} while (0);
 
 	do {
-		r = ndm_core_get_config(
-			core, NDM_CORE_MODE_CACHE,
-			"show interface", NULL);
+		r = ndm_core_request(core, NDM_CORE_REQUEST_CONFIG,
+			NDM_CORE_MODE_CACHE, NULL, "show interface");
 
 		NDM_TEST(r != NULL);
 
@@ -133,9 +131,8 @@ int main()
 			NULL
 		};
 
-		r = ndm_core_get_config(
-			core, NDM_CORE_MODE_CACHE,
-			"show interface", args);
+		r = ndm_core_request(core, NDM_CORE_REQUEST_CONFIG,
+			NDM_CORE_MODE_CACHE, args, "show interface");
 
 		NDM_TEST(r != NULL);
 
@@ -143,9 +140,8 @@ int main()
 	} while (0);
 
 	do {
-		r = ndm_core_get_config(
-			core, NDM_CORE_MODE_CACHE,
-			"show interface", NULL);
+		r = ndm_core_request(core, NDM_CORE_REQUEST_CONFIG,
+			NDM_CORE_MODE_CACHE, NULL, "show interface");
 
 		NDM_TEST(r != NULL);
 
@@ -153,9 +149,8 @@ int main()
 	} while (0);
 
 	do {
-		r = ndm_core_get_config(
-			core, NDM_CORE_MODE_CACHE,
-			"show running-config", NULL);
+		r = ndm_core_request(core, NDM_CORE_REQUEST_PARSE,
+			NDM_CORE_MODE_CACHE, NULL, "show running-config");
 
 		NDM_TEST(r != NULL);
 
@@ -163,9 +158,8 @@ int main()
 	} while (0);
 
 	do {
-		r = ndm_core_execute(
-			core, NDM_CORE_MODE_CACHE,
-			"show log", NULL);
+		r = ndm_core_request(core, NDM_CORE_REQUEST_EXECUTE,
+			NDM_CORE_MODE_CACHE, NULL, "show log");
 
 		NDM_TEST(r != NULL);
 		NDM_TEST(ndm_core_response_is_continued(r));
@@ -174,14 +168,117 @@ int main()
 	} while (0);
 
 	do {
-		r = ndm_core_get_config(
-			core, NDM_CORE_MODE_CACHE,
-			"show interface", NULL);
+		r = ndm_core_request(core, NDM_CORE_REQUEST_PARSE,
+			NDM_CORE_MODE_CACHE, NULL, "show interface");
 
 		NDM_TEST(r != NULL);
 
 		ndm_core_response_free(&r);
 	} while (0);
+
+	r = ndm_core_request(core,
+		NDM_CORE_REQUEST_PARSE,
+		NDM_CORE_MODE_CACHE,
+		NULL, "show interface");
+
+	NDM_TEST(r != NULL);
+
+	if (r != NULL) {
+		int i = 0;
+		unsigned int u = 0;
+		bool b = false;
+		const struct ndm_xml_node_t *n = ndm_core_response_root(r);
+		const char *s = NULL;
+
+		NDM_TEST(ndm_core_response_first_str(n, &s, "") ==
+			NDM_CORE_RESPONSE_ERROR_OK);
+		NDM_TEST(s != NULL && *s == '\0');	/* <response> value */
+
+		NDM_TEST(ndm_core_response_first_str(n, &s, "/") ==
+			NDM_CORE_RESPONSE_ERROR_OK);
+		NDM_TEST(s != NULL && *s == '\0');	/* <response> value */
+
+		NDM_TEST(ndm_core_response_first_str(n, &s, "//") ==
+			NDM_CORE_RESPONSE_ERROR_OK);
+		NDM_TEST(s != NULL && *s == '\0');	/* <response> value */
+
+		NDM_TEST(ndm_core_response_first_str(n, &s, "///") ==
+			NDM_CORE_RESPONSE_ERROR_OK);
+		NDM_TEST(s != NULL && *s == '\0');	/* <response> value */
+
+		NDM_TEST(ndm_core_response_first_str(n, &s, "interface") ==
+			NDM_CORE_RESPONSE_ERROR_OK);
+		NDM_TEST(s != NULL && *s == '\0');	/* <response/interface> value */
+
+		NDM_TEST(ndm_core_response_first_str(n, &s, "//interface") ==
+			NDM_CORE_RESPONSE_ERROR_OK);
+		NDM_TEST(s != NULL && *s == '\0');	/* <response/interface> value */
+
+		NDM_TEST(ndm_core_response_first_str(n, &s, "///interface") ==
+			NDM_CORE_RESPONSE_ERROR_OK);
+		NDM_TEST(s != NULL && *s == '\0');	/* <response/interface> value */
+
+		NDM_TEST(ndm_core_response_first_str(n, &s, "interface/") ==
+			NDM_CORE_RESPONSE_ERROR_OK);
+		NDM_TEST(s != NULL && *s == '\0');	/* <response/interface> value */
+
+		NDM_TEST(ndm_core_response_first_str(n, &s, "interface//") ==
+			NDM_CORE_RESPONSE_ERROR_OK);
+		NDM_TEST(s != NULL && *s == '\0');	/* <response/interface> value */
+
+		NDM_TEST(ndm_core_response_first_str(n, &s, "interface///") ==
+			NDM_CORE_RESPONSE_ERROR_OK);
+		NDM_TEST(s != NULL && *s == '\0');	/* <response/interface> value */
+
+		NDM_TEST(ndm_core_response_first_str(n, &s, "/interface/") ==
+			NDM_CORE_RESPONSE_ERROR_OK);
+		NDM_TEST(s != NULL && *s == '\0');	/* <response/interface> value */
+
+		NDM_TEST(ndm_core_response_first_str(n, &s, "//interface//") ==
+			NDM_CORE_RESPONSE_ERROR_OK);
+		NDM_TEST(s != NULL && *s == '\0');	/* <response/interface> value */
+
+		NDM_TEST(ndm_core_response_first_str(n, &s, "///interface///") ==
+			NDM_CORE_RESPONSE_ERROR_OK);
+		NDM_TEST(s != NULL && *s == '\0');	/* <response/interface> value */
+
+		NDM_TEST(ndm_core_response_first_str(
+			n, &s, "//interface///mtu//") == NDM_CORE_RESPONSE_ERROR_OK);
+		/* <response/interface/mtu> value */
+		NDM_TEST(s != NULL && strcmp(s, "1500") == 0);
+
+		NDM_TEST(ndm_core_response_first_str(n, &s, "interface@name") ==
+			NDM_CORE_RESPONSE_ERROR_OK);
+		/* <response/interface@name> value */
+		NDM_TEST(s != NULL && *s != '\0');
+
+		NDM_TEST(ndm_core_response_first_int(n, &i, "interface/mtu") ==
+			NDM_CORE_RESPONSE_ERROR_OK);
+		/* <response/interface/mtu> value */
+		NDM_TEST(i == 1500);
+
+		NDM_TEST(ndm_core_response_first_uint(n, &u, "interface/mtu") ==
+			NDM_CORE_RESPONSE_ERROR_OK);
+		/* <response/interface/mtu> value */
+		NDM_TEST(u == 1500);
+
+		NDM_TEST(ndm_core_response_first_bool(
+			n, &b, "interface/global") == NDM_CORE_RESPONSE_ERROR_OK);
+		/* <response/interface/mtu> value */
+		NDM_TEST(!b);
+
+		i = 0;
+
+		NDM_TEST(
+			ndm_core_request_first_int(core,
+				NDM_CORE_REQUEST_PARSE,
+				NDM_CORE_MODE_CACHE,
+				&i, "interface/mtu",
+				NULL, "show interface") == NDM_CORE_RESPONSE_ERROR_OK);
+		NDM_TEST(i == 1500);
+	}
+
+	ndm_core_response_free(&r);
 
 	ndm_core_close(&core);
 

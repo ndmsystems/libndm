@@ -4,6 +4,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <ndm/sys.h>
 #include <ndm/xml.h>
 #include <ndm/core.h>
@@ -16,32 +17,36 @@
 #include <ndm/string.h>
 #include <ndm/ip_sockaddr.h>
 
-#define NDM_CORE_PORT_							41230
-#define NDM_CORE_EVENT_PORT_					41232
-#define NDM_CORE_ADDRESS_						"127.0.0.1"
+#define NDM_CORE_PORT_									41230
+#define NDM_CORE_EVENT_PORT_							41232
+#define NDM_CORE_ADDRESS_								"127.0.0.1"
 
-#define NDM_CORE_DEFAULT_AGENT_					"unknown"
+#define NDM_CORE_DEFAULT_AGENT_							"unknown"
 
-#define NDM_CORE_STATIC_BUFFER_SIZE_			1024
+#define NDM_CORE_STATIC_BUFFER_SIZE_					1024
 
-#define NDM_CORE_CONNECTION_BUFFER_SIZE_		8192
+#define NDM_CORE_CONNECTION_BUFFER_SIZE_				8192
 
-#define NDM_CORE_REQUEST_BINARY_STATIC_SIZE_	2048
-#define NDM_CORE_REQUEST_STATIC_SIZE_			2048
-#define NDM_CORE_REQUEST_DYNAMIC_BLOCK_SIZE_	1024
+#define NDM_CORE_REQUEST_BINARY_STATIC_SIZE_			2048
+#define NDM_CORE_REQUEST_STATIC_SIZE_					2048
+#define NDM_CORE_REQUEST_DYNAMIC_BLOCK_SIZE_			1024
 
-#define NDM_CORE_RESPONSE_STATIC_SIZE_			1024
-#define NDM_CORE_RESPONSE_INITIAL_BUFFER_SIZE_	2048
-#define NDM_CORE_RESPONSE_DYNAMIC_BLOCK_SIZE_	4096
+#define NDM_CORE_REQUEST_STATIC_COMMAND_BUFFER_SIZE_	256
 
-#define NDM_CORE_EVENT_CONNECTION_BUFFER_SIZE_	4096
-#define NDM_CORE_EVENT_INITIAL_BUFFER_SIZE_		1024
-#define NDM_CORE_EVENT_DYNAMIC_BLOCK_SIZE_		1024
+#define NDM_CORE_RESPONSE_STATIC_SIZE_					1024
+#define NDM_CORE_RESPONSE_INITIAL_BUFFER_SIZE_			2048
+#define NDM_CORE_RESPONSE_DYNAMIC_BLOCK_SIZE_			4096
 
-#define NDM_CORE_CTRL_NODE_						0
-#define NDM_CORE_CTRL_ATTR_						1
-#define NDM_CORE_CTRL_SIBL_						2
-#define NDM_CORE_CTRL_END_						3
+#define NDM_CORE_RESPONSE_STATIC_PATH_BUFFER_SIZE_		256
+
+#define NDM_CORE_EVENT_CONNECTION_BUFFER_SIZE_			4096
+#define NDM_CORE_EVENT_INITIAL_BUFFER_SIZE_				1024
+#define NDM_CORE_EVENT_DYNAMIC_BLOCK_SIZE_				1024
+
+#define NDM_CORE_CTRL_NODE_								0
+#define NDM_CORE_CTRL_ATTR_								1
+#define NDM_CORE_CTRL_SIBL_								2
+#define NDM_CORE_CTRL_END_								3
 
 typedef uint8_t ndm_core_ctrl_t;
 typedef uint32_t ndm_core_size_t;
@@ -707,20 +712,38 @@ static struct ndm_core_cache_entry_t *__ndm_core_cache_find(
 static struct ndm_core_response_t *__ndm_core_cache_get(
 		struct ndm_core_cache_t *cache,
 		const uint8_t *request,
-		const size_t request_size)
+		const size_t request_size,
+		const bool copy_cached_response,
+		bool *response_copied)
 {
 	struct ndm_core_cache_entry_t *e = NULL;
+	struct ndm_core_response_t *response = NULL;
 
 	__ndm_core_cache_clear(cache, false);
 
 	e = __ndm_core_cache_find(cache, request, request_size);
 
 	if (e != NULL) {
-		/* cache hit; a response may remain a NULL on copying error */
-		return __ndm_core_response_copy(e->response);
+		/* cache hit; a response may remain a NULL on a copying error */
+
+		if (copy_cached_response) {
+			response = __ndm_core_response_copy(e->response);
+
+			if (response_copied != NULL) {
+				*response_copied = (response != NULL);
+			}
+		} else {
+			/* no real response copy */
+
+			response = e->response;
+
+			if (response_copied != NULL) {
+				*response_copied = false;
+			}
+		}
 	}
 
-	return NULL;
+	return response;
 }
 
 static void __ndm_core_cache(
@@ -784,8 +807,8 @@ static void __ndm_core_cache(
 				ndm_time_get_monotonic(&e->expiration_time);
 				ndm_time_add_msec(&e->expiration_time, cache->ttl_msec);
 
+				ndm_dlist_insert_after(&cache->entries, &e->list);
 				e->owner->size += need_size;
-				ndm_dlist_insert_after(cache->entries.next, &e->list);
 
 				if (e->response == NULL) {
 					__ndm_core_cache_entry_remove(e);
@@ -1036,7 +1059,9 @@ static size_t __ndm_core_request_store(
 static struct ndm_core_response_t *__ndm_core_do_request(
 		struct ndm_core_t *core,
 		const enum ndm_core_cache_mode_t cache_mode,
-		struct ndm_xml_node_t *request)
+		const bool copy_cached_response,
+		struct ndm_xml_node_t *request,
+		bool *response_copied)
 {
 	const struct timespec deadline =
 		__ndm_core_calculate_msec_deadline(core->timeout);
@@ -1063,8 +1088,8 @@ static struct ndm_core_response_t *__ndm_core_do_request(
 		/* a request sequence is ready */
 
 		if (cache_mode == NDM_CORE_MODE_CACHE) {
-			response = __ndm_core_cache_get(
-				&core->cache, buffer, request_size);
+			response = __ndm_core_cache_get(&core->cache, buffer,
+				request_size, copy_cached_response, response_copied);
 		}
 
 		if (response == NULL) {
@@ -1096,8 +1121,8 @@ static struct ndm_core_response_t *__ndm_core_do_request(
 
 						if (n > 0) {
 							/* NDM_HEX_DUMP(
-							 * 	buffer + offs,
-							 * 	request_size - offs); */
+							  	buffer + offs,
+							  	request_size - offs); */
 							offs += (size_t) n;
 						}
 					}
@@ -1128,12 +1153,18 @@ static struct ndm_core_response_t *__ndm_core_do_request(
 							root, "response")) == NULL)
 					{
 						ndm_core_response_free(&response);
-					} else
-					if (cache_mode == NDM_CORE_MODE_CACHE &&
-						!ndm_core_response_is_continued(response))
-					{
-						__ndm_core_cache(&core->cache,
-							buffer, request_size, response);
+					} else {
+						if (cache_mode == NDM_CORE_MODE_CACHE &&
+							!ndm_core_response_is_continued(response))
+						{
+							__ndm_core_cache(&core->cache,
+								buffer, request_size, response);
+						}
+
+						/* this allocated response copy should be freed */
+						if (response_copied != NULL) {
+							*response_copied = true;
+						}
 					}
 				}
 			}
@@ -1197,9 +1228,8 @@ bool ndm_core_authenticate(
 		ndm_xml_node_append_attr_str(hello_node, "realm", realm) != NULL &&
 		ndm_xml_node_append_attr_str(hello_node, "tag", tag) != NULL)
 	{
-		struct ndm_core_response_t *response =
-			__ndm_core_do_request(core,
-				NDM_CORE_MODE_NO_CACHE, request_node);
+		struct ndm_core_response_t *response = __ndm_core_do_request(
+			core, NDM_CORE_MODE_NO_CACHE, true, request_node, NULL);
 
 		if (response != NULL) {
 			const struct ndm_xml_node_t *response_node =
@@ -1218,12 +1248,15 @@ bool ndm_core_authenticate(
 	return done;
 }
 
-static struct ndm_core_response_t *__ndm_core_get(
+static struct ndm_core_response_t *__ndm_core_request(
 		struct ndm_core_t *core,
+		const enum ndm_core_request_type_t request_type,
 		const enum ndm_core_cache_mode_t cache_mode,
-		const char *const tag,
-		const char *const command,
-		const char *const args[])
+		const char *const command_args[],
+		const char *const command_format,
+		va_list ap,
+		const bool copy_cached_response,
+		bool *response_copied)
 {
 	uint8_t request_buffer[NDM_CORE_REQUEST_STATIC_SIZE_];
 	struct ndm_xml_document_t request;
@@ -1231,39 +1264,77 @@ static struct ndm_core_response_t *__ndm_core_get(
 		__ndm_core_request_document_init(&request,
 			request_buffer, sizeof(request_buffer),
 			core->agent);
-	struct ndm_xml_node_t *tag_node = NULL;
 	struct ndm_core_response_t *response = NULL;
 
-	if (request_node != NULL &&
-		(tag_node = ndm_xml_node_append_child_str(
-			request_node, tag, NULL)) != NULL &&
-		ndm_xml_node_append_attr_str(tag_node, "name", command) != NULL)
-	{
-		if (args != NULL) {
-			size_t i = 0;
+	if (request_node != NULL) {
+		char command_buffer[NDM_CORE_REQUEST_STATIC_COMMAND_BUFFER_SIZE_];
+		char *command = command_buffer;
+		va_list aq;
 
-			while (
-				args[i] != NULL &&
-				args[i + 1] != NULL &&
-				ndm_xml_node_append_child_str(
-					tag_node, args[i], args[i + 1]) != NULL)
+		va_copy(aq, ap);
+		ndm_vabsprintf(
+			command_buffer, sizeof(command_buffer),
+			&command, command_format, aq);
+		va_end(aq);
+
+		if (command != NULL) {
+			/* build different requests */
+			struct ndm_xml_node_t *command_node = NULL;
+
+			if (request_type == NDM_CORE_REQUEST_CONFIG ||
+				request_type == NDM_CORE_REQUEST_EXECUTE)
 			{
-				i += 2;
-			}
+				if ((command_node = ndm_xml_node_append_child_str(
+						request_node,
+						(request_type == NDM_CORE_REQUEST_CONFIG) ?
+						"config" : "command", NULL)) == NULL ||
+					ndm_xml_node_append_attr_str(
+						command_node, "name", command) == NULL)
+				{
+					errno = ENOMEM;
+					command_node = NULL;
+				} else
+				if (command_args != NULL) {
+					size_t i = 0;
 
-			if (args[i] != NULL) {
-				if (args[i + 1] == NULL) {
-					errno = EINVAL;
-				} else {
-					/* ENOMEM */
+					while (
+						command_args[i] != NULL &&
+						command_args[i + 1] != NULL &&
+						ndm_xml_node_append_child_str(command_node,
+							command_args[i], command_args[i + 1]) != NULL)
+					{
+						i += 2;
+					}
+
+					if (command_args[i] != NULL) {
+						if (command_args[i + 1] == NULL) {
+							errno = EINVAL;
+						} else {
+							/* ENOMEM */
+						}
+
+						command_node = NULL;
+					}
 				}
-
-				tag_node = NULL;
+			} else
+			if (command_args != NULL) {
+				/* no arguments allowed for "parse" request */
+				errno = EINVAL;
+				command_node = NULL;
+			} else {
+				command_node = ndm_xml_node_append_child_str(
+					request_node, "parse", command);
 			}
-		}
 
-		if (tag_node != NULL) {
-			response = __ndm_core_do_request(core, cache_mode, request_node);
+			if (command_node != NULL) {
+				response = __ndm_core_do_request(core,
+					cache_mode, copy_cached_response,
+					request_node, response_copied);
+			}
+
+			if (command != command_buffer) {
+				free(command);
+			}
 		}
 	}
 
@@ -1272,29 +1343,31 @@ static struct ndm_core_response_t *__ndm_core_get(
 	return response;
 }
 
-struct ndm_core_response_t *ndm_core_get_config(
+struct ndm_core_response_t *ndm_core_request(
 		struct ndm_core_t *core,
+		const enum ndm_core_request_type_t request_type,
 		const enum ndm_core_cache_mode_t cache_mode,
-		const char *const command,
-		const char *const args[])
+		const char *const command_args[],
+		const char *const command_format,
+		...)
 {
-	return __ndm_core_get(core, cache_mode, "config", command, args);
-}
+	va_list ap;
+	struct ndm_core_response_t *response = NULL;
 
-struct ndm_core_response_t *ndm_core_execute(
-		struct ndm_core_t *core,
-		const enum ndm_core_cache_mode_t cache_mode,
-		const char *const command,
-		const char *const args[])
-{
-	return __ndm_core_get(core, cache_mode, "command", command, args);
+	va_start(ap, command_format);
+	response = __ndm_core_request(core,
+		request_type, cache_mode, command_args,
+		command_format, ap, true, NULL);
+	va_end(ap);
+
+	return response;
 }
 
 static struct ndm_core_response_t *__ndm_core_get_one_tag(
 		struct ndm_core_t *core,
 		const enum ndm_core_cache_mode_t cache_mode,
 		const char *const tag,
-		const char *const command)
+		const char *const value)
 {
 	struct ndm_core_response_t *response = NULL;
 	uint8_t request_buffer[NDM_CORE_REQUEST_STATIC_SIZE_];
@@ -1305,9 +1378,10 @@ static struct ndm_core_response_t *__ndm_core_get_one_tag(
 			core->agent);
 
 	if (request_node != NULL &&
-		ndm_xml_node_append_child_str(request_node, tag, command) != NULL)
+		ndm_xml_node_append_child_str(request_node, tag, value) != NULL)
 	{
-		response = __ndm_core_do_request(core, cache_mode, request_node);
+		response = __ndm_core_do_request(core,
+			cache_mode, true, request_node, NULL);
 	}
 
 	ndm_xml_document_clear(&request);
@@ -1318,46 +1392,10 @@ static struct ndm_core_response_t *__ndm_core_get_one_tag(
 struct ndm_core_response_t *ndm_core_get_help(
 		struct ndm_core_t *core,
 		const enum ndm_core_cache_mode_t cache_mode,
-		const char *const format,
-		...)
+		const char *const command)
 {
-	va_list ap;
-	char *command = NULL;
-	struct ndm_core_response_t *response = NULL;
-
-	va_start(ap, format);
-	ndm_vasprintf(&command, format, ap);
-	va_end(ap);
-
-	if (command != NULL) {
-		response = __ndm_core_get_one_tag(core, cache_mode, "help", command);
-		free(command);
-	}
-
-	return response;
-}
-
-struct ndm_core_response_t *ndm_core_parse(
-		struct ndm_core_t *core,
-		const enum ndm_core_cache_mode_t cache_mode,
-		const char *const format,
-		...)
-{
-	va_list ap;
-	char *command = NULL;
-	struct ndm_core_response_t *response = NULL;
-
-	va_start(ap, format);
-	ndm_vasprintf(&command, format, ap);
-	va_end(ap);
-
-	if (command != NULL) {
-		response = __ndm_core_get_one_tag(core,
-			cache_mode, "parse", command);
-		free(command);
-	}
-
-	return response;
+	return __ndm_core_get_one_tag(core,
+		cache_mode, "help", command);
 }
 
 struct ndm_core_response_t *ndm_core_continue(
@@ -1365,6 +1403,13 @@ struct ndm_core_response_t *ndm_core_continue(
 {
 	return __ndm_core_get_one_tag(core,
 		NDM_CORE_MODE_NO_CACHE, "continue", "");
+}
+
+struct ndm_core_response_t *ndm_core_break(
+		struct ndm_core_t *core)
+{
+	return __ndm_core_get_one_tag(core,
+		NDM_CORE_MODE_NO_CACHE, "break", "");
 }
 
 void ndm_core_response_free(
@@ -1456,5 +1501,461 @@ static inline size_t __ndm_core_response_size(
 {
 	return (response == NULL) ?
 		0 : sizeof(*response) + ndm_xml_document_size(&response->doc);
+}
+
+static inline void __ndm_core_response_find_end(char **p)
+{
+	char *q = *p;
+
+	while (*q != '/' && *q != '@' && *q != '\0') {
+		++q;
+	}
+
+	*p = q;
+}
+
+static enum ndm_core_response_error_t __ndm_core_response_first_node(
+		const struct ndm_xml_node_t *node,
+		const struct ndm_xml_node_t **value,
+		char *value_path)
+{
+	enum ndm_core_response_error_t e = NDM_CORE_RESPONSE_ERROR_OK;
+	char *p = value_path;
+
+	*value = node;
+
+	do {
+		const char *node_name = p;
+
+		__ndm_core_response_find_end(&p);
+
+		if (*p == '@') {
+			/* no attribute reference allowed here */
+			e = NDM_CORE_RESPONSE_ERROR_SYNTAX;
+		} else {
+			if (*p == '/') {
+				*p = '\0';
+				++p;
+			}
+
+			if (*node_name != '\0' &&
+				(*value = ndm_xml_node_first_child(
+					*value, node_name)) == NULL)
+			{
+				/* there is no such a child */
+				e = NDM_CORE_RESPONSE_ERROR_NOT_FOUND;
+			}
+		}
+	} while (*p != '\0' && e == NDM_CORE_RESPONSE_ERROR_OK);
+
+	return e;
+}
+
+enum ndm_core_response_error_t ndm_core_response_first_node(
+		const struct ndm_xml_node_t *node,
+		const struct ndm_xml_node_t **value,
+		const char *const value_path_format,
+		...)
+{
+	enum ndm_core_response_error_t e = NDM_CORE_RESPONSE_ERROR_SYSTEM;
+	char path_buffer[NDM_CORE_RESPONSE_STATIC_PATH_BUFFER_SIZE_];
+	char *value_path = path_buffer;
+	va_list ap;
+
+	va_start(ap, value_path_format);
+	ndm_vabsprintf(
+		path_buffer, sizeof(path_buffer),
+		&value_path, value_path_format, ap);
+	va_end(ap);
+
+	if (value_path != NULL) {
+		e = __ndm_core_response_first_node(node, value, value_path);
+
+		if (value_path != path_buffer) {
+			free(value_path);
+		}
+	}
+
+	return e;
+}
+
+static enum ndm_core_response_error_t __ndm_core_response_first_str(
+		const struct ndm_xml_node_t *node,
+		const char **value,
+		const char *const path_format,
+		va_list ap)
+{
+	enum ndm_core_response_error_t e = NDM_CORE_RESPONSE_ERROR_SYSTEM;
+	char path_buffer[NDM_CORE_RESPONSE_STATIC_PATH_BUFFER_SIZE_];
+	char *path = path_buffer;
+	int path_size = -1;
+	va_list aq;
+
+	va_copy(aq, ap);
+	path_size = ndm_vabsprintf(
+		path_buffer, sizeof(path_buffer),
+		&path, path_format, aq);
+	va_end(aq);
+
+	if (path != NULL) {
+		const struct ndm_xml_node_t *n = node;
+		char *p = path + path_size - 1;
+		char *attr_name = NULL;
+
+		while (path < p && *p != '@' && *p != '/') {
+			--p;
+		}
+
+		if (path <= p && *p == '@') {
+			*p = '\0';
+			attr_name = p + 1;
+		}
+
+		e = __ndm_core_response_first_node(node, &n, path);
+
+		if (e == NDM_CORE_RESPONSE_ERROR_OK) {
+			if (attr_name == NULL) {
+				*value = ndm_xml_node_value(n);
+			} else {
+				struct ndm_xml_attr_t *a =
+					ndm_xml_node_first_attr(n, attr_name);
+
+				if (a == NULL) {
+					e = NDM_CORE_RESPONSE_ERROR_NOT_FOUND;
+				} else {
+					*value = ndm_xml_attr_value(a);
+				}
+			}
+		}
+
+		if (path != path_buffer) {
+			free(path);
+		}
+	}
+
+	return e;
+}
+
+enum ndm_core_response_error_t ndm_core_response_first_str(
+		const struct ndm_xml_node_t *node,
+		const char **value,
+		const char *const path_format,
+		...)
+{
+	va_list ap;
+	enum ndm_core_response_error_t e = NDM_CORE_RESPONSE_ERROR_OK;
+
+	va_start(ap, path_format);
+	e = __ndm_core_response_first_str(node, value, path_format, ap);
+	va_end(ap);
+
+	return e;
+}
+
+enum ndm_core_response_error_t ndm_core_response_first_int(
+		const struct ndm_xml_node_t *node,
+		int *value,
+		const char *const path_format,
+		...)
+{
+	va_list ap;
+	const char *str_value = NULL;
+	enum ndm_core_response_error_t e = NDM_CORE_RESPONSE_ERROR_OK;
+
+	va_start(ap, path_format);
+	e = __ndm_core_response_first_str(
+		node, &str_value, path_format, ap);
+	va_end(ap);
+
+	if (e == NDM_CORE_RESPONSE_ERROR_OK &&
+		!ndm_int_parse_int(str_value, value))
+	{
+		e = NDM_CORE_RESPONSE_ERROR_FORMAT;
+	}
+
+	return e;
+}
+
+enum ndm_core_response_error_t ndm_core_response_first_uint(
+		const struct ndm_xml_node_t *node,
+		unsigned int *value,
+		const char *const path_format,
+		...)
+{
+	va_list ap;
+	const char *str_value = NULL;
+	enum ndm_core_response_error_t e = NDM_CORE_RESPONSE_ERROR_OK;
+
+	va_start(ap, path_format);
+	e = __ndm_core_response_first_str(
+		node, &str_value, path_format, ap);
+	va_end(ap);
+
+	if (e == NDM_CORE_RESPONSE_ERROR_OK &&
+		!ndm_int_parse_uint(str_value, value))
+	{
+		e = NDM_CORE_RESPONSE_ERROR_FORMAT;
+	}
+
+	return e;
+}
+
+enum ndm_core_response_error_t ndm_core_response_first_bool(
+		const struct ndm_xml_node_t *node,
+		bool *value,
+		const char *const path_format,
+		...)
+{
+	va_list ap;
+	const char *str_value = NULL;
+	enum ndm_core_response_error_t e = NDM_CORE_RESPONSE_ERROR_OK;
+
+	va_start(ap, path_format);
+	e = __ndm_core_response_first_str(
+		node, &str_value, path_format, ap);
+	va_end(ap);
+
+	if (e == NDM_CORE_RESPONSE_ERROR_OK) {
+		long l;
+
+		if (ndm_int_parse_long(str_value, &l)) {
+			*value = (l == 0) ? false : true;
+		} else
+		if (strcasecmp(str_value, "yes") == 0 ||
+			strcasecmp(str_value, "true") == 0 ||
+			strcasecmp(str_value, "up") == 0 ||
+			strcasecmp(str_value, "on") == 0)
+		{
+			*value = true;
+		} else
+		if (strcasecmp(str_value, "no") == 0 ||
+			strcasecmp(str_value, "false") == 0 ||
+			strcasecmp(str_value, "down") == 0 ||
+			strcasecmp(str_value, "off") == 0)
+		{
+			*value = false;
+		} else {
+			e = NDM_CORE_RESPONSE_ERROR_FORMAT;
+		}
+	}
+
+	return e;
+}
+
+/**
+ * The highest level core functions.
+ **/
+
+enum ndm_core_response_error_t ndm_core_request_break(
+		struct ndm_core_t *core)
+{
+	errno = EINVAL;
+
+	return NDM_CORE_RESPONSE_ERROR_SYSTEM;
+}
+
+enum ndm_core_response_error_t ndm_core_request_first_str_alloc(
+		struct ndm_core_t *core,
+		const enum ndm_core_request_type_t request_type,
+		const enum ndm_core_cache_mode_t cache_mode,
+		char **value,
+		const char *const value_path,
+		const char *const command_args[],
+		const char *const command_format,
+		...)
+{
+	va_list ap;
+	bool response_copied = false;
+	struct ndm_core_response_t *response = NULL;
+	enum ndm_core_response_error_t e = NDM_CORE_RESPONSE_ERROR_OK;
+
+	va_start(ap, command_format);
+	response = __ndm_core_request(
+		core, request_type, cache_mode, command_args, command_format,
+		ap, (cache_mode != NDM_CORE_MODE_CACHE), &response_copied);
+	va_end(ap);
+
+	if (response == NULL) {
+		e = NDM_CORE_RESPONSE_ERROR_SYSTEM;
+	} else {
+		const char *response_value = NULL;
+
+		e = ndm_core_response_first_str(
+			ndm_core_response_root(response),
+			&response_value, "%s", value_path);
+
+		if (e == NDM_CORE_RESPONSE_ERROR_OK &&
+			(*value = ndm_string_dup(response_value)) == NULL)
+		{
+			e = NDM_CORE_RESPONSE_ERROR_SYSTEM;
+		}
+
+		if (response_copied) {
+			ndm_core_response_free(&response);
+		}
+	}
+
+	return e;
+}
+
+enum ndm_core_response_error_t ndm_core_request_first_str_buffer(
+		struct ndm_core_t *core,
+		const enum ndm_core_request_type_t request_type,
+		const enum ndm_core_cache_mode_t cache_mode,
+		char *value,
+		const size_t value_buffer_size,
+		size_t *value_size,
+		const char *const value_path,
+		const char *const command_args[],
+		const char *const command_format,
+		...)
+{
+	va_list ap;
+	bool response_copied = false;
+	struct ndm_core_response_t *response = NULL;
+	enum ndm_core_response_error_t e = NDM_CORE_RESPONSE_ERROR_OK;
+
+	va_start(ap, command_format);
+	response = __ndm_core_request(
+		core, request_type, cache_mode, command_args, command_format,
+		ap, (cache_mode != NDM_CORE_MODE_CACHE), &response_copied);
+	va_end(ap);
+
+	if (response == NULL) {
+		e = NDM_CORE_RESPONSE_ERROR_SYSTEM;
+	} else {
+		const char *response_value = NULL;
+
+		e = ndm_core_response_first_str(
+			ndm_core_response_root(response),
+			&response_value, "%s", value_path);
+
+		if (e == NDM_CORE_RESPONSE_ERROR_OK) {
+			const int size = snprintf(
+				value, value_buffer_size,
+				"%s", response_value);
+
+			if (size < 0) {
+				e = NDM_CORE_RESPONSE_ERROR_SYSTEM;
+			} else
+			if (value_size != NULL) {
+				*value_size = (size_t) size;
+			}
+		}
+
+		if (response_copied) {
+			ndm_core_response_free(&response);
+		}
+	}
+
+	return e;
+}
+
+enum ndm_core_response_error_t ndm_core_request_first_int(
+		struct ndm_core_t *core,
+		const enum ndm_core_request_type_t request_type,
+		const enum ndm_core_cache_mode_t cache_mode,
+		int *value,
+		const char *const value_path,
+		const char *const command_args[],
+		const char *const command_format,
+		...)
+{
+	va_list ap;
+	bool response_copied = false;
+	struct ndm_core_response_t *response = NULL;
+	enum ndm_core_response_error_t e = NDM_CORE_RESPONSE_ERROR_OK;
+
+	va_start(ap, command_format);
+	response = __ndm_core_request(
+		core, request_type, cache_mode, command_args, command_format,
+		ap, (cache_mode != NDM_CORE_MODE_CACHE), &response_copied);
+	va_end(ap);
+
+	if (response == NULL) {
+		e = NDM_CORE_RESPONSE_ERROR_SYSTEM;
+	} else {
+		e = ndm_core_response_first_int(
+			ndm_core_response_root(response),
+			value, "%s", value_path);
+
+		if (response_copied) {
+			ndm_core_response_free(&response);
+		}
+	}
+
+	return e;
+}
+
+enum ndm_core_response_error_t ndm_core_request_first_uint(
+		struct ndm_core_t *core,
+		const enum ndm_core_request_type_t request_type,
+		const enum ndm_core_cache_mode_t cache_mode,
+		unsigned int *value,
+		const char *const value_path,
+		const char *const command_args[],
+		const char *const command_format,
+		...)
+{
+	va_list ap;
+	bool response_copied = false;
+	struct ndm_core_response_t *response = NULL;
+	enum ndm_core_response_error_t e = NDM_CORE_RESPONSE_ERROR_OK;
+
+	va_start(ap, command_format);
+	response = __ndm_core_request(
+		core, request_type, cache_mode, command_args, command_format,
+		ap, (cache_mode != NDM_CORE_MODE_CACHE), &response_copied);
+	va_end(ap);
+
+	if (response == NULL) {
+		e = NDM_CORE_RESPONSE_ERROR_SYSTEM;
+	} else {
+		e = ndm_core_response_first_uint(
+			ndm_core_response_root(response),
+			value, "%s", value_path);
+
+		if (response_copied) {
+			ndm_core_response_free(&response);
+		}
+	}
+
+	return e;
+}
+
+enum ndm_core_response_error_t ndm_core_request_first_bool(
+		struct ndm_core_t *core,
+		const enum ndm_core_request_type_t request_type,
+		const enum ndm_core_cache_mode_t cache_mode,
+		bool *value,
+		const char *const value_path,
+		const char *const command_args[],
+		const char *const command_format,
+		...)
+{
+	va_list ap;
+	bool response_copied = false;
+	struct ndm_core_response_t *response = NULL;
+	enum ndm_core_response_error_t e = NDM_CORE_RESPONSE_ERROR_OK;
+
+	va_start(ap, command_format);
+	response = __ndm_core_request(
+		core, request_type, cache_mode, command_args, command_format,
+		ap, (cache_mode != NDM_CORE_MODE_CACHE), &response_copied);
+	va_end(ap);
+
+	if (response == NULL) {
+		e = NDM_CORE_RESPONSE_ERROR_SYSTEM;
+	} else {
+		e = ndm_core_response_first_bool(
+			ndm_core_response_root(response),
+			value, "%s", value_path);
+
+		if (response_copied) {
+			ndm_core_response_free(&response);
+		}
+	}
+
+	return e;
 }
 

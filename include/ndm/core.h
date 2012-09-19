@@ -17,12 +17,28 @@
 
 struct ndm_xml_node_t;
 
+enum ndm_core_request_type_t
+{
+	NDM_CORE_REQUEST_CONFIG,
+	NDM_CORE_REQUEST_EXECUTE,
+	NDM_CORE_REQUEST_PARSE
+};
+
 enum ndm_core_response_type_t
 {
 	NDM_CORE_INFO,
 	NDM_CORE_WARNING,
 	NDM_CORE_ERROR,
 	NDM_CORE_CRITICAL
+};
+
+enum ndm_core_response_error_t
+{
+	NDM_CORE_RESPONSE_ERROR_OK,
+	NDM_CORE_RESPONSE_ERROR_SYNTAX,
+	NDM_CORE_RESPONSE_ERROR_NOT_FOUND,
+	NDM_CORE_RESPONSE_ERROR_FORMAT,
+	NDM_CORE_RESPONSE_ERROR_SYSTEM
 };
 
 enum ndm_core_cache_mode_t
@@ -105,29 +121,18 @@ bool ndm_core_authenticate(
 		const char *const tag,
 		bool *authenticated) NDM_ATTR_WUR;
 
-struct ndm_core_response_t *ndm_core_get_config(
+struct ndm_core_response_t *ndm_core_request(
 		struct ndm_core_t *core,
+		const enum ndm_core_request_type_t request_type,
 		const enum ndm_core_cache_mode_t cache_mode,
-		const char *const command,
-		const char *const args[]) NDM_ATTR_WUR;
-
-struct ndm_core_response_t *ndm_core_execute(
-		struct ndm_core_t *core,
-		const enum ndm_core_cache_mode_t cache_mode,
-		const char *const command,
-		const char *const args[]) NDM_ATTR_WUR;
+		const char *const command_args[],
+		const char *const command_format,
+		...) NDM_ATTR_WUR;
 
 struct ndm_core_response_t *ndm_core_get_help(
 		struct ndm_core_t *core,
 		const enum ndm_core_cache_mode_t cache_mode,
-		const char *const format,
-		...) NDM_ATTR_WUR;
-
-struct ndm_core_response_t *ndm_core_parse(
-		struct ndm_core_t *core,
-		const enum ndm_core_cache_mode_t cache_mode,
-		const char *const format,
-		...) NDM_ATTR_WUR;
+		const char *const command);
 
 struct ndm_core_response_t *ndm_core_continue(
 		struct ndm_core_t *core) NDM_ATTR_WUR;
@@ -149,6 +154,99 @@ bool ndm_core_response_is_continued(
 
 const struct ndm_xml_node_t *ndm_core_response_root(
 		const struct ndm_core_response_t *response) NDM_ATTR_WUR;
+
+/**
+ * Core response node functions.
+ **/
+
+enum ndm_core_response_error_t ndm_core_response_first_node(
+		const struct ndm_xml_node_t *node,
+		const struct ndm_xml_node_t **value,
+		const char *const value_path_format,
+		...) NDM_ATTR_WUR;
+
+enum ndm_core_response_error_t ndm_core_response_first_str(
+		const struct ndm_xml_node_t *node,
+		const char **value,
+		const char *const value_path_format,
+		...) NDM_ATTR_WUR;
+
+enum ndm_core_response_error_t ndm_core_response_first_int(
+		const struct ndm_xml_node_t *node,
+		int *value,
+		const char *const value_path_format,
+		...) NDM_ATTR_WUR;
+
+enum ndm_core_response_error_t ndm_core_response_first_uint(
+		const struct ndm_xml_node_t *node,
+		unsigned int *value,
+		const char *const value_path_format,
+		...) NDM_ATTR_WUR;
+
+enum ndm_core_response_error_t ndm_core_response_first_bool(
+		const struct ndm_xml_node_t *node,
+		bool *value,
+		const char *const value_path_format,
+		...) NDM_ATTR_WUR;
+
+/**
+ * The highest level core functions.
+ **/
+
+enum ndm_core_response_error_t ndm_core_request_break(
+		struct ndm_core_t *core) NDM_ATTR_WUR;
+
+enum ndm_core_response_error_t ndm_core_request_first_str_alloc(
+		struct ndm_core_t *core,
+		const enum ndm_core_request_type_t request_type,
+		const enum ndm_core_cache_mode_t cache_mode,
+		char **value,
+		const char *const value_path,
+		const char *const command_args[],
+		const char *const command_format,
+		...) NDM_ATTR_WUR;
+
+enum ndm_core_response_error_t ndm_core_request_first_str_buffer(
+		struct ndm_core_t *core,
+		const enum ndm_core_request_type_t request_type,
+		const enum ndm_core_cache_mode_t cache_mode,
+		char *value,
+		const size_t value_buffer_size,
+		size_t *value_size,
+		const char *const value_path,
+		const char *const command_args[],
+		const char *const command_format,
+		...) NDM_ATTR_WUR;
+
+enum ndm_core_response_error_t ndm_core_request_first_int(
+		struct ndm_core_t *core,
+		const enum ndm_core_request_type_t request_type,
+		const enum ndm_core_cache_mode_t cache_mode,
+		int *value,
+		const char *const value_path,
+		const char *const command_args[],
+		const char *const command_format,
+		...) NDM_ATTR_WUR;
+
+enum ndm_core_response_error_t ndm_core_request_first_uint(
+		struct ndm_core_t *core,
+		const enum ndm_core_request_type_t request_type,
+		const enum ndm_core_cache_mode_t cache_mode,
+		unsigned int *value,
+		const char *const value_path,
+		const char *const command_args[],
+		const char *const command_format,
+		...) NDM_ATTR_WUR;
+
+enum ndm_core_response_error_t ndm_core_request_first_bool(
+		struct ndm_core_t *core,
+		const enum ndm_core_request_type_t request_type,
+		const enum ndm_core_cache_mode_t cache_mode,
+		bool *value,
+		const char *const value_path,
+		const char *const command_args[],
+		const char *const command_format,
+		...) NDM_ATTR_WUR;
 
 #endif	/* __NDM_CORE_H__ */
 
