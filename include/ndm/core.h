@@ -140,6 +140,18 @@ struct ndm_core_response_t *ndm_core_continue(
 struct ndm_core_response_t *ndm_core_break(
 		struct ndm_core_t *core) NDM_ATTR_WUR;
 
+const char *ndm_core_last_message_string(
+		struct ndm_core_t *core) NDM_ATTR_WUR;
+
+const char *ndm_core_last_message_ident(
+		struct ndm_core_t *core) NDM_ATTR_WUR;
+
+const char *ndm_core_last_message_source(
+		struct ndm_core_t *core) NDM_ATTR_WUR;
+
+uint32_t ndm_core_last_message_code(
+		struct ndm_core_t *code) NDM_ATTR_WUR;
+
 void ndm_core_response_free(
 		struct ndm_core_response_t **response);
 

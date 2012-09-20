@@ -37,19 +37,30 @@
 #define NDM_CORE_RESPONSE_INITIAL_BUFFER_SIZE_			2048
 #define NDM_CORE_RESPONSE_DYNAMIC_BLOCK_SIZE_			4096
 
+#define NDM_CORE_RESPONSE_ID_INITIALIZER_				0
+
 #define NDM_CORE_RESPONSE_STATIC_PATH_BUFFER_SIZE_		256
 
 #define NDM_CORE_EVENT_CONNECTION_BUFFER_SIZE_			4096
 #define NDM_CORE_EVENT_INITIAL_BUFFER_SIZE_				1024
 #define NDM_CORE_EVENT_DYNAMIC_BLOCK_SIZE_				1024
 
+#define NDM_CORE_MESSAGE_STRING_MAX_SIZE_				512
+#define NDM_CORE_MESSAGE_IDENT_MAX_SIZE_				128
+#define NDM_CORE_MESSAGE_SOURCE_MAX_SIZE_				128
+
 #define NDM_CORE_CTRL_NODE_								0
 #define NDM_CORE_CTRL_ATTR_								1
 #define NDM_CORE_CTRL_SIBL_								2
 #define NDM_CORE_CTRL_END_								3
 
+NDM_BUILD_ASSERT(message_string_size, NDM_CORE_MESSAGE_STRING_MAX_SIZE_ > 0);
+NDM_BUILD_ASSERT(message_ident_size, NDM_CORE_MESSAGE_IDENT_MAX_SIZE_ > 0);
+NDM_BUILD_ASSERT(message_source_size, NDM_CORE_MESSAGE_SOURCE_MAX_SIZE_ > 0);
+
 typedef uint8_t ndm_core_ctrl_t;
 typedef uint32_t ndm_core_size_t;
+typedef uint64_t ndm_core_response_id_t;
 
 struct ndm_core_buffer_t
 {
@@ -78,6 +89,16 @@ struct ndm_core_cache_t
 	struct ndm_dlist_entry_t entries;
 };
 
+struct ndm_core_message_t
+{
+	char string[NDM_CORE_MESSAGE_STRING_MAX_SIZE_];
+	char ident[NDM_CORE_MESSAGE_IDENT_MAX_SIZE_];
+	char source[NDM_CORE_MESSAGE_SOURCE_MAX_SIZE_];
+	uint32_t code;
+	enum ndm_core_response_type_t type;
+	ndm_core_response_id_t response_id;
+};
+
 struct ndm_core_t
 {
 	int fd;
@@ -86,6 +107,8 @@ struct ndm_core_t
 	uint8_t buffer_storage[NDM_CORE_CONNECTION_BUFFER_SIZE_];
 	struct ndm_core_buffer_t buffer;
 	struct ndm_core_cache_t cache;
+	struct ndm_core_message_t last_message;
+	ndm_core_response_id_t last_response_id;
 };
 
 struct ndm_core_response_t
@@ -93,6 +116,7 @@ struct ndm_core_response_t
 	uint8_t buffer[NDM_CORE_RESPONSE_INITIAL_BUFFER_SIZE_];
 	struct ndm_xml_document_t doc;
 	struct ndm_xml_node_t *root;
+	ndm_core_response_id_t id;
 };
 
 struct ndm_core_event_connection_t
@@ -112,8 +136,162 @@ struct ndm_core_event_t
 	struct timespec raise_time;
 };
 
-static int __ndm_core_msec_to_deadline(
-		const struct timespec *deadline) NDM_ATTR_WUR;
+/**
+ * Core message functions.
+ **/
+
+static inline void __ndm_core_message_init(
+		struct ndm_core_message_t *message)
+{
+	*message->string = '\0';
+	*message->source = '\0';
+	*message->ident = '\0';
+	message->code = 0;
+	message->type = NDM_CORE_INFO;
+	message->response_id = NDM_CORE_RESPONSE_ID_INITIALIZER_;
+}
+
+static inline void __ndm_core_message_append_dots(
+		char *dst,
+		const size_t dst_size)
+{
+	static const char TRAILING_DOTS_[] = "...";
+
+	snprintf(dst + dst_size - sizeof(TRAILING_DOTS_),
+		sizeof(TRAILING_DOTS_), "%s", TRAILING_DOTS_);
+}
+
+static void __ndm_core_message_printf(
+		char *dst,
+		const size_t dst_size,
+		const char *const src)
+{
+	const int size = snprintf(dst, dst_size, "%s", src);
+
+	if ((size_t) size >= dst_size) {
+		__ndm_core_message_append_dots(dst, dst_size);
+	}
+}
+
+static void __ndm_core_message_update(
+		struct ndm_core_message_t *message,
+		struct ndm_core_response_t *response)
+{
+	if (response->id != message->response_id) {
+		const struct ndm_xml_node_t *response_node =
+			ndm_core_response_root(response);
+		const struct ndm_xml_node_t *message_node = NULL;
+
+		__ndm_core_message_init(message);
+
+		message->response_id = response->id;
+
+		if ((message_node = ndm_xml_node_first_child(
+				response_node, "info")) != NULL ||
+			(message_node = ndm_xml_node_first_child(
+				response_node, "message")) != NULL)
+		{
+			message->type = NDM_CORE_INFO;
+		} else
+		if ((message_node = ndm_xml_node_first_child(
+				response_node, "warning")) != NULL)
+		{
+			message->type = NDM_CORE_WARNING;
+		} else
+		if ((message_node = ndm_xml_node_first_child(
+				response_node, "error")) != NULL)
+		{
+			message->type = NDM_CORE_ERROR;
+		} else
+		if ((message_node = ndm_xml_node_first_child(
+				response_node, "critical")) != NULL)
+		{
+			message->type = NDM_CORE_CRITICAL;
+		}
+
+		if (message_node != NULL) {
+			char *p = message->string;
+			char *pend = p + sizeof(message->string);
+			const char *m = (const char *) ndm_xml_node_value(message_node);
+			const struct ndm_xml_attr_t *code_attr =
+				ndm_xml_node_first_attr(message_node, "code");
+			const struct ndm_xml_attr_t *ident_attr =
+				ndm_xml_node_first_attr(message_node, "ident");
+			const struct ndm_xml_attr_t *source_attr =
+				ndm_xml_node_first_attr(message_node, "source");
+
+			__ndm_core_message_printf(
+				message->ident, sizeof(message->ident),
+				(ident_attr == NULL) ?
+				"" : ndm_xml_attr_value(ident_attr));
+
+			__ndm_core_message_printf(
+				message->source, sizeof(message->source),
+				(source_attr == NULL) ?
+				"" : ndm_xml_attr_value(source_attr));
+
+			if (code_attr != NULL) {
+				unsigned long ul;
+
+				if (ndm_int_parse_ulong(
+						ndm_xml_attr_value(code_attr), &ul) &&
+					ul <= UINT32_MAX)
+				{
+					message->code = (uint32_t) ul;
+				}
+			}
+
+			/* a message string may contain argument references */
+
+			do {
+				if (((uint8_t) *(m + 0)) == 0xee &&
+					((uint8_t) *(m + 1)) == 0x80 &&
+					((uint8_t) *(m + 2)) >= 0x80)
+				{
+					/* UTF-8 codes 0xee8080-0xee80ff are arg. references */
+					size_t arg_index = (size_t) (*(m + 2) - '\x80');
+					struct ndm_xml_node_t *arg_node =
+						ndm_xml_node_first_child(message_node, "argument");
+
+					/* skip an argument reference */
+					m += 3;
+
+					while (arg_node != NULL && arg_index > 0) {
+						arg_node = ndm_xml_node_next_sibling(
+							arg_node, "argument");
+						--arg_index;
+					}
+
+					if (arg_node != NULL) {
+						const int arg_size = snprintf(
+							p, (size_t) (pend - p), "%s",
+							ndm_xml_node_value(arg_node));
+
+						if (arg_size < 0) {
+							/* ignore failed snprintf() call */
+							*p = '\0';
+						} else {
+							p += NDM_MIN(pend - p, (ptrdiff_t) arg_size);
+						}
+					} else {
+						/* ignore invalid argument reference */
+					}
+				} else {
+					*p = *m;
+					++p;
+					++m;
+				}
+			} while (*m != '\0' && p < pend);
+
+			if (p == pend) {
+				/* message was truncated, append trailing dots */
+				__ndm_core_message_append_dots(
+					message->string,
+					sizeof(message->string));
+			}
+		}
+	}
+}
 
 /**
  * Core buffer functions.
@@ -150,7 +328,7 @@ static bool __ndm_core_buffer_read_all(
 	while (s != 0 && !error) {
 		if (__ndm_core_buffer_is_empty(buffer)) {
 			/* there is no data in a buffer */
-			const int delay = __ndm_core_msec_to_deadline(deadline);
+			const int delay = (int) ndm_time_left_monotonic_msec(deadline);
 
 			buffer->putp = buffer->getp = buffer->start;
 
@@ -207,32 +385,6 @@ static bool __ndm_core_buffer_read_all(
 /**
  * Common core functions.
  **/
-
-static inline struct timespec __ndm_core_calculate_msec_deadline(
-		const int timeout) NDM_ATTR_WUR;
-
-static inline struct timespec __ndm_core_calculate_msec_deadline(
-		const int timeout)
-{
-	struct timespec deadline;
-
-	ndm_time_get_monotonic(&deadline);
-	ndm_time_add_msec(&deadline, timeout);
-
-	return deadline;
-}
-
-static int __ndm_core_msec_to_deadline(
-		const struct timespec *deadline)
-{
-	struct timespec now;
-	struct timespec left = *deadline;
-
-	ndm_time_get_monotonic(&now);
-	ndm_time_sub(&left, &now);
-
-	return (int) ndm_time_to_msec(&left);
-}
 
 static inline bool __ndm_core_read_ctrl(
 		struct ndm_core_buffer_t *buffer,
@@ -521,9 +673,10 @@ struct ndm_core_event_t *ndm_core_event_connection_get(
 	if (event == NULL) {
 		errno = ENOMEM;
 	} else {
-		const struct timespec deadline =
-			__ndm_core_calculate_msec_deadline(connection->timeout);
+		struct timespec deadline;
 		struct ndm_xml_node_t *root = NULL;
+
+		ndm_time_get_monotonic_plus_msec(&deadline, connection->timeout);
 
 		ndm_xml_document_init(
 			&event->doc, event->buffer, sizeof(event->buffer),
@@ -841,10 +994,9 @@ struct ndm_core_t *ndm_core_open(
 			&core->buffer,
 			core->buffer_storage,
 			sizeof(core->buffer_storage));
-		__ndm_core_cache_init(
-			&core->cache,
-			cache_ttl_msec,
-			cache_max_size);
+
+		__ndm_core_cache_init(&core->cache, cache_ttl_msec, cache_max_size);
+		__ndm_core_message_init(&core->last_message);
 
 		if ((core->agent = ndm_string_dup(current_agent)) == NULL) {
 			errno = ENOMEM;
@@ -866,6 +1018,7 @@ struct ndm_core_t *ndm_core_open(
 			} else {
 				connected = true;
 				core->timeout = NDM_CORE_DEFAULT_TIMEOUT;
+				core->last_response_id = NDM_CORE_RESPONSE_ID_INITIALIZER_;
 			}
 		}
 
@@ -1063,12 +1216,13 @@ static struct ndm_core_response_t *__ndm_core_do_request(
 		struct ndm_xml_node_t *request,
 		bool *response_copied)
 {
-	const struct timespec deadline =
-		__ndm_core_calculate_msec_deadline(core->timeout);
+	struct timespec deadline;
 	const size_t request_size = __ndm_core_request_store(request, NULL, 0);
 	uint8_t request_static_buffer[NDM_CORE_REQUEST_BINARY_STATIC_SIZE_];
 	uint8_t *buffer = request_static_buffer;
 	struct ndm_core_response_t *response = NULL;
+
+	ndm_time_get_monotonic_plus_msec(&deadline, core->timeout);
 
 	if (request_size == 0) {
 		/* empty request */
@@ -1099,7 +1253,8 @@ static struct ndm_core_response_t *__ndm_core_do_request(
 			size_t offs = 0;
 
 			do {
-				const int delay = __ndm_core_msec_to_deadline(&deadline);
+				const int delay = (int)
+					ndm_time_left_monotonic_msec(&deadline);
 
 				if (delay < 0) {
 					errno = ETIMEDOUT;
@@ -1154,6 +1309,8 @@ static struct ndm_core_response_t *__ndm_core_do_request(
 					{
 						ndm_core_response_free(&response);
 					} else {
+						response->id = ++core->last_response_id;
+
 						if (cache_mode == NDM_CORE_MODE_CACHE &&
 							!ndm_core_response_is_continued(response))
 						{
@@ -1168,6 +1325,10 @@ static struct ndm_core_response_t *__ndm_core_do_request(
 					}
 				}
 			}
+		}
+
+		if (response != NULL) {
+			__ndm_core_message_update(&core->last_message, response);
 		}
 
 		if (buffer != request_static_buffer) {
@@ -1412,6 +1573,30 @@ struct ndm_core_response_t *ndm_core_break(
 		NDM_CORE_MODE_NO_CACHE, "break", "");
 }
 
+const char *ndm_core_last_message_string(
+		struct ndm_core_t *core)
+{
+	return core->last_message.string;
+}
+
+const char *ndm_core_last_message_ident(
+		struct ndm_core_t *core)
+{
+	return core->last_message.ident;
+}
+
+const char *ndm_core_last_message_source(
+		struct ndm_core_t *core)
+{
+	return core->last_message.source;
+}
+
+uint32_t ndm_core_last_message_code(
+		struct ndm_core_t *core)
+{
+	return core->last_message.code;
+}
+
 void ndm_core_response_free(
 		struct ndm_core_response_t **response)
 {
@@ -1470,6 +1655,8 @@ static struct ndm_core_response_t *__ndm_core_response_copy(
 
 	if (copy != NULL) {
 		bool error = false;
+
+		copy->id = response->id;
 
 		ndm_xml_document_init(&copy->doc,
 			copy->buffer, sizeof(copy->buffer),
