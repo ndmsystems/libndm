@@ -160,8 +160,12 @@ void ndm_time_from_timeval(
 		struct timespec *t,
 		const struct timeval *u);
 
-int64_t ndm_time_ms_to(
-		struct timespec *deadline) NDM_ATTR_WUR;
+void ndm_time_get_monotonic_plus_msec(
+		struct timespec *t,
+		int64_t msec);
+
+int64_t ndm_time_left_monotonic_msec(
+		const struct timespec *t);
 
 #endif	/* __NDM_TIME_H__ */
 

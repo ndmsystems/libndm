@@ -3,26 +3,6 @@
 #include <ndm/sys.h>
 #include <ndm/time.h>
 
-static void __ndm_poll_calculate_msec_deadline(
-		struct timespec *deadline,
-		const int timeout)
-{
-	ndm_time_get_monotonic(deadline);
-	ndm_time_add_msec(deadline, timeout);
-}
-
-static int __ndm_poll_msec_to_deadline(
-		const struct timespec *deadline)
-{
-	struct timespec now;
-	struct timespec left = *deadline;
-
-	ndm_time_get_monotonic(&now);
-	ndm_time_sub(&left, &now);
-
-	return (int) ndm_time_to_msec(&left);
-}
-
 /* interruptible poll */
 int ndm_poll(
 		struct pollfd *fds,
@@ -33,12 +13,12 @@ int ndm_poll(
 	int left = 0;
 	int n = 0;
 
-	__ndm_poll_calculate_msec_deadline(&deadline, interval);
+	ndm_time_get_monotonic_plus_msec(&deadline, interval);
 
 	do {
 		left = (interval < 0) ?
 			NDM_SYS_SLEEP_GRANULARITY_MSEC :
-			__ndm_poll_msec_to_deadline(&deadline);
+			(int) ndm_time_left_monotonic_msec(&deadline);
 
 		n = poll(fds, nfds,
 			(left < 0) ? 0 :
