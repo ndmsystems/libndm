@@ -458,7 +458,7 @@ struct ndm_core_event_connection_t *ndm_core_event_connection_open(
 		} else {
 			struct ndm_ip_sockaddr_t sa = NDM_IP4_SOCKADDR_ZERO;
 
-			sa.un.in.sin_port = htons(NDM_CORE_EVENT_PORT_);
+			sa.un.in.sin_port = (uint16_t) htons(NDM_CORE_EVENT_PORT_);
 
 			if (ndm_ip_sockaddr_pton(NDM_CORE_ADDRESS_, &sa) &&
 				connect(connection->fd,
@@ -854,7 +854,7 @@ struct ndm_core_t *ndm_core_open(
 		} else {
 			struct ndm_ip_sockaddr_t sa = NDM_IP4_SOCKADDR_ZERO;
 
-			sa.un.in.sin_port = htons(NDM_CORE_PORT_);
+			sa.un.in.sin_port = (uint16_t) htons(NDM_CORE_PORT_);
 
 			if (!ndm_ip_sockaddr_pton(NDM_CORE_ADDRESS_, &sa) ||
 				connect(core->fd,
@@ -1020,8 +1020,8 @@ static size_t __ndm_core_request_store_node(
 
 	while (child != NULL) {
 		size += __ndm_core_request_store_node(child,
-			(child == first_child) ?
-			NDM_CORE_CTRL_NODE_ : NDM_CORE_CTRL_SIBL_,
+			(ndm_core_ctrl_t) ((child == first_child) ?
+			NDM_CORE_CTRL_NODE_ : NDM_CORE_CTRL_SIBL_),
 			node_depth + 1, p, end);
 		child = ndm_xml_node_next_sibling(child, NULL);
 	}

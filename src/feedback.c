@@ -35,7 +35,7 @@ bool ndm_feedback(
 
 	if (ret >= 0) {
 		unsigned int i;
-		unsigned int env_count = (ret > 0) ? 1 : 0;
+		unsigned int env_count = (ret > 0) ? 1u : 0u;
 		const char **env_argv;
 
 		for (i = 0; i < ret; i++) {

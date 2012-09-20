@@ -17,7 +17,7 @@ bool ndm_mac_socket_open(
 {
 	bool opened = false;
 
-	s->__protocol = htons(protocol);
+	s->__protocol = (uint16_t) htons(protocol);
 
 	if ((s->__fd = socket(PF_PACKET, SOCK_RAW, s->__protocol)) < 0) {
 		/* failed to open a socket */
