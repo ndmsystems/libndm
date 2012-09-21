@@ -790,8 +790,8 @@ static void __ndm_core_cache_entry_remove(
 		struct ndm_core_cache_entry_t *e)
 {
 	ndm_dlist_remove(&e->list);
-	e->owner->size -= __ndm_core_cache_entry_size(
-		e->request_size, e->response);
+	e->owner->size -=
+		__ndm_core_cache_entry_size(e->request_size, e->response);
 	ndm_core_response_free(&e->response);
 	free(e);
 }
@@ -803,15 +803,16 @@ static void __ndm_core_cache_init(
 {
 	*((int *) &cache->ttl_msec) = ttl_msec;
 	*((size_t *) &cache->max_size) = max_size;
-	ndm_time_get_max(&cache->next_expiration_time);
+	ndm_time_get_min(&cache->next_expiration_time);
 	cache->size = 0;
 	ndm_dlist_init(&cache->entries);
 }
 
-static void __ndm_core_cache_clear(
-		struct ndm_core_cache_t *cache,
+void ndm_core_cache_clear(
+		struct ndm_core_t *core,
 		const bool remove_all)
 {
+	struct ndm_core_cache_t *cache = &core->cache;
 	struct timespec now;
 
 	ndm_time_get_monotonic(&now);
@@ -840,67 +841,69 @@ static void __ndm_core_cache_clear(
 	}
 }
 
-static struct ndm_core_cache_entry_t *__ndm_core_cache_find(
-		struct ndm_core_cache_t *cache,
-		const uint8_t *request,
-		const size_t request_size)
-{
-	struct ndm_core_cache_entry_t *e;
-	struct ndm_core_cache_entry_t *n;
-
-	ndm_dlist_foreach_entry_safe(e,
-		struct ndm_core_cache_entry_t,
-		list, &cache->entries, n)
-	{
-		if (e->request_size == request_size &&
-			memcmp(e->request, request, request_size) == 0)
-		{
-			/* move this entry to a head of a list */
-			ndm_dlist_remove(&e->list);
-			ndm_dlist_insert_after(&cache->entries, &e->list);
-
-			return e;
-		}
-	}
-
-	return NULL;
-}
-
-static struct ndm_core_response_t *__ndm_core_cache_get(
+static bool __ndm_core_cache_get(
 		struct ndm_core_cache_t *cache,
 		const uint8_t *request,
 		const size_t request_size,
 		const bool copy_cached_response,
-		bool *response_copied)
+		bool *response_copied,
+		struct ndm_core_response_t **response)
 {
+	struct ndm_core_cache_entry_t *i;
+	struct ndm_core_cache_entry_t *n;
 	struct ndm_core_cache_entry_t *e = NULL;
-	struct ndm_core_response_t *response = NULL;
+	struct timespec now;
+	bool error = false;
 
-	__ndm_core_cache_clear(cache, false);
+	ndm_time_get_monotonic(&now);
 
-	e = __ndm_core_cache_find(cache, request, request_size);
+	ndm_dlist_foreach_entry_safe(i,
+		struct ndm_core_cache_entry_t,
+		list, &cache->entries, n)
+	{
+		if (ndm_time_less(&i->expiration_time, &now)) {
+			/* remove and free an expired entry */
+			__ndm_core_cache_entry_remove(i);
+		} else
+		if (i->request_size == request_size &&
+			memcmp(i->request, request, request_size) == 0)
+		{
+			e = i;
+
+			break;
+		}
+	}
+
+	*response = NULL;
+
+	if (response_copied != NULL) {
+		*response_copied = false;
+	}
 
 	if (e != NULL) {
-		/* cache hit; a response may remain a NULL on a copying error */
+		/* cache hit */
+
+		/* move a found entry to a head of a list */
+		ndm_dlist_remove(&e->list);
+		ndm_dlist_insert_after(&cache->entries, &e->list);
 
 		if (copy_cached_response) {
-			response = __ndm_core_response_copy(e->response);
+			*response = __ndm_core_response_copy(e->response);
+
+			if (response == NULL) {
+				error = true;
+			}
 
 			if (response_copied != NULL) {
 				*response_copied = (response != NULL);
 			}
 		} else {
 			/* no real response copy */
-
-			response = e->response;
-
-			if (response_copied != NULL) {
-				*response_copied = false;
-			}
+			*response = e->response;
 		}
 	}
 
-	return response;
+	return !error;
 }
 
 static void __ndm_core_cache(
@@ -909,54 +912,33 @@ static void __ndm_core_cache(
 		const size_t request_size,
 		const struct ndm_core_response_t *response)
 {
-	struct ndm_core_cache_entry_t *e = NULL;
+	/* there is no a check of duplicating entries here due to speed up
+	 * reasons; make sure that this function called only
+	 * when __ndm_core_cache_get() failed because of cache miss */
 
-	__ndm_core_cache_clear(cache, false);
+	/* try to add a new entry */
+	const size_t need_size =
+		__ndm_core_cache_entry_size(request_size, response);
 
-	e = __ndm_core_cache_find(cache, request, request_size);
+	if (cache->max_size >= need_size) {
+		/* the response can be cached */
+		struct ndm_core_cache_entry_t *e = NULL;
 
-	if (e != NULL) {
-		if (!ndm_xml_document_is_equal(&response->doc, &e->response->doc)) {
-			bool copied = false;
-
-			/* try to replace a cached response */
-			e->owner->size -= __ndm_core_response_size(e->response);
-			ndm_core_response_free(&e->response);
-			e->response = __ndm_core_response_copy(response);
-			e->owner->size += __ndm_core_response_size(e->response);
-
-			if (!copied) {
-				/* failed to copy a new response contents;
-				 * remove a broken entry */
-				__ndm_core_cache_entry_remove(e);
-			}
-		} else {
-			/* a response is already cached */
+		while (cache->max_size - cache->size < need_size) {
+			/* remove last entries until a need free size reached */
+			__ndm_core_cache_entry_remove(
+				ndm_dlist_entry(cache->entries.prev,
+					struct ndm_core_cache_entry_t, list));
 		}
-	} else {
-		/* try to add a new entry */
-		const size_t need_size =
-			__ndm_core_cache_entry_size(request_size, response);
 
-		if (cache->max_size >= need_size) {
-			/* the response can be cached */
+		e = malloc(sizeof(*e) + request_size);
 
-			while (
-				cache->max_size - cache->size < need_size &&
-				!ndm_dlist_is_empty(&cache->entries))
-			{
-				/* remove last entries until a need free size reached */
-
-				e = ndm_dlist_entry(cache->entries.prev,
-					struct ndm_core_cache_entry_t, list);
-				__ndm_core_cache_entry_remove(e);
-			}
-
-			e = malloc(sizeof(*e) + request_size);
-
-			if (e != NULL) {
+		if (e != NULL) {
+			if ((e->response = __ndm_core_response_copy(response)) == NULL) {
+				/* failed to cache */
+				free(e);
+			} else {
 				ndm_dlist_init(&e->list);
-				e->response = __ndm_core_response_copy(response);
 				e->owner = cache;
 				e->request_size = request_size;
 				memcpy(e->request, request, request_size);
@@ -966,10 +948,6 @@ static void __ndm_core_cache(
 
 				ndm_dlist_insert_after(&cache->entries, &e->list);
 				e->owner->size += need_size;
-
-				if (e->response == NULL) {
-					__ndm_core_cache_entry_remove(e);
-				}
 			}
 		}
 	}
@@ -1061,13 +1039,6 @@ int ndm_core_fd(
 		const struct ndm_core_t *core)
 {
 	return core->fd;
-}
-
-void ndm_core_cache_clear(
-		struct ndm_core_t *core,
-		const bool remove_all)
-{
-	__ndm_core_cache_clear(&core->cache, remove_all);
 }
 
 void ndm_core_set_timeout(
@@ -1245,13 +1216,16 @@ static struct ndm_core_response_t *__ndm_core_do_request(
 	} else {
 		/* a request sequence is ready */
 
-		if (cache_mode == NDM_CORE_MODE_CACHE) {
-			response = __ndm_core_cache_get(&core->cache, buffer,
-				request_size, copy_cached_response, response_copied);
-		}
-
+		if (cache_mode == NDM_CORE_MODE_CACHE &&
+			!__ndm_core_cache_get(&core->cache, buffer,
+				request_size, copy_cached_response,
+				response_copied, &response))
+		{
+			/* failed to copy a response from a cache */
+			errno = ENOMEM;
+		} else
 		if (response == NULL) {
-			/* cache miss, cache copy error or noncached mode */
+			/* cache miss or noncached mode */
 
 			ssize_t n = 0;
 			size_t offs = 0;
