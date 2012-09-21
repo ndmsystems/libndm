@@ -803,7 +803,7 @@ static void __ndm_core_cache_init(
 {
 	*((int *) &cache->ttl_msec) = ttl_msec;
 	*((size_t *) &cache->max_size) = max_size;
-	ndm_time_get_min(&cache->next_expiration_time);
+	ndm_time_get_max(&cache->next_expiration_time);
 	cache->size = 0;
 	ndm_dlist_init(&cache->entries);
 }
@@ -946,8 +946,13 @@ static void __ndm_core_cache(
 				ndm_time_get_monotonic(&e->expiration_time);
 				ndm_time_add_msec(&e->expiration_time, cache->ttl_msec);
 
-				ndm_dlist_insert_after(&cache->entries, &e->list);
 				e->owner->size += need_size;
+
+				if (ndm_dlist_is_empty(&cache->entries)) {
+					cache->next_expiration_time = e->expiration_time;
+				}
+
+				ndm_dlist_insert_after(&cache->entries, &e->list);
 			}
 		}
 	}
