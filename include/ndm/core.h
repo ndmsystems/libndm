@@ -35,16 +35,17 @@ enum ndm_core_response_type_t
 enum ndm_core_response_error_t
 {
 	NDM_CORE_RESPONSE_ERROR_OK,
-	NDM_CORE_RESPONSE_ERROR_SYNTAX,
-	NDM_CORE_RESPONSE_ERROR_NOT_FOUND,
-	NDM_CORE_RESPONSE_ERROR_FORMAT,
-	NDM_CORE_RESPONSE_ERROR_SYSTEM
+	NDM_CORE_RESPONSE_ERROR_SYNTAX,		/* invalid path node syntax 	*/
+	NDM_CORE_RESPONSE_ERROR_FORMAT,		/* invalid path format			*/
+	NDM_CORE_RESPONSE_ERROR_NOT_FOUND,	/* node or attribute not found 	*/
+	NDM_CORE_RESPONSE_ERROR_MESSAGE,	/* core error message received	*/
+	NDM_CORE_RESPONSE_ERROR_SYSTEM		/* see errno for details		*/
 };
 
 enum ndm_core_cache_mode_t
 {
-	NDM_CORE_MODE_CACHE,
-	NDM_CORE_MODE_NO_CACHE
+	NDM_CORE_MODE_CACHE,				/* cache a response				*/
+	NDM_CORE_MODE_NO_CACHE				/* do not cache a response		*/
 };
 
 struct ndm_core_t;
@@ -209,10 +210,29 @@ enum ndm_core_response_error_t ndm_core_response_first_bool(
 
 /**
  * The highest level core functions.
+ *
+ * Some function prototypes contain a value_path argument to address
+ * a specific first node or attribute using the following syntax:
+ * "child_name1/child_name2/.../child_nameN@attr_name".
+ * The path is relative name that starts addressing from
+ * the root "response" node of a response XML document.
+ * Any child name can be an empty string that means a "current" node.
+ * For example a "@name" path addresses a "name" attribute of the root
+ * "response" node. So "interface/mac", "/interface/mac", and
+ * "//interface//mac///" are the same paths to a child node "mac" of a
+ * child "interface" node of the root "response" node.
+ * All space characters of the path considered as parts of node names.
  **/
 
 enum ndm_core_response_error_t ndm_core_request_break(
 		struct ndm_core_t *core) NDM_ATTR_WUR;
+
+enum ndm_core_response_error_t ndm_core_request_send(
+		struct ndm_core_t *core,
+		const enum ndm_core_request_type_t request_type,
+		const char *const command_args[],
+		const char *const command_format,
+		...) NDM_ATTR_WUR;
 
 enum ndm_core_response_error_t ndm_core_request_first_str_alloc(
 		struct ndm_core_t *core,

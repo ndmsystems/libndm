@@ -1969,6 +1969,53 @@ enum ndm_core_response_error_t ndm_core_request_break(
 	return e;
 }
 
+static bool __ndm_core_request_succeeded(
+		struct ndm_core_t *core)
+{
+	bool ok = true;
+
+	if (!ndm_core_last_message_received(core)) {
+		/* no core message received, this is a valid response */
+	} else
+	if ((ndm_core_last_message_type(core) == NDM_CORE_ERROR) ||
+		(ndm_core_last_message_type(core) == NDM_CORE_CRITICAL))
+	{
+		ok = false;
+	}
+
+	return ok;
+}
+
+enum ndm_core_response_error_t ndm_core_request_send(
+		struct ndm_core_t *core,
+		const enum ndm_core_request_type_t request_type,
+		const char *const command_args[],
+		const char *const command_format,
+		...)
+{
+	va_list ap;
+	struct ndm_core_response_t *response = NULL;
+	enum ndm_core_response_error_t e = NDM_CORE_RESPONSE_ERROR_OK;
+
+	va_start(ap, command_format);
+	response = __ndm_core_request(
+		core, request_type, NDM_CORE_MODE_NO_CACHE,
+		command_args, command_format, ap, true, NULL);
+	va_end(ap);
+
+	if (response == NULL) {
+		e = NDM_CORE_RESPONSE_ERROR_SYSTEM;
+	} else {
+		if (!__ndm_core_request_succeeded(core)) {
+			e = NDM_CORE_RESPONSE_ERROR_MESSAGE;
+		}
+
+		ndm_core_response_free(&response);
+	}
+
+	return e;
+}
+
 enum ndm_core_response_error_t ndm_core_request_first_str_alloc(
 		struct ndm_core_t *core,
 		const enum ndm_core_request_type_t request_type,
@@ -1993,16 +2040,20 @@ enum ndm_core_response_error_t ndm_core_request_first_str_alloc(
 	if (response == NULL) {
 		e = NDM_CORE_RESPONSE_ERROR_SYSTEM;
 	} else {
-		const char *response_value = NULL;
+		if (!__ndm_core_request_succeeded(core)) {
+			e = NDM_CORE_RESPONSE_ERROR_MESSAGE;
+		} else {
+			const char *response_value = NULL;
 
-		e = ndm_core_response_first_str(
-			ndm_core_response_root(response),
-			&response_value, "%s", value_path);
+			e = ndm_core_response_first_str(
+				ndm_core_response_root(response),
+				&response_value, "%s", value_path);
 
-		if (e == NDM_CORE_RESPONSE_ERROR_OK &&
-			(*value = ndm_string_dup(response_value)) == NULL)
-		{
-			e = NDM_CORE_RESPONSE_ERROR_SYSTEM;
+			if (e == NDM_CORE_RESPONSE_ERROR_OK &&
+				(*value = ndm_string_dup(response_value)) == NULL)
+			{
+				e = NDM_CORE_RESPONSE_ERROR_SYSTEM;
+			}
 		}
 
 		if (response_copied) {
@@ -2039,22 +2090,26 @@ enum ndm_core_response_error_t ndm_core_request_first_str_buffer(
 	if (response == NULL) {
 		e = NDM_CORE_RESPONSE_ERROR_SYSTEM;
 	} else {
-		const char *response_value = NULL;
+		if (!__ndm_core_request_succeeded(core)) {
+			e = NDM_CORE_RESPONSE_ERROR_MESSAGE;
+		} else {
+			const char *response_value = NULL;
 
-		e = ndm_core_response_first_str(
-			ndm_core_response_root(response),
-			&response_value, "%s", value_path);
+			e = ndm_core_response_first_str(
+				ndm_core_response_root(response),
+				&response_value, "%s", value_path);
 
-		if (e == NDM_CORE_RESPONSE_ERROR_OK) {
-			const int size = snprintf(
-				value, value_buffer_size,
-				"%s", response_value);
+			if (e == NDM_CORE_RESPONSE_ERROR_OK) {
+				const int size = snprintf(
+					value, value_buffer_size,
+					"%s", response_value);
 
-			if (size < 0) {
-				e = NDM_CORE_RESPONSE_ERROR_SYSTEM;
-			} else
-			if (value_size != NULL) {
-				*value_size = (size_t) size;
+				if (size < 0) {
+					e = NDM_CORE_RESPONSE_ERROR_SYSTEM;
+				} else
+				if (value_size != NULL) {
+					*value_size = (size_t) size;
+				}
 			}
 		}
 
@@ -2090,9 +2145,11 @@ enum ndm_core_response_error_t ndm_core_request_first_int(
 	if (response == NULL) {
 		e = NDM_CORE_RESPONSE_ERROR_SYSTEM;
 	} else {
-		e = ndm_core_response_first_int(
-			ndm_core_response_root(response),
-			value, "%s", value_path);
+		e = __ndm_core_request_succeeded(core) ?
+			ndm_core_response_first_int(
+				ndm_core_response_root(response),
+				value, "%s", value_path) :
+			NDM_CORE_RESPONSE_ERROR_MESSAGE;
 
 		if (response_copied) {
 			ndm_core_response_free(&response);
@@ -2126,9 +2183,11 @@ enum ndm_core_response_error_t ndm_core_request_first_uint(
 	if (response == NULL) {
 		e = NDM_CORE_RESPONSE_ERROR_SYSTEM;
 	} else {
-		e = ndm_core_response_first_uint(
-			ndm_core_response_root(response),
-			value, "%s", value_path);
+		e = __ndm_core_request_succeeded(core) ?
+			ndm_core_response_first_uint(
+				ndm_core_response_root(response),
+				value, "%s", value_path) :
+			NDM_CORE_RESPONSE_ERROR_MESSAGE;
 
 		if (response_copied) {
 			ndm_core_response_free(&response);
@@ -2162,9 +2221,11 @@ enum ndm_core_response_error_t ndm_core_request_first_bool(
 	if (response == NULL) {
 		e = NDM_CORE_RESPONSE_ERROR_SYSTEM;
 	} else {
-		e = ndm_core_response_first_bool(
-			ndm_core_response_root(response),
-			value, "%s", value_path);
+		e = __ndm_core_request_succeeded(core) ?
+			ndm_core_response_first_bool(
+				ndm_core_response_root(response),
+				value, "%s", value_path) :
+			NDM_CORE_RESPONSE_ERROR_MESSAGE;
 
 		if (response_copied) {
 			ndm_core_response_free(&response);
