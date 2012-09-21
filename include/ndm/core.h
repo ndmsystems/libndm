@@ -140,6 +140,12 @@ struct ndm_core_response_t *ndm_core_continue(
 struct ndm_core_response_t *ndm_core_break(
 		struct ndm_core_t *core) NDM_ATTR_WUR;
 
+bool ndm_core_last_message_received(
+		struct ndm_core_t *core) NDM_ATTR_WUR;
+
+enum ndm_core_response_type_t ndm_core_last_message_type(
+		struct ndm_core_t *core) NDM_ATTR_WUR;
+
 const char *ndm_core_last_message_string(
 		struct ndm_core_t *core) NDM_ATTR_WUR;
 

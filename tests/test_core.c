@@ -275,17 +275,25 @@ int main()
 				NULL, "show interface") == NDM_CORE_RESPONSE_ERROR_OK);
 		NDM_TEST(i == 1500);
 
+		NDM_TEST(ndm_core_request_break(core) == NDM_CORE_RESPONSE_ERROR_OK);
+
 		NDM_TEST(
 			ndm_core_request_first_bool(core,
 				NDM_CORE_REQUEST_PARSE,
 				NDM_CORE_MODE_CACHE,
 				&b, "config/enabled",
 				NULL, "service aaa") != NDM_CORE_RESPONSE_ERROR_OK);
-		printf("\"%s\" [ident = \"%s\",source = \"%s\", code = \"%lu\"]\n",
+
+		NDM_TEST(ndm_core_last_message_received(core));
+
+		NDM_TEST(strcmp(
 			ndm_core_last_message_string(core),
-			ndm_core_last_message_source(core),
+			"no such command: aaa") == 0);
+		NDM_TEST(ndm_core_last_message_code(core) == 7405600);
+		NDM_TEST(*ndm_core_last_message_source(core) == '\0');
+		NDM_TEST(strcmp(
 			ndm_core_last_message_ident(core),
-			(unsigned long) ndm_core_last_message_code(core));
+			"Command::Base") == 0);
 	}
 
 	ndm_core_response_free(&r);

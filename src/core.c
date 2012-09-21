@@ -91,6 +91,7 @@ struct ndm_core_cache_t
 
 struct ndm_core_message_t
 {
+	bool received;
 	char string[NDM_CORE_MESSAGE_STRING_MAX_SIZE_];
 	char ident[NDM_CORE_MESSAGE_IDENT_MAX_SIZE_];
 	char source[NDM_CORE_MESSAGE_SOURCE_MAX_SIZE_];
@@ -108,7 +109,7 @@ struct ndm_core_t
 	struct ndm_core_buffer_t buffer;
 	struct ndm_core_cache_t cache;
 	struct ndm_core_message_t last_message;
-	ndm_core_response_id_t last_response_id;
+	ndm_core_response_id_t response_id;
 };
 
 struct ndm_core_response_t
@@ -143,6 +144,7 @@ struct ndm_core_event_t
 static inline void __ndm_core_message_init(
 		struct ndm_core_message_t *message)
 {
+	message->received = false;
 	*message->string = '\0';
 	*message->source = '\0';
 	*message->ident = '\0';
@@ -220,6 +222,8 @@ static void __ndm_core_message_update(
 			const struct ndm_xml_attr_t *source_attr =
 				ndm_xml_node_first_attr(message_node, "source");
 
+			message->received = true;
+
 			__ndm_core_message_printf(
 				message->ident, sizeof(message->ident),
 				(ident_attr == NULL) ?
@@ -262,7 +266,9 @@ static void __ndm_core_message_update(
 						--arg_index;
 					}
 
-					if (arg_node != NULL) {
+					if (arg_node == NULL) {
+						/* ignore invalid argument reference */
+					} else {
 						const int arg_size = snprintf(
 							p, (size_t) (pend - p), "%s",
 							ndm_xml_node_value(arg_node));
@@ -273,8 +279,6 @@ static void __ndm_core_message_update(
 						} else {
 							p += NDM_MIN(pend - p, (ptrdiff_t) arg_size);
 						}
-					} else {
-						/* ignore invalid argument reference */
 					}
 				} else {
 					*p = *m;
@@ -1018,7 +1022,7 @@ struct ndm_core_t *ndm_core_open(
 			} else {
 				connected = true;
 				core->timeout = NDM_CORE_DEFAULT_TIMEOUT;
-				core->last_response_id = NDM_CORE_RESPONSE_ID_INITIALIZER_;
+				core->response_id = NDM_CORE_RESPONSE_ID_INITIALIZER_;
 			}
 		}
 
@@ -1309,7 +1313,7 @@ static struct ndm_core_response_t *__ndm_core_do_request(
 					{
 						ndm_core_response_free(&response);
 					} else {
-						response->id = ++core->last_response_id;
+						response->id = ++core->response_id;
 
 						if (cache_mode == NDM_CORE_MODE_CACHE &&
 							!ndm_core_response_is_continued(response))
@@ -1571,6 +1575,18 @@ struct ndm_core_response_t *ndm_core_break(
 {
 	return __ndm_core_get_one_tag(core,
 		NDM_CORE_MODE_NO_CACHE, "break", "");
+}
+
+bool ndm_core_last_message_received(
+		struct ndm_core_t *core)
+{
+	return core->last_message.received;
+}
+
+enum ndm_core_response_type_t ndm_core_last_message_type(
+		struct ndm_core_t *core)
+{
+	return core->last_message.type;
 }
 
 const char *ndm_core_last_message_string(
@@ -1936,9 +1952,21 @@ enum ndm_core_response_error_t ndm_core_response_first_bool(
 enum ndm_core_response_error_t ndm_core_request_break(
 		struct ndm_core_t *core)
 {
-	errno = EINVAL;
+	struct ndm_core_response_t *response = ndm_core_break(core);
+	enum ndm_core_response_error_t e = NDM_CORE_RESPONSE_ERROR_SYSTEM;
 
-	return NDM_CORE_RESPONSE_ERROR_SYSTEM;
+	if (response != NULL) {
+		const struct ndm_xml_node_t *response_root =
+			ndm_core_response_root(response);
+
+		e = (ndm_xml_node_first_child(response_root, "prompt") == NULL) ?
+			NDM_CORE_RESPONSE_ERROR_NOT_FOUND :
+			NDM_CORE_RESPONSE_ERROR_OK;
+
+		ndm_core_response_free(&response);
+	}
+
+	return e;
 }
 
 enum ndm_core_response_error_t ndm_core_request_first_str_alloc(
