@@ -128,7 +128,7 @@ struct ndm_core_response_t *ndm_core_request(
 		const enum ndm_core_cache_mode_t cache_mode,
 		const char *const command_args[],
 		const char *const command_format,
-		...) NDM_ATTR_WUR;
+		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(5, 6);
 
 struct ndm_core_response_t *ndm_core_get_help(
 		struct ndm_core_t *core,
@@ -182,31 +182,31 @@ enum ndm_core_response_error_t ndm_core_response_first_node(
 		const struct ndm_xml_node_t *node,
 		const struct ndm_xml_node_t **value,
 		const char *const value_path_format,
-		...) NDM_ATTR_WUR;
+		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(3, 4);
 
 enum ndm_core_response_error_t ndm_core_response_first_str(
 		const struct ndm_xml_node_t *node,
 		const char **value,
 		const char *const value_path_format,
-		...) NDM_ATTR_WUR;
+		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(3, 4);
 
 enum ndm_core_response_error_t ndm_core_response_first_int(
 		const struct ndm_xml_node_t *node,
 		int *value,
 		const char *const value_path_format,
-		...) NDM_ATTR_WUR;
+		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(3, 4);
 
 enum ndm_core_response_error_t ndm_core_response_first_uint(
 		const struct ndm_xml_node_t *node,
 		unsigned int *value,
 		const char *const value_path_format,
-		...) NDM_ATTR_WUR;
+		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(3, 4);
 
 enum ndm_core_response_error_t ndm_core_response_first_bool(
 		const struct ndm_xml_node_t *node,
 		bool *value,
 		const char *const value_path_format,
-		...) NDM_ATTR_WUR;
+		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(3, 4);
 
 /**
  * The highest level core functions.
@@ -232,7 +232,7 @@ enum ndm_core_response_error_t ndm_core_request_send(
 		const enum ndm_core_request_type_t request_type,
 		const char *const command_args[],
 		const char *const command_format,
-		...) NDM_ATTR_WUR;
+		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(4, 5);
 
 enum ndm_core_response_error_t ndm_core_request_first_str_alloc(
 		struct ndm_core_t *core,
@@ -242,7 +242,7 @@ enum ndm_core_response_error_t ndm_core_request_first_str_alloc(
 		const char *const value_path,
 		const char *const command_args[],
 		const char *const command_format,
-		...) NDM_ATTR_WUR;
+		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(7, 8);
 
 enum ndm_core_response_error_t ndm_core_request_first_str_buffer(
 		struct ndm_core_t *core,
@@ -254,7 +254,7 @@ enum ndm_core_response_error_t ndm_core_request_first_str_buffer(
 		const char *const value_path,
 		const char *const command_args[],
 		const char *const command_format,
-		...) NDM_ATTR_WUR;
+		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(9, 10);
 
 enum ndm_core_response_error_t ndm_core_request_first_int(
 		struct ndm_core_t *core,
@@ -264,7 +264,7 @@ enum ndm_core_response_error_t ndm_core_request_first_int(
 		const char *const value_path,
 		const char *const command_args[],
 		const char *const command_format,
-		...) NDM_ATTR_WUR;
+		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(7, 8);
 
 enum ndm_core_response_error_t ndm_core_request_first_uint(
 		struct ndm_core_t *core,
@@ -274,7 +274,7 @@ enum ndm_core_response_error_t ndm_core_request_first_uint(
 		const char *const value_path,
 		const char *const command_args[],
 		const char *const command_format,
-		...) NDM_ATTR_WUR;
+		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(7, 8);
 
 enum ndm_core_response_error_t ndm_core_request_first_bool(
 		struct ndm_core_t *core,
@@ -284,7 +284,7 @@ enum ndm_core_response_error_t ndm_core_request_first_bool(
 		const char *const value_path,
 		const char *const command_args[],
 		const char *const command_format,
-		...) NDM_ATTR_WUR;
+		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(7, 8);
 
 #endif	/* __NDM_CORE_H__ */
 

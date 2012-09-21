@@ -190,7 +190,7 @@ int main()
 		const struct ndm_xml_node_t *n = ndm_core_response_root(r);
 		const char *s = NULL;
 
-		NDM_TEST(ndm_core_response_first_str(n, &s, "") ==
+		NDM_TEST(ndm_core_response_first_str(n, &s, "%s", "") ==
 			NDM_CORE_RESPONSE_ERROR_OK);
 		NDM_TEST(s != NULL && *s == '\0');	/* <response> value */
 
