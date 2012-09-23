@@ -1131,7 +1131,6 @@ static inline size_t __ndm_core_request_store_base(
 static size_t __ndm_core_request_store_node(
 		const struct ndm_xml_node_t *node,
 		const ndm_core_ctrl_t node_ctrl,
-		const size_t node_depth,
 		uint8_t **p,
 		const uint8_t *end)
 {
@@ -1155,11 +1154,11 @@ static size_t __ndm_core_request_store_node(
 		size += __ndm_core_request_store_node(child,
 			(ndm_core_ctrl_t) ((child == first_child) ?
 			NDM_CORE_CTRL_NODE_ : NDM_CORE_CTRL_SIBL_),
-			node_depth + 1, p, end);
+			p, end);
 		child = ndm_xml_node_next_sibling(child, NULL);
 	}
 
-	if (node_depth > 0) {
+	if (ndm_xml_node_first_child(node, NULL) != NULL) {
 		size += __ndm_core_request_store_ctrl(p, end, NDM_CORE_CTRL_END_, 0);
 	}
 
@@ -1177,7 +1176,7 @@ static size_t __ndm_core_request_store(
 
 	if (root != NULL) {
 		size = __ndm_core_request_store_node(
-			root, NDM_CORE_CTRL_NODE_, 0,
+			root, NDM_CORE_CTRL_NODE_,
 			p, start + buffer_size);
 
 		if (p != NULL && *p == NULL) {
@@ -1259,8 +1258,8 @@ static struct ndm_core_response_t *__ndm_core_do_request(
 
 						if (n > 0) {
 							/* NDM_HEX_DUMP(
-							  	buffer + offs,
-							  	request_size - offs); */
+								buffer + offs,
+								request_size - offs); */
 							offs += (size_t) n;
 						}
 					}
