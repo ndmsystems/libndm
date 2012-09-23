@@ -268,7 +268,7 @@ int main()
 		i = 0;
 
 		NDM_TEST(
-			ndm_core_request_first_int(core,
+			ndm_core_request_first_int_cf(core,
 				NDM_CORE_REQUEST_PARSE,
 				NDM_CORE_MODE_CACHE,
 				&i, "interface/mtu",
@@ -278,11 +278,18 @@ int main()
 		NDM_TEST(ndm_core_request_break(core) == NDM_CORE_RESPONSE_ERROR_OK);
 
 		NDM_TEST(
-			ndm_core_request_first_bool(core,
+			ndm_core_request_first_bool_cf(core,
 				NDM_CORE_REQUEST_PARSE,
 				NDM_CORE_MODE_CACHE,
 				&b, "config/enabled",
 				NULL, "service aaa") != NDM_CORE_RESPONSE_ERROR_OK);
+
+		NDM_TEST(
+			ndm_core_request_first_bool_pf(core,
+				NDM_CORE_REQUEST_PARSE,
+				NDM_CORE_MODE_CACHE,
+				NULL, "service aaa",
+				&b, "config/%s", "enabled") != NDM_CORE_RESPONSE_ERROR_OK);
 
 		NDM_TEST(ndm_core_last_message_received(core));
 

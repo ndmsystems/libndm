@@ -1396,11 +1396,11 @@ static struct ndm_core_response_t *__ndm_core_request(
 		struct ndm_core_t *core,
 		const enum ndm_core_request_type_t request_type,
 		const enum ndm_core_cache_mode_t cache_mode,
+		const bool copy_cached_response,
+		bool *response_copied,
 		const char *const command_args[],
 		const char *const command_format,
-		va_list ap,
-		const bool copy_cached_response,
-		bool *response_copied)
+		va_list ap)
 {
 	uint8_t request_buffer[NDM_CORE_REQUEST_STATIC_SIZE_];
 	struct ndm_xml_document_t request;
@@ -1487,6 +1487,28 @@ static struct ndm_core_response_t *__ndm_core_request(
 	return response;
 }
 
+static struct ndm_core_response_t *__ndm_core_request_cf(
+		struct ndm_core_t *core,
+		const enum ndm_core_request_type_t request_type,
+		const enum ndm_core_cache_mode_t cache_mode,
+		const bool copy_cached_response,
+		bool *response_copied,
+		const char *const command_args[],
+		const char *const command_format,
+		...)
+{
+	va_list ap;
+	struct ndm_core_response_t *response = NULL;
+
+	va_start(ap, command_format);
+	response = __ndm_core_request(
+		core, request_type, cache_mode, copy_cached_response,
+		response_copied, command_args, command_format, ap);
+	va_end(ap);
+
+	return response;
+}
+
 struct ndm_core_response_t *ndm_core_request(
 		struct ndm_core_t *core,
 		const enum ndm_core_request_type_t request_type,
@@ -1499,9 +1521,9 @@ struct ndm_core_response_t *ndm_core_request(
 	struct ndm_core_response_t *response = NULL;
 
 	va_start(ap, command_format);
-	response = __ndm_core_request(core,
-		request_type, cache_mode, command_args,
-		command_format, ap, true, NULL);
+	response = __ndm_core_request(
+		core, request_type, cache_mode, true,
+		NULL, command_args, command_format, ap);
 	va_end(ap);
 
 	return response;
@@ -1834,6 +1856,25 @@ enum ndm_core_response_error_t ndm_core_response_first_str(
 	return e;
 }
 
+static enum ndm_core_response_error_t __ndm_core_response_first_int(
+		const struct ndm_xml_node_t *node,
+		int *value,
+		const char *const path_format,
+		va_list ap)
+{
+	const char *str_value = NULL;
+	enum ndm_core_response_error_t e =
+		__ndm_core_response_first_str(node, &str_value, path_format, ap);
+
+	if (e == NDM_CORE_RESPONSE_ERROR_OK &&
+		!ndm_int_parse_int(str_value, value))
+	{
+		e = NDM_CORE_RESPONSE_ERROR_FORMAT;
+	}
+
+	return e;
+}
+
 enum ndm_core_response_error_t ndm_core_response_first_int(
 		const struct ndm_xml_node_t *node,
 		int *value,
@@ -1841,16 +1882,27 @@ enum ndm_core_response_error_t ndm_core_response_first_int(
 		...)
 {
 	va_list ap;
-	const char *str_value = NULL;
 	enum ndm_core_response_error_t e = NDM_CORE_RESPONSE_ERROR_OK;
 
 	va_start(ap, path_format);
-	e = __ndm_core_response_first_str(
-		node, &str_value, path_format, ap);
+	e = __ndm_core_response_first_int(node, value, path_format, ap);
 	va_end(ap);
 
+	return e;
+}
+
+static enum ndm_core_response_error_t __ndm_core_response_first_uint(
+		const struct ndm_xml_node_t *node,
+		unsigned int *value,
+		const char *const path_format,
+		va_list ap)
+{
+	const char *str_value = NULL;
+	enum ndm_core_response_error_t e =
+		__ndm_core_response_first_str(node, &str_value, path_format, ap);
+
 	if (e == NDM_CORE_RESPONSE_ERROR_OK &&
-		!ndm_int_parse_int(str_value, value))
+		!ndm_int_parse_uint(str_value, value))
 	{
 		e = NDM_CORE_RESPONSE_ERROR_FORMAT;
 	}
@@ -1865,37 +1917,24 @@ enum ndm_core_response_error_t ndm_core_response_first_uint(
 		...)
 {
 	va_list ap;
-	const char *str_value = NULL;
 	enum ndm_core_response_error_t e = NDM_CORE_RESPONSE_ERROR_OK;
 
 	va_start(ap, path_format);
-	e = __ndm_core_response_first_str(
-		node, &str_value, path_format, ap);
+	e = __ndm_core_response_first_uint(node, value, path_format, ap);
 	va_end(ap);
-
-	if (e == NDM_CORE_RESPONSE_ERROR_OK &&
-		!ndm_int_parse_uint(str_value, value))
-	{
-		e = NDM_CORE_RESPONSE_ERROR_FORMAT;
-	}
 
 	return e;
 }
 
-enum ndm_core_response_error_t ndm_core_response_first_bool(
+static enum ndm_core_response_error_t __ndm_core_response_first_bool(
 		const struct ndm_xml_node_t *node,
 		bool *value,
 		const char *const path_format,
-		...)
+		va_list ap)
 {
-	va_list ap;
 	const char *str_value = NULL;
-	enum ndm_core_response_error_t e = NDM_CORE_RESPONSE_ERROR_OK;
-
-	va_start(ap, path_format);
-	e = __ndm_core_response_first_str(
-		node, &str_value, path_format, ap);
-	va_end(ap);
+	enum ndm_core_response_error_t e =
+		__ndm_core_response_first_str(node, &str_value, path_format, ap);
 
 	if (e == NDM_CORE_RESPONSE_ERROR_OK) {
 		long l;
@@ -1920,6 +1959,22 @@ enum ndm_core_response_error_t ndm_core_response_first_bool(
 			e = NDM_CORE_RESPONSE_ERROR_FORMAT;
 		}
 	}
+
+	return e;
+}
+
+enum ndm_core_response_error_t ndm_core_response_first_bool(
+		const struct ndm_xml_node_t *node,
+		bool *value,
+		const char *const path_format,
+		...)
+{
+	va_list ap;
+	enum ndm_core_response_error_t e = NDM_CORE_RESPONSE_ERROR_OK;
+
+	va_start(ap, path_format);
+	e = __ndm_core_response_first_bool(node, value, path_format, ap);
+	va_end(ap);
 
 	return e;
 }
@@ -1979,7 +2034,7 @@ enum ndm_core_response_error_t ndm_core_request_send(
 	va_start(ap, command_format);
 	response = __ndm_core_request(
 		core, request_type, NDM_CORE_MODE_NO_CACHE,
-		command_args, command_format, ap, true, NULL);
+		true, NULL, command_args, command_format, ap);
 	va_end(ap);
 
 	if (response == NULL) {
@@ -1995,7 +2050,11 @@ enum ndm_core_response_error_t ndm_core_request_send(
 	return e;
 }
 
-enum ndm_core_response_error_t ndm_core_request_first_str_alloc(
+/**
+ * Functions with command formatting.
+ **/
+
+enum ndm_core_response_error_t ndm_core_request_first_str_alloc_cf(
 		struct ndm_core_t *core,
 		const enum ndm_core_request_type_t request_type,
 		const enum ndm_core_cache_mode_t cache_mode,
@@ -2011,9 +2070,9 @@ enum ndm_core_response_error_t ndm_core_request_first_str_alloc(
 	enum ndm_core_response_error_t e = NDM_CORE_RESPONSE_ERROR_OK;
 
 	va_start(ap, command_format);
-	response = __ndm_core_request(
-		core, request_type, cache_mode, command_args, command_format,
-		ap, (cache_mode != NDM_CORE_MODE_CACHE), &response_copied);
+	response = __ndm_core_request(core, request_type, cache_mode,
+		(cache_mode != NDM_CORE_MODE_CACHE), &response_copied,
+		command_args, command_format, ap);
 	va_end(ap);
 
 	if (response == NULL) {
@@ -2043,7 +2102,7 @@ enum ndm_core_response_error_t ndm_core_request_first_str_alloc(
 	return e;
 }
 
-enum ndm_core_response_error_t ndm_core_request_first_str_buffer(
+enum ndm_core_response_error_t ndm_core_request_first_str_buffer_cf(
 		struct ndm_core_t *core,
 		const enum ndm_core_request_type_t request_type,
 		const enum ndm_core_cache_mode_t cache_mode,
@@ -2061,9 +2120,9 @@ enum ndm_core_response_error_t ndm_core_request_first_str_buffer(
 	enum ndm_core_response_error_t e = NDM_CORE_RESPONSE_ERROR_OK;
 
 	va_start(ap, command_format);
-	response = __ndm_core_request(
-		core, request_type, cache_mode, command_args, command_format,
-		ap, (cache_mode != NDM_CORE_MODE_CACHE), &response_copied);
+	response = __ndm_core_request(core, request_type, cache_mode,
+		(cache_mode != NDM_CORE_MODE_CACHE), &response_copied,
+		command_args, command_format, ap);
 	va_end(ap);
 
 	if (response == NULL) {
@@ -2089,6 +2148,12 @@ enum ndm_core_response_error_t ndm_core_request_first_str_buffer(
 				if (value_size != NULL) {
 					*value_size = (size_t) size;
 				}
+
+				if (size >= value_buffer_size) {
+					/* a buffer contains truncated content;
+					 * *value_size is a real content length */
+					e = NDM_CORE_RESPONSE_ERROR_BUFFER_SIZE;
+				}
 			}
 		}
 
@@ -2100,7 +2165,7 @@ enum ndm_core_response_error_t ndm_core_request_first_str_buffer(
 	return e;
 }
 
-enum ndm_core_response_error_t ndm_core_request_first_int(
+enum ndm_core_response_error_t ndm_core_request_first_int_cf(
 		struct ndm_core_t *core,
 		const enum ndm_core_request_type_t request_type,
 		const enum ndm_core_cache_mode_t cache_mode,
@@ -2116,9 +2181,9 @@ enum ndm_core_response_error_t ndm_core_request_first_int(
 	enum ndm_core_response_error_t e = NDM_CORE_RESPONSE_ERROR_OK;
 
 	va_start(ap, command_format);
-	response = __ndm_core_request(
-		core, request_type, cache_mode, command_args, command_format,
-		ap, (cache_mode != NDM_CORE_MODE_CACHE), &response_copied);
+	response = __ndm_core_request(core, request_type, cache_mode,
+		(cache_mode != NDM_CORE_MODE_CACHE), &response_copied,
+		command_args, command_format, ap);
 	va_end(ap);
 
 	if (response == NULL) {
@@ -2138,7 +2203,7 @@ enum ndm_core_response_error_t ndm_core_request_first_int(
 	return e;
 }
 
-enum ndm_core_response_error_t ndm_core_request_first_uint(
+enum ndm_core_response_error_t ndm_core_request_first_uint_cf(
 		struct ndm_core_t *core,
 		const enum ndm_core_request_type_t request_type,
 		const enum ndm_core_cache_mode_t cache_mode,
@@ -2154,9 +2219,9 @@ enum ndm_core_response_error_t ndm_core_request_first_uint(
 	enum ndm_core_response_error_t e = NDM_CORE_RESPONSE_ERROR_OK;
 
 	va_start(ap, command_format);
-	response = __ndm_core_request(
-		core, request_type, cache_mode, command_args, command_format,
-		ap, (cache_mode != NDM_CORE_MODE_CACHE), &response_copied);
+	response = __ndm_core_request(core, request_type, cache_mode,
+		(cache_mode != NDM_CORE_MODE_CACHE), &response_copied,
+		command_args, command_format, ap);
 	va_end(ap);
 
 	if (response == NULL) {
@@ -2176,7 +2241,7 @@ enum ndm_core_response_error_t ndm_core_request_first_uint(
 	return e;
 }
 
-enum ndm_core_response_error_t ndm_core_request_first_bool(
+enum ndm_core_response_error_t ndm_core_request_first_bool_cf(
 		struct ndm_core_t *core,
 		const enum ndm_core_request_type_t request_type,
 		const enum ndm_core_cache_mode_t cache_mode,
@@ -2192,9 +2257,9 @@ enum ndm_core_response_error_t ndm_core_request_first_bool(
 	enum ndm_core_response_error_t e = NDM_CORE_RESPONSE_ERROR_OK;
 
 	va_start(ap, command_format);
-	response = __ndm_core_request(
-		core, request_type, cache_mode, command_args, command_format,
-		ap, (cache_mode != NDM_CORE_MODE_CACHE), &response_copied);
+	response = __ndm_core_request(core, request_type, cache_mode,
+		(cache_mode != NDM_CORE_MODE_CACHE), &response_copied,
+		command_args, command_format, ap);
 	va_end(ap);
 
 	if (response == NULL) {
@@ -2205,6 +2270,239 @@ enum ndm_core_response_error_t ndm_core_request_first_bool(
 				ndm_core_response_root(response),
 				value, "%s", value_path) :
 			NDM_CORE_RESPONSE_ERROR_MESSAGE;
+
+		if (response_copied) {
+			ndm_core_response_free(&response);
+		}
+	}
+
+	return e;
+}
+
+/**
+ * Functions with path formatting.
+ **/
+
+enum ndm_core_response_error_t ndm_core_request_first_str_alloc_pf(
+		struct ndm_core_t *core,
+		const enum ndm_core_request_type_t request_type,
+		const enum ndm_core_cache_mode_t cache_mode,
+		const char *const command_args[],
+		const char *const command,
+		char **value,
+		const char *const value_path_format,
+		...)
+{
+	bool response_copied = false;
+	struct ndm_core_response_t *response = NULL;
+	enum ndm_core_response_error_t e = NDM_CORE_RESPONSE_ERROR_OK;
+
+	response = __ndm_core_request_cf(
+		core, request_type, cache_mode,
+		(cache_mode != NDM_CORE_MODE_CACHE), &response_copied,
+		command_args, "%s", command);
+
+	if (response == NULL) {
+		e = NDM_CORE_RESPONSE_ERROR_SYSTEM;
+	} else {
+		if (!__ndm_core_request_succeeded(core)) {
+			e = NDM_CORE_RESPONSE_ERROR_MESSAGE;
+		} else {
+			va_list ap;
+			const char *response_value = NULL;
+
+			va_start(ap, value_path_format);
+			e = __ndm_core_response_first_str(
+				ndm_core_response_root(response),
+				&response_value, value_path_format, ap);
+			va_end(ap);
+
+			if (e == NDM_CORE_RESPONSE_ERROR_OK &&
+				(*value = ndm_string_dup(response_value)) == NULL)
+			{
+				e = NDM_CORE_RESPONSE_ERROR_SYSTEM;
+			}
+		}
+
+		if (response_copied) {
+			ndm_core_response_free(&response);
+		}
+	}
+
+	return e;
+}
+
+enum ndm_core_response_error_t ndm_core_request_first_str_buffer_pf(
+		struct ndm_core_t *core,
+		const enum ndm_core_request_type_t request_type,
+		const enum ndm_core_cache_mode_t cache_mode,
+		const char *const command_args[],
+		const char *const command,
+		char *value,
+		const size_t value_buffer_size,
+		size_t *value_size,
+		const char *const value_path_format,
+		...)
+{
+	bool response_copied = false;
+	struct ndm_core_response_t *response = NULL;
+	enum ndm_core_response_error_t e = NDM_CORE_RESPONSE_ERROR_OK;
+
+	response = __ndm_core_request_cf(core, request_type, cache_mode,
+		(cache_mode != NDM_CORE_MODE_CACHE), &response_copied,
+		command_args, "%s", command);
+
+	if (response == NULL) {
+		e = NDM_CORE_RESPONSE_ERROR_SYSTEM;
+	} else {
+		if (!__ndm_core_request_succeeded(core)) {
+			e = NDM_CORE_RESPONSE_ERROR_MESSAGE;
+		} else {
+			va_list ap;
+			const char *response_value = NULL;
+
+			va_start(ap, value_path_format);
+			e = __ndm_core_response_first_str(
+				ndm_core_response_root(response),
+				&response_value, value_path_format, ap);
+			va_end(ap);
+
+			if (e == NDM_CORE_RESPONSE_ERROR_OK) {
+				const int size = snprintf(
+					value, value_buffer_size,
+					"%s", response_value);
+
+				if (size < 0) {
+					e = NDM_CORE_RESPONSE_ERROR_SYSTEM;
+				} else
+				if (value_size != NULL) {
+					*value_size = (size_t) size;
+				}
+
+				if (size >= value_buffer_size) {
+					/* a buffer contains truncated content;
+					 * *value_size is a real content length */
+					e = NDM_CORE_RESPONSE_ERROR_BUFFER_SIZE;
+				}
+			}
+		}
+
+		if (response_copied) {
+			ndm_core_response_free(&response);
+		}
+	}
+
+	return e;
+}
+
+enum ndm_core_response_error_t ndm_core_request_first_int_pf(
+		struct ndm_core_t *core,
+		const enum ndm_core_request_type_t request_type,
+		const enum ndm_core_cache_mode_t cache_mode,
+		const char *const command_args[],
+		const char *const command,
+		int *value,
+		const char *const value_path_format,
+		...)
+{
+	bool response_copied = false;
+	struct ndm_core_response_t *response = NULL;
+	enum ndm_core_response_error_t e = NDM_CORE_RESPONSE_ERROR_OK;
+
+	response = __ndm_core_request_cf(core, request_type, cache_mode,
+		(cache_mode != NDM_CORE_MODE_CACHE), &response_copied,
+		command_args, "%s", command);
+
+	if (response == NULL) {
+		e = NDM_CORE_RESPONSE_ERROR_SYSTEM;
+	} else {
+		va_list ap;
+
+		va_start(ap, value_path_format);
+		e = __ndm_core_request_succeeded(core) ?
+			__ndm_core_response_first_int(
+				ndm_core_response_root(response),
+				value, value_path_format, ap) :
+			NDM_CORE_RESPONSE_ERROR_MESSAGE;
+		va_end(ap);
+
+		if (response_copied) {
+			ndm_core_response_free(&response);
+		}
+	}
+
+	return e;
+}
+
+enum ndm_core_response_error_t ndm_core_request_first_uint_pf(
+		struct ndm_core_t *core,
+		const enum ndm_core_request_type_t request_type,
+		const enum ndm_core_cache_mode_t cache_mode,
+		const char *const command_args[],
+		const char *const command,
+		unsigned int *value,
+		const char *const value_path_format,
+		...)
+{
+	bool response_copied = false;
+	struct ndm_core_response_t *response = NULL;
+	enum ndm_core_response_error_t e = NDM_CORE_RESPONSE_ERROR_OK;
+
+	response = __ndm_core_request_cf(core, request_type, cache_mode,
+		(cache_mode != NDM_CORE_MODE_CACHE), &response_copied,
+		command_args, "%s", command);
+
+	if (response == NULL) {
+		e = NDM_CORE_RESPONSE_ERROR_SYSTEM;
+	} else {
+		va_list ap;
+
+		va_start(ap, value_path_format);
+		e = __ndm_core_request_succeeded(core) ?
+			__ndm_core_response_first_uint(
+				ndm_core_response_root(response),
+				value, value_path_format, ap) :
+			NDM_CORE_RESPONSE_ERROR_MESSAGE;
+		va_end(ap);
+
+		if (response_copied) {
+			ndm_core_response_free(&response);
+		}
+	}
+
+	return e;
+}
+
+enum ndm_core_response_error_t ndm_core_request_first_bool_pf(
+		struct ndm_core_t *core,
+		const enum ndm_core_request_type_t request_type,
+		const enum ndm_core_cache_mode_t cache_mode,
+		const char *const command_args[],
+		const char *const command,
+		bool *value,
+		const char *const value_path_format,
+		...)
+{
+	bool response_copied = false;
+	struct ndm_core_response_t *response = NULL;
+	enum ndm_core_response_error_t e = NDM_CORE_RESPONSE_ERROR_OK;
+
+	response = __ndm_core_request_cf(core, request_type, cache_mode,
+		(cache_mode != NDM_CORE_MODE_CACHE), &response_copied,
+		command_args, "%s", command);
+
+	if (response == NULL) {
+		e = NDM_CORE_RESPONSE_ERROR_SYSTEM;
+	} else {
+		va_list ap;
+
+		va_start(ap, value_path_format);
+		e = __ndm_core_request_succeeded(core) ?
+			__ndm_core_response_first_bool(
+				ndm_core_response_root(response),
+				value, value_path_format, ap) :
+			NDM_CORE_RESPONSE_ERROR_MESSAGE;
+		va_end(ap);
 
 		if (response_copied) {
 			ndm_core_response_free(&response);
