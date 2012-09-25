@@ -1001,7 +1001,9 @@ struct ndm_core_t *ndm_core_open(
 					sizeof(sa.un.in)) != 0)
 			{
 				/* failed to parse a defined core address or connect */
-				close(core->fd);
+				if (core->fd >= 0) {
+					close(core->fd);
+				}
 			} else {
 				connected = true;
 				core->timeout = NDM_CORE_DEFAULT_TIMEOUT;
