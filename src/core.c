@@ -808,34 +808,51 @@ static void __ndm_core_cache_init(
 	ndm_dlist_init(&cache->entries);
 }
 
+static inline void __ndm_core_cache_remove_last(
+		struct ndm_core_cache_t *cache)
+{
+	__ndm_core_cache_entry_remove(
+		ndm_dlist_entry(cache->entries.prev,
+			struct ndm_core_cache_entry_t, list));
+}
+
 void ndm_core_cache_clear(
 		struct ndm_core_t *core,
 		const bool remove_all)
 {
 	struct ndm_core_cache_t *cache = &core->cache;
-	struct timespec now;
 
-	ndm_time_get_monotonic(&now);
-
-	if (remove_all || ndm_time_less(&cache->next_expiration_time, &now)) {
-		struct ndm_core_cache_entry_t *e;
-		struct ndm_core_cache_entry_t *n;
+	if (remove_all) {
+		while (!ndm_dlist_is_empty(&cache->entries)) {
+			__ndm_core_cache_remove_last(cache);
+		}
 
 		ndm_time_get_max(&cache->next_expiration_time);
+	} else {
+		/* remove only expired entries */
+		struct timespec now;
 
-		ndm_dlist_foreach_entry_safe(e,
-			struct ndm_core_cache_entry_t,
-			list, &cache->entries, n)
-		{
-			if (remove_all || ndm_time_less(&e->expiration_time, &now)) {
-				/* remove and free an expired entry */
-				__ndm_core_cache_entry_remove(e);
-			} else
-			if (ndm_time_greater(
-					&cache->next_expiration_time,
-					&e->expiration_time))
+		ndm_time_get_monotonic(&now);
+
+		if (ndm_time_less(&cache->next_expiration_time, &now)) {
+			struct ndm_core_cache_entry_t *e;
+			struct ndm_core_cache_entry_t *n;
+
+			ndm_time_get_max(&cache->next_expiration_time);
+
+			ndm_dlist_foreach_entry_safe(e,
+				struct ndm_core_cache_entry_t,
+				list, &cache->entries, n)
 			{
-				cache->next_expiration_time = e->expiration_time;
+				if (ndm_time_less(&e->expiration_time, &now)) {
+					__ndm_core_cache_entry_remove(e);
+				} else
+				if (ndm_time_greater(
+						&cache->next_expiration_time,
+						&e->expiration_time))
+				{
+					cache->next_expiration_time = e->expiration_time;
+				}
 			}
 		}
 	}
@@ -925,10 +942,7 @@ static void __ndm_core_cache(
 		struct ndm_core_cache_entry_t *e = NULL;
 
 		while (cache->max_size - cache->size < need_size) {
-			/* remove last entries until a need free size reached */
-			__ndm_core_cache_entry_remove(
-				ndm_dlist_entry(cache->entries.prev,
-					struct ndm_core_cache_entry_t, list));
+			__ndm_core_cache_remove_last(cache);
 		}
 
 		e = malloc(sizeof(*e) + request_size);
@@ -1001,9 +1015,8 @@ struct ndm_core_t *ndm_core_open(
 					sizeof(sa.un.in)) != 0)
 			{
 				/* failed to parse a defined core address or connect */
-				if (core->fd >= 0) {
-					close(core->fd);
-				}
+				close(core->fd);
+				core->fd = -1;
 			} else {
 				connected = true;
 				core->timeout = NDM_CORE_DEFAULT_TIMEOUT;
