@@ -1942,6 +1942,7 @@ enum ndm_core_response_error_t ndm_core_response_first_uint(
 
 static enum ndm_core_response_error_t __ndm_core_response_first_bool(
 		const struct ndm_xml_node_t *node,
+		const bool parse_value,
 		bool *value,
 		const char *const path_format,
 		va_list ap)
@@ -1950,6 +1951,18 @@ static enum ndm_core_response_error_t __ndm_core_response_first_bool(
 	enum ndm_core_response_error_t e =
 		__ndm_core_response_first_str(node, &str_value, path_format, ap);
 
+	if (!parse_value) {
+		/* try to find only */
+		if (e == NDM_CORE_RESPONSE_ERROR_OK) {
+			/* a tag found */
+			*value = true;
+		} else
+		if (e == NDM_CORE_RESPONSE_ERROR_NOT_FOUND) {
+			/* no tag found */
+			*value = false;
+			e = NDM_CORE_RESPONSE_ERROR_OK;
+		}
+	} else
 	if (e == NDM_CORE_RESPONSE_ERROR_OK) {
 		long l;
 
@@ -1979,6 +1992,7 @@ static enum ndm_core_response_error_t __ndm_core_response_first_bool(
 
 enum ndm_core_response_error_t ndm_core_response_first_bool(
 		const struct ndm_xml_node_t *node,
+		const bool parse_value,
 		bool *value,
 		const char *const path_format,
 		...)
@@ -1987,7 +2001,8 @@ enum ndm_core_response_error_t ndm_core_response_first_bool(
 	enum ndm_core_response_error_t e = NDM_CORE_RESPONSE_ERROR_OK;
 
 	va_start(ap, path_format);
-	e = __ndm_core_response_first_bool(node, value, path_format, ap);
+	e = __ndm_core_response_first_bool(node,
+		parse_value, value, path_format, ap);
 	va_end(ap);
 
 	return e;
@@ -2259,6 +2274,7 @@ enum ndm_core_response_error_t ndm_core_request_first_bool_cf(
 		struct ndm_core_t *core,
 		const enum ndm_core_request_type_t request_type,
 		const enum ndm_core_cache_mode_t cache_mode,
+		const bool parse_value,
 		bool *value,
 		const char *const value_path,
 		const char *const command_args[],
@@ -2282,7 +2298,7 @@ enum ndm_core_response_error_t ndm_core_request_first_bool_cf(
 		e = __ndm_core_request_succeeded(core) ?
 			ndm_core_response_first_bool(
 				ndm_core_response_root(response),
-				value, "%s", value_path) :
+				parse_value, value, "%s", value_path) :
 			NDM_CORE_RESPONSE_ERROR_MESSAGE;
 
 		if (response_copied) {
@@ -2493,6 +2509,7 @@ enum ndm_core_response_error_t ndm_core_request_first_bool_pf(
 		const enum ndm_core_cache_mode_t cache_mode,
 		const char *const command_args[],
 		const char *const command,
+		const bool parse_value,
 		bool *value,
 		const char *const value_path_format,
 		...)
@@ -2514,7 +2531,7 @@ enum ndm_core_response_error_t ndm_core_request_first_bool_pf(
 		e = __ndm_core_request_succeeded(core) ?
 			__ndm_core_response_first_bool(
 				ndm_core_response_root(response),
-				value, value_path_format, ap) :
+				parse_value, value, value_path_format, ap) :
 			NDM_CORE_RESPONSE_ERROR_MESSAGE;
 		va_end(ap);
 

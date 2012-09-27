@@ -205,9 +205,10 @@ enum ndm_core_response_error_t ndm_core_response_first_uint(
 
 enum ndm_core_response_error_t ndm_core_response_first_bool(
 		const struct ndm_xml_node_t *node,
+		const bool parse_value,
 		bool *value,
 		const char *const value_path_format,
-		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(3, 4);
+		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(4, 5);
 
 /**
  * The highest level core functions.
@@ -285,11 +286,12 @@ enum ndm_core_response_error_t ndm_core_request_first_bool_cf(
 		struct ndm_core_t *core,
 		const enum ndm_core_request_type_t request_type,
 		const enum ndm_core_cache_mode_t cache_mode,
+		const bool parse_value,
 		bool *value,
 		const char *const value_path,
 		const char *const command_args[],
 		const char *const command_format,
-		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(7, 8);
+		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(8, 9);
 
 /**
  * Functions with path formatting.
@@ -343,9 +345,10 @@ enum ndm_core_response_error_t ndm_core_request_first_bool_pf(
 		const enum ndm_core_cache_mode_t cache_mode,
 		const char *const command_args[],
 		const char *const command,
+		const bool parse_value,
 		bool *value,
 		const char *const value_path_format,
-		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(7, 8);
+		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(8, 9);
 
 #endif	/* __NDM_CORE_H__ */
 

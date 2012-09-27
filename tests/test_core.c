@@ -263,7 +263,7 @@ int main()
 		NDM_TEST(u == 1500);
 
 		NDM_TEST(ndm_core_response_first_bool(
-			n, &b, "interface/global") == NDM_CORE_RESPONSE_ERROR_OK);
+			n, true, &b, "interface/global") == NDM_CORE_RESPONSE_ERROR_OK);
 
 		i = 0;
 
@@ -281,14 +281,14 @@ int main()
 			ndm_core_request_first_bool_cf(core,
 				NDM_CORE_REQUEST_PARSE,
 				NDM_CORE_MODE_CACHE,
-				&b, "config/enabled",
+				false, &b, "config/enabled",
 				NULL, "service aaa") != NDM_CORE_RESPONSE_ERROR_OK);
 
 		NDM_TEST(
 			ndm_core_request_first_bool_pf(core,
 				NDM_CORE_REQUEST_PARSE,
 				NDM_CORE_MODE_CACHE,
-				NULL, "service aaa",
+				false, NULL, "service aaa",
 				&b, "config/%s", "enabled") != NDM_CORE_RESPONSE_ERROR_OK);
 
 		NDM_TEST(ndm_core_last_message_received(core));
