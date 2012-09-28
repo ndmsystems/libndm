@@ -95,7 +95,7 @@ struct ndm_core_message_t
 	char string[NDM_CORE_MESSAGE_STRING_MAX_SIZE_];
 	char ident[NDM_CORE_MESSAGE_IDENT_MAX_SIZE_];
 	char source[NDM_CORE_MESSAGE_SOURCE_MAX_SIZE_];
-	uint32_t code;
+	ndm_code_t code;
 	enum ndm_core_response_type_t type;
 	ndm_core_response_id_t response_id;
 };
@@ -235,13 +235,13 @@ static void __ndm_core_message_update(
 				"" : ndm_xml_attr_value(source_attr));
 
 			if (code_attr != NULL) {
-				unsigned long ul;
+				char end;
 
-				if (ndm_int_parse_ulong(
-						ndm_xml_attr_value(code_attr), &ul) &&
-					ul <= UINT32_MAX)
+				if (sscanf(ndm_xml_attr_value(code_attr),
+						"%" NDM_CODE_SCNu "%c", &message->code, &end) != 1)
 				{
-					message->code = (uint32_t) ul;
+					/* failed to parse a message code */
+					message->code = 0;
 				}
 			}
 
@@ -1622,7 +1622,7 @@ const char *ndm_core_last_message_source(
 	return core->last_message.source;
 }
 
-uint32_t ndm_core_last_message_code(
+ndm_code_t ndm_core_last_message_code(
 		struct ndm_core_t *core)
 {
 	return core->last_message.code;

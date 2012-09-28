@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include "code.h"
 #include "attr.h"
 
 #define NDM_CORE_DEFAULT_CACHE_TTL					200
@@ -157,7 +158,7 @@ const char *ndm_core_last_message_ident(
 const char *ndm_core_last_message_source(
 		struct ndm_core_t *core) NDM_ATTR_WUR;
 
-uint32_t ndm_core_last_message_code(
+ndm_code_t ndm_core_last_message_code(
 		struct ndm_core_t *code) NDM_ATTR_WUR;
 
 void ndm_core_response_free(
