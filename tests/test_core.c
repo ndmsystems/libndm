@@ -288,8 +288,9 @@ int main()
 			ndm_core_request_first_bool_pf(core,
 				NDM_CORE_REQUEST_PARSE,
 				NDM_CORE_MODE_CACHE,
-				false, NULL, "service aaa",
-				&b, "config/%s", "enabled") != NDM_CORE_RESPONSE_ERROR_OK);
+				NULL, "service aaa",
+				false, &b, "config/%s", "enabled") !=
+					NDM_CORE_RESPONSE_ERROR_OK);
 
 		NDM_TEST(ndm_core_last_message_received(core));
 
