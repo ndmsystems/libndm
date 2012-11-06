@@ -33,7 +33,7 @@ void ndm_mac_addr_assign(
 		struct ndm_mac_addr_t *a,
 		const struct ndm_mac_addr_t *b)
 {
-	memcpy(a, b, sizeof(b));
+	memcpy(a, b, sizeof(*b));
 }
 
 bool ndm_mac_addr_assign_array(
