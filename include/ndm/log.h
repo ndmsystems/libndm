@@ -33,6 +33,8 @@ void ndm_log(
 #define NDM_LOG_CRITICAL(fmt, args...)	ndm_log(LCRITICAL, fmt, ##args)
 
 #ifndef NDEBUG
+#include "macro.h"
+
 #define NDM_LOG_DEBUG(fmt, args...)		\
 	ndm_log(LDEBUG,						\
 		"[" __FILE__ ":" NDM_TO_STRING(__LINE__) "] " fmt, ##args)
