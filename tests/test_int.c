@@ -25,7 +25,9 @@ int main()
 {
 	char lb[NDM_INT_BUFSIZE];
 	long l;
+	long long ll;
 	unsigned long ul;
+	unsigned long long ull;
 
 	NDM_TEST(NDM_INT_MIN(char) == CHAR_MIN);
 	NDM_TEST(NDM_INT_MAX(char) == CHAR_MAX);
@@ -78,6 +80,34 @@ int main()
 
 	NDM_TEST_BREAK_IF(snprintf(lb, sizeof(lb), "%lu", ULONG_MAX) <= 0);
 	NDM_TEST(ndm_int_parse_ulong(lb, &ul) && ul == ULONG_MAX);
+
+	NDM_TEST(!ndm_int_parse_llong("", &ll));
+	NDM_TEST(!ndm_int_parse_llong(" ", &ll));
+	NDM_TEST(!ndm_int_parse_llong("0 ", &ll));
+	NDM_TEST(!ndm_int_parse_llong(" 0", &ll));
+	NDM_TEST(!ndm_int_parse_llong("999999999999999999999999999999999", &ll));
+
+	NDM_TEST(ndm_int_parse_llong("1", &ll) && ll == 1);
+	NDM_TEST(ndm_int_parse_llong("-1", &ll) && ll == -1);
+
+	NDM_TEST_BREAK_IF(snprintf(lb, sizeof(lb), "%lli", LLONG_MAX) <= 0);
+	NDM_TEST(ndm_int_parse_llong(lb, &ll) && ll == LLONG_MAX);
+
+	NDM_TEST_BREAK_IF(snprintf(lb, sizeof(lb), "%lli", LLONG_MIN) <= 0);
+	NDM_TEST(ndm_int_parse_llong(lb, &ll) && ll == LLONG_MIN);
+
+	NDM_TEST(!ndm_int_parse_ullong("", &ull));
+	NDM_TEST(!ndm_int_parse_ullong(" ", &ull));
+	NDM_TEST(!ndm_int_parse_ullong("0 ", &ull));
+	NDM_TEST(!ndm_int_parse_ullong(" 0", &ull));
+	NDM_TEST(!ndm_int_parse_ullong(
+		"999999999999999999999999999999999", &ull));
+	NDM_TEST(!ndm_int_parse_ullong("-1", &ull));
+
+	NDM_TEST(ndm_int_parse_ullong("1", &ull) && ull == 1);
+
+	NDM_TEST_BREAK_IF(snprintf(lb, sizeof(lb), "%llu", ULLONG_MAX) <= 0);
+	NDM_TEST(ndm_int_parse_ullong(lb, &ull) && ull == ULLONG_MAX);
 
 	return NDM_TEST_RESULT;
 }

@@ -87,3 +87,45 @@ bool ndm_int_parse_ulong(const char *const str, unsigned long *value)
 	return false;
 }
 
+bool ndm_int_parse_llong(const char *const str, long long *value)
+{
+	char *e;
+	long v;
+
+	if (!isdigit(*str) && *str != '-') {
+		errno = EINVAL;
+	} else {
+		errno = 0;
+		v = strtoll(str, &e, 10);
+
+		if (errno == 0 && *e == 0) {
+			*value = v;
+
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool ndm_int_parse_ullong(const char *const str, unsigned long long *value)
+{
+	char *e;
+	unsigned long v;
+
+	if (!isdigit(*str)) {
+		errno = EINVAL;
+	} else {
+		errno = 0;
+		v = strtoull(str, &e, 10);
+
+		if (errno == 0 && *e == 0) {
+			*value = v;
+
+			return true;
+		}
+	}
+
+	return false;
+}
+

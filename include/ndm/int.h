@@ -55,5 +55,13 @@ bool ndm_int_parse_ulong(
 		const char *const str,
 		unsigned long *value) NDM_ATTR_WUR;
 
+bool ndm_int_parse_llong(
+		const char *const str,
+		long long *value) NDM_ATTR_WUR;
+
+bool ndm_int_parse_ullong(
+		const char *const str,
+		unsigned long long *value) NDM_ATTR_WUR;
+
 #endif	/* __NDM_INT_H__ */
 
