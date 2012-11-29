@@ -61,6 +61,9 @@ uint16_t ndm_ip_sockaddr_port(
 int ndm_ip_sockaddr_domain(
 		const struct ndm_ip_sockaddr_t *const sa) NDM_ATTR_WUR;
 
+sa_family_t ndm_ip_sockaddr_family(
+		const struct ndm_ip_sockaddr_t *const sa) NDM_ATTR_WUR;
+
 extern const struct ndm_ip_sockaddr_t NDM_IP4_SOCKADDR_ZERO;
 extern const struct ndm_ip_sockaddr_t NDM_IP6_SOCKADDR_ZERO;
 

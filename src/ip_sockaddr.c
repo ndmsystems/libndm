@@ -155,3 +155,9 @@ int ndm_ip_sockaddr_domain(
 	return sa->un.family == AF_INET ? PF_INET : PF_INET6;
 }
 
+sa_family_t ndm_ip_sockaddr_family(
+		const struct ndm_ip_sockaddr_t *const sa)
+{
+	return sa->un.family;
+}
+
