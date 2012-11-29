@@ -128,3 +128,30 @@ const struct ndm_ip_sockaddr_t *ndm_ip_sockaddr_get_zero(
 		&NDM_IP6_SOCKADDR_ZERO;
 }
 
+void ndm_ip_sockaddr_set_port(
+		struct ndm_ip_sockaddr_t *const sa,
+		const uint16_t port)
+{
+	if (sa->un.family == AF_INET) {
+		sa->un.in.sin_port = htons(port);
+	} else {
+		sa->un.in6.sin6_port = htons(port);
+	}
+}
+
+uint16_t ndm_ip_sockaddr_port(
+		const struct ndm_ip_sockaddr_t *const sa)
+{
+	if (sa->un.family == AF_INET) {
+		return ntohs(sa->un.in.sin_port);
+	}
+
+	return ntohs(sa->un.in6.sin6_port);
+}
+
+int ndm_ip_sockaddr_domain(
+		const struct ndm_ip_sockaddr_t *const sa)
+{
+	return sa->un.family == AF_INET ? PF_INET : PF_INET6;
+}
+
