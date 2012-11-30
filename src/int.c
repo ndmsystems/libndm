@@ -90,7 +90,7 @@ bool ndm_int_parse_ulong(const char *const str, unsigned long *value)
 bool ndm_int_parse_llong(const char *const str, long long *value)
 {
 	char *e;
-	long v;
+	long long v;
 
 	if (!isdigit(*str) && *str != '-') {
 		errno = EINVAL;
@@ -111,7 +111,7 @@ bool ndm_int_parse_llong(const char *const str, long long *value)
 bool ndm_int_parse_ullong(const char *const str, unsigned long long *value)
 {
 	char *e;
-	unsigned long v;
+	unsigned long long v;
 
 	if (!isdigit(*str)) {
 		errno = EINVAL;
