@@ -46,22 +46,35 @@ void ndm_log(
 		const char *const format,
 		...)
 {
-	va_list vargs;
+	const char *trailer = "";
+	const bool source_empty = (__source == NULL) || (*__source == '\0');
 	char message[NDM_LOG_MESSAGE_SIZE_];
+	va_list vargs;
+	int size = 0;
 
 	va_start(vargs, format);
-	vsnprintf(message, sizeof(message), format, vargs);
+	size = vsnprintf(message, sizeof(message), format, vargs);
 	va_end(vargs);
+
+	if (size > 0 && size < sizeof(message) &&
+		message[size - 1] != '.' &&
+		(level == LINFO ||
+		 level == LWARNING ||
+		 level == LERROR ||
+		 level == LCRITICAL) ? "." : "")
+	{
+		trailer = ".";
+	}
 
 	if (!__console_mode) {
 		syslog(__facility |
 			((level == LINFO)  ?	LOG_INFO :
 			 (level == LWARNING) ?	LOG_WARNING :
 			 (level == LERROR) ?	LOG_ERR :
-			 (level == LCRITICAL) ?	LOG_CRIT : LOG_DEBUG), ": %s%s%s",
-			(__source == NULL) ? "" : __source,
-			(__source == NULL) ? "" : ": ",
-			message);
+			 (level == LCRITICAL) ?	LOG_CRIT : LOG_DEBUG), "%s%s%s%s",
+			source_empty ? "" : __source,
+			source_empty ? "" : ": ",
+			message, trailer);
 	} else {
 		static const char *MONTHS[] = {
 			"Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -89,14 +102,9 @@ void ndm_log(
 			WEEKDAYS[((unsigned long) t.tm_wday) % NDM_ARRAY_SIZE(WEEKDAYS)],
 			(int) t.tm_hour, (int) t.tm_min, (int) t.tm_sec,
 			__ident,
-			(__source == NULL) ? "" : __source,
-			(__source == NULL) ? "" : ": ",
-			message,
-			(message[strlen(message) - 1] != '.') &&
-			(level == LINFO ||
-			 level == LWARNING ||
-			 level == LERROR ||
-			 level == LCRITICAL) ? "." : "");
+			source_empty ? "" : __source,
+			source_empty ? "" : ": ",
+			message, trailer);
 	}
 }
 
