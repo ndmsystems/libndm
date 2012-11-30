@@ -133,9 +133,9 @@ void ndm_ip_sockaddr_set_port(
 		const uint16_t port)
 {
 	if (sa->un.family == AF_INET) {
-		sa->un.in.sin_port = htons(port);
+		sa->un.in.sin_port = (uint16_t) htons(port);
 	} else {
-		sa->un.in6.sin6_port = htons(port);
+		sa->un.in6.sin6_port = (uint16_t) htons(port);
 	}
 }
 
@@ -143,10 +143,10 @@ uint16_t ndm_ip_sockaddr_port(
 		const struct ndm_ip_sockaddr_t *const sa)
 {
 	if (sa->un.family == AF_INET) {
-		return ntohs(sa->un.in.sin_port);
+		return (uint16_t) ntohs(sa->un.in.sin_port);
 	}
 
-	return ntohs(sa->un.in6.sin6_port);
+	return (uint16_t) ntohs(sa->un.in6.sin6_port);
 }
 
 int ndm_ip_sockaddr_domain(
