@@ -61,7 +61,7 @@ void ndm_log(
 		(level == LINFO ||
 		 level == LWARNING ||
 		 level == LERROR ||
-		 level == LCRITICAL) ? "." : "")
+		 level == LCRITICAL))
 	{
 		trailer = ".";
 	}
