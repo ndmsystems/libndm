@@ -51,6 +51,9 @@ bool ndm_ip_sockaddr_pton(
 const struct ndm_ip_sockaddr_t *ndm_ip_sockaddr_get_zero(
 		const int family) NDM_ATTR_WUR;
 
+const struct ndm_ip_sockaddr_t *ndm_ip_sockaddr_get_loopback(
+		const int family) NDM_ATTR_WUR;
+
 void ndm_ip_sockaddr_set_port(
 		struct ndm_ip_sockaddr_t *const sa,
 		const uint16_t port);
@@ -66,6 +69,9 @@ sa_family_t ndm_ip_sockaddr_family(
 
 extern const struct ndm_ip_sockaddr_t NDM_IP4_SOCKADDR_ZERO;
 extern const struct ndm_ip_sockaddr_t NDM_IP6_SOCKADDR_ZERO;
+
+extern const struct ndm_ip_sockaddr_t NDM_IP4_SOCKADDR_LOOPBACK;
+extern const struct ndm_ip_sockaddr_t NDM_IP6_SOCKADDR_LOOPBACK;
 
 #endif	/* __NDM_IP_SOCKADDR_H__ */
 

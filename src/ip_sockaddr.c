@@ -27,10 +27,38 @@ const struct ndm_ip_sockaddr_t NDM_IP6_SOCKADDR_ZERO =
 		{
 			.sin6_family = AF_INET6,
 			.sin6_port = 0,
-			.sin6_addr =
+			.sin6_addr = IN6ADDR_ANY_INIT
+		}
+	},
+	.size = sizeof(struct sockaddr_in6)
+};
+
+const struct ndm_ip_sockaddr_t NDM_IP4_SOCKADDR_LOOPBACK =
+{
+	.un =
+	{
+		.in =
+		{
+			.sin_family = AF_INET,
+			.sin_port = 0,
+			.sin_addr =
 			{
-				.s6_addr = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+				.s_addr = INADDR_LOOPBACK
 			}
+		}
+	},
+	.size = sizeof(struct sockaddr_in)
+};
+
+const struct ndm_ip_sockaddr_t NDM_IP6_SOCKADDR_LOOPBACK =
+{
+	.un =
+	{
+		.in6 =
+		{
+			.sin6_family = AF_INET6,
+			.sin6_port = 0,
+			.sin6_addr = IN6ADDR_LOOPBACK_INIT
 		}
 	},
 	.size = sizeof(struct sockaddr_in6)
@@ -126,6 +154,14 @@ const struct ndm_ip_sockaddr_t *ndm_ip_sockaddr_get_zero(
 	return family == AF_INET ?
 		&NDM_IP4_SOCKADDR_ZERO :
 		&NDM_IP6_SOCKADDR_ZERO;
+}
+
+const struct ndm_ip_sockaddr_t *ndm_ip_sockaddr_get_loopback(
+		const int family)
+{
+	return family == AF_INET ?
+		&NDM_IP4_SOCKADDR_LOOPBACK :
+		&NDM_IP6_SOCKADDR_LOOPBACK;
 }
 
 void ndm_ip_sockaddr_set_port(
