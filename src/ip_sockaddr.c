@@ -3,7 +3,7 @@
 #include <arpa/inet.h>
 #include <ndm/ip_sockaddr.h>
 
-const struct ndm_ip_sockaddr_t NDM_IP4_SOCKADDR_ZERO =
+const struct ndm_ip_sockaddr_t NDM_IP_SOCKADDR_ANY =
 {
 	.un =
 	{
@@ -20,7 +20,7 @@ const struct ndm_ip_sockaddr_t NDM_IP4_SOCKADDR_ZERO =
 	.size = sizeof(struct sockaddr_in)
 };
 
-const struct ndm_ip_sockaddr_t NDM_IP6_SOCKADDR_ZERO =
+const struct ndm_ip_sockaddr_t NDM_IP_SOCKADDR_ANY6 =
 {
 	.un =
 	{
@@ -132,22 +132,22 @@ bool ndm_ip_sockaddr_address_is_equal(
 		  	sizeof(sa1->un.in6.sin6_addr.s6_addr)) == 0)) ? true : false;
 }
 
-bool ndm_ip_sockaddr_is_zero(
+bool ndm_ip_sockaddr_is_any(
 		const struct ndm_ip_sockaddr_t *const sa)
 {
 	assert(ndm_ip_sockaddr_is_v4(sa) || ndm_ip_sockaddr_is_v6(sa));
 
 	return ndm_ip_sockaddr_is_equal(sa,
-		ndm_ip_sockaddr_get_zero(ndm_ip_sockaddr_family(sa)));
+		ndm_ip_sockaddr_get_any(ndm_ip_sockaddr_family(sa)));
 }
 
-bool ndm_ip_sockaddr_address_is_zero(
+bool ndm_ip_sockaddr_address_is_any(
 		const struct ndm_ip_sockaddr_t *const sa)
 {
 	assert(ndm_ip_sockaddr_is_v4(sa) || ndm_ip_sockaddr_is_v6(sa));
 
 	return ndm_ip_sockaddr_address_is_equal(sa,
-		ndm_ip_sockaddr_get_zero(ndm_ip_sockaddr_family(sa)));
+		ndm_ip_sockaddr_get_any(ndm_ip_sockaddr_family(sa)));
 }
 
 bool ndm_ip_sockaddr_is_v4(
@@ -251,7 +251,7 @@ bool ndm_ip_sockaddr_get_v4_compat(
 	if (ndm_ip_sockaddr_is_v4(sa)) {
 		const uint32_t s4 = ntohl(sa->un.in.sin_addr.s_addr);
 
-		*sa6 = NDM_IP6_SOCKADDR_ZERO;
+		*sa6 = NDM_IP_SOCKADDR_ANY6;
 		in6->s6_addr[12] = (uint8_t) (s4 >> 24);
 		in6->s6_addr[13] = (uint8_t) (s4 >> 16);
 		in6->s6_addr[14] = (uint8_t) (s4 >> 8);
@@ -277,14 +277,14 @@ bool ndm_ip_sockaddr_is_v6(
 	return (ndm_ip_sockaddr_family(sa) == AF_INET6) ? true : false;
 }
 
-const struct ndm_ip_sockaddr_t *ndm_ip_sockaddr_get_zero(
+const struct ndm_ip_sockaddr_t *ndm_ip_sockaddr_get_any(
 		const int family)
 {
 	assert(family == AF_INET || family == AF_INET6);
 
 	return (family == AF_INET) ?
-		&NDM_IP4_SOCKADDR_ZERO :
-		&NDM_IP6_SOCKADDR_ZERO;
+		&NDM_IP_SOCKADDR_ANY :
+		&NDM_IP_SOCKADDR_ANY6;
 }
 
 void ndm_ip_sockaddr_get_loopback(

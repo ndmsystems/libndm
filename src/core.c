@@ -612,7 +612,7 @@ struct ndm_core_event_connection_t *ndm_core_event_connection_open(
 		{
 			/* failed to open a new TCP socket */
 		} else {
-			struct ndm_ip_sockaddr_t sa = NDM_IP4_SOCKADDR_ZERO;
+			struct ndm_ip_sockaddr_t sa = NDM_IP_SOCKADDR_ANY;
 
 			sa.un.in.sin_port = (uint16_t) htons(NDM_CORE_EVENT_PORT_);
 
@@ -1005,7 +1005,7 @@ struct ndm_core_t *ndm_core_open(
 		if ((core->fd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
 			/* failed to open a new TCP socket */
 		} else {
-			struct ndm_ip_sockaddr_t sa = NDM_IP4_SOCKADDR_ZERO;
+			struct ndm_ip_sockaddr_t sa = NDM_IP_SOCKADDR_ANY;
 
 			sa.un.in.sin_port = (uint16_t) htons(NDM_CORE_PORT_);
 

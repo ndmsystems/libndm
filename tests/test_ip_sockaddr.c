@@ -23,7 +23,7 @@ int main()
 	struct sockaddr_in6 in6;
 	char addr[NDM_IP_SOCKADDR_LEN];
 
-	/* IPv4 zero address test */
+	/* IPv4 any address test */
 
 	in.sin_family = AF_INET;
 	in.sin_port = 0;
@@ -41,8 +41,8 @@ int main()
 	b = a;
 
 	NDM_TEST(ndm_ip_sockaddr_is_equal(&a, &b));
-	NDM_TEST(ndm_ip_sockaddr_is_zero(&a));
-	NDM_TEST(ndm_ip_sockaddr_address_is_zero(&a));
+	NDM_TEST(ndm_ip_sockaddr_is_any(&a));
+	NDM_TEST(ndm_ip_sockaddr_address_is_any(&a));
 
 	ndm_ip_sockaddr_get_loopback(ndm_ip_sockaddr_family(&a), &b);
 
@@ -54,7 +54,7 @@ int main()
 	NDM_TEST(ndm_ip_sockaddr_pton(addr, &b));
 	NDM_TEST(ndm_ip_sockaddr_is_equal(&a, &b));
 	NDM_TEST(ndm_ip_sockaddr_address_is_equal(
-		&a, ndm_ip_sockaddr_get_zero(AF_INET)));
+		&a, ndm_ip_sockaddr_get_any(AF_INET)));
 
 	NDM_TEST(ndm_ip_sockaddr_port(&a) == 0);
 
@@ -72,7 +72,7 @@ int main()
 
 	NDM_TEST(ndm_ip_sockaddr_get_v4(&a, &b));
 	NDM_TEST(ndm_ip_sockaddr_is_equal(&a, &b));
-	NDM_TEST(!ndm_ip_sockaddr_is_zero(&a));
+	NDM_TEST(!ndm_ip_sockaddr_is_any(&a));
 
 	/* IPv4 loopback address test */
 
@@ -92,8 +92,8 @@ int main()
 	b = a;
 
 	NDM_TEST(ndm_ip_sockaddr_is_equal(&a, &b));
-	NDM_TEST(!ndm_ip_sockaddr_is_zero(&a));
-	NDM_TEST(!ndm_ip_sockaddr_address_is_zero(&a));
+	NDM_TEST(!ndm_ip_sockaddr_is_any(&a));
+	NDM_TEST(!ndm_ip_sockaddr_address_is_any(&a));
 
 	ndm_ip_sockaddr_get_loopback(ndm_ip_sockaddr_family(&a), &b);
 
@@ -122,8 +122,8 @@ int main()
 
 	NDM_TEST(ndm_ip_sockaddr_get_v4(&a, &b));
 	NDM_TEST(ndm_ip_sockaddr_is_equal(&a, &b));
-	NDM_TEST(!ndm_ip_sockaddr_is_zero(&a));
-	NDM_TEST(!ndm_ip_sockaddr_address_is_zero(&a));
+	NDM_TEST(!ndm_ip_sockaddr_is_any(&a));
+	NDM_TEST(!ndm_ip_sockaddr_address_is_any(&a));
 
 	/* IPv4 class C address test */
 
@@ -143,8 +143,8 @@ int main()
 	b = a;
 
 	NDM_TEST(ndm_ip_sockaddr_is_equal(&a, &b));
-	NDM_TEST(!ndm_ip_sockaddr_is_zero(&a));
-	NDM_TEST(!ndm_ip_sockaddr_address_is_zero(&a));
+	NDM_TEST(!ndm_ip_sockaddr_is_any(&a));
+	NDM_TEST(!ndm_ip_sockaddr_address_is_any(&a));
 
 	ndm_ip_sockaddr_get_loopback(ndm_ip_sockaddr_family(&a), &b);
 
@@ -173,10 +173,10 @@ int main()
 
 	NDM_TEST(ndm_ip_sockaddr_get_v4(&a, &b));
 	NDM_TEST(ndm_ip_sockaddr_is_equal(&a, &b));
-	NDM_TEST(!ndm_ip_sockaddr_is_zero(&a));
-	NDM_TEST(!ndm_ip_sockaddr_address_is_zero(&a));
+	NDM_TEST(!ndm_ip_sockaddr_is_any(&a));
+	NDM_TEST(!ndm_ip_sockaddr_address_is_any(&a));
 
-	/* IPv6 zero address test */
+	/* IPv6 any address test */
 
 #ifdef SIN6_LEN
 	in6.sin6_len = SIN6_LEN;
@@ -198,8 +198,8 @@ int main()
 	b = a;
 
 	NDM_TEST(ndm_ip_sockaddr_is_equal(&a, &b));
-	NDM_TEST(ndm_ip_sockaddr_is_zero(&a));
-	NDM_TEST(ndm_ip_sockaddr_address_is_zero(&a));
+	NDM_TEST(ndm_ip_sockaddr_is_any(&a));
+	NDM_TEST(ndm_ip_sockaddr_address_is_any(&a));
 
 	ndm_ip_sockaddr_get_loopback(ndm_ip_sockaddr_family(&a), &b);
 
@@ -211,7 +211,7 @@ int main()
 	NDM_TEST(ndm_ip_sockaddr_pton(addr, &b));
 	NDM_TEST(ndm_ip_sockaddr_is_equal(&a, &b));
 	NDM_TEST(ndm_ip_sockaddr_address_is_equal(
-		&a, ndm_ip_sockaddr_get_zero(
+		&a, ndm_ip_sockaddr_get_any(
 			ndm_ip_sockaddr_family(&a))));
 
 	NDM_TEST(ndm_ip_sockaddr_port(&a) == 0);
@@ -231,14 +231,14 @@ int main()
 	NDM_TEST(ndm_ip_sockaddr_get_v4(&a, &b));
 
 	NDM_TEST(ndm_ip_sockaddr_address_is_equal(
-		&b, ndm_ip_sockaddr_get_zero(AF_INET)));
-	NDM_TEST(ndm_ip_sockaddr_address_is_zero(&a));
-	NDM_TEST(ndm_ip_sockaddr_address_is_zero(&b));
+		&b, ndm_ip_sockaddr_get_any(AF_INET)));
+	NDM_TEST(ndm_ip_sockaddr_address_is_any(&a));
+	NDM_TEST(ndm_ip_sockaddr_address_is_any(&b));
 
 	NDM_TEST(!ndm_ip_sockaddr_is_equal(
-		&b, ndm_ip_sockaddr_get_zero(AF_INET)));
-	NDM_TEST(!ndm_ip_sockaddr_is_zero(&a));
-	NDM_TEST(!ndm_ip_sockaddr_is_zero(&b));
+		&b, ndm_ip_sockaddr_get_any(AF_INET)));
+	NDM_TEST(!ndm_ip_sockaddr_is_any(&a));
+	NDM_TEST(!ndm_ip_sockaddr_is_any(&b));
 
 	/* IPv6 loopback address test */
 
@@ -262,8 +262,8 @@ int main()
 	b = a;
 
 	NDM_TEST(ndm_ip_sockaddr_is_equal(&a, &b));
-	NDM_TEST(!ndm_ip_sockaddr_is_zero(&a));
-	NDM_TEST(!ndm_ip_sockaddr_address_is_zero(&a));
+	NDM_TEST(!ndm_ip_sockaddr_is_any(&a));
+	NDM_TEST(!ndm_ip_sockaddr_address_is_any(&a));
 
 	ndm_ip_sockaddr_get_loopback(ndm_ip_sockaddr_family(&a), &b);
 
@@ -312,8 +312,8 @@ int main()
 	b = a;
 
 	NDM_TEST(ndm_ip_sockaddr_is_equal(&a, &b));
-	NDM_TEST(!ndm_ip_sockaddr_is_zero(&a));
-	NDM_TEST(!ndm_ip_sockaddr_address_is_zero(&a));
+	NDM_TEST(!ndm_ip_sockaddr_is_any(&a));
+	NDM_TEST(!ndm_ip_sockaddr_address_is_any(&a));
 
 	ndm_ip_sockaddr_get_loopback(ndm_ip_sockaddr_family(&a), &b);
 
@@ -325,7 +325,7 @@ int main()
 	NDM_TEST(ndm_ip_sockaddr_pton(addr, &b));
 	NDM_TEST(ndm_ip_sockaddr_is_equal(&a, &b));
 	NDM_TEST(!ndm_ip_sockaddr_address_is_equal(
-		&a, ndm_ip_sockaddr_get_zero(
+		&a, ndm_ip_sockaddr_get_any(
 			ndm_ip_sockaddr_family(&a))));
 
 	NDM_TEST(ndm_ip_sockaddr_port(&a) == 0);
@@ -339,14 +339,14 @@ int main()
 	NDM_TEST(!ndm_ip_sockaddr_get_v4(&a, &b));
 
 	NDM_TEST(!ndm_ip_sockaddr_address_is_equal(
-		&b, ndm_ip_sockaddr_get_zero(AF_INET)));
-	NDM_TEST(!ndm_ip_sockaddr_address_is_zero(&a));
-	NDM_TEST(!ndm_ip_sockaddr_address_is_zero(&b));
+		&b, ndm_ip_sockaddr_get_any(AF_INET)));
+	NDM_TEST(!ndm_ip_sockaddr_address_is_any(&a));
+	NDM_TEST(!ndm_ip_sockaddr_address_is_any(&b));
 
 	NDM_TEST(!ndm_ip_sockaddr_is_equal(
-		&b, ndm_ip_sockaddr_get_zero(AF_INET)));
-	NDM_TEST(!ndm_ip_sockaddr_is_zero(&a));
-	NDM_TEST(!ndm_ip_sockaddr_is_zero(&b));
+		&b, ndm_ip_sockaddr_get_any(AF_INET)));
+	NDM_TEST(!ndm_ip_sockaddr_is_any(&a));
+	NDM_TEST(!ndm_ip_sockaddr_is_any(&b));
 
 	return NDM_TEST_RESULT;
 }

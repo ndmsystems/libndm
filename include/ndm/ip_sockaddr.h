@@ -36,10 +36,10 @@ bool ndm_ip_sockaddr_address_is_equal(
 		const struct ndm_ip_sockaddr_t *const sa1,
 		const struct ndm_ip_sockaddr_t *const sa2) NDM_ATTR_WUR;
 
-bool ndm_ip_sockaddr_is_zero(
+bool ndm_ip_sockaddr_is_any(
 		const struct ndm_ip_sockaddr_t *const sa) NDM_ATTR_WUR;
 
-bool ndm_ip_sockaddr_address_is_zero(
+bool ndm_ip_sockaddr_address_is_any(
 		const struct ndm_ip_sockaddr_t *const sa) NDM_ATTR_WUR;
 
 bool ndm_ip_sockaddr_is_v4(
@@ -75,7 +75,7 @@ bool ndm_ip_sockaddr_pton(
 		const char *const src,
 		struct ndm_ip_sockaddr_t *const sa) NDM_ATTR_WUR;
 
-const struct ndm_ip_sockaddr_t *ndm_ip_sockaddr_get_zero(
+const struct ndm_ip_sockaddr_t *ndm_ip_sockaddr_get_any(
 		const int family) NDM_ATTR_WUR;
 
 void ndm_ip_sockaddr_get_loopback(
@@ -95,8 +95,8 @@ int ndm_ip_sockaddr_domain(
 sa_family_t ndm_ip_sockaddr_family(
 		const struct ndm_ip_sockaddr_t *const sa) NDM_ATTR_WUR;
 
-extern const struct ndm_ip_sockaddr_t NDM_IP4_SOCKADDR_ZERO;
-extern const struct ndm_ip_sockaddr_t NDM_IP6_SOCKADDR_ZERO;
+extern const struct ndm_ip_sockaddr_t NDM_IP_SOCKADDR_ANY;
+extern const struct ndm_ip_sockaddr_t NDM_IP_SOCKADDR_ANY6;
 
 #endif	/* __NDM_IP_SOCKADDR_H__ */
 
