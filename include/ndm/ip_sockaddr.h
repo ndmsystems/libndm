@@ -39,6 +39,33 @@ bool ndm_ip_sockaddr_address_is_equal(
 bool ndm_ip_sockaddr_is_zero(
 		const struct ndm_ip_sockaddr_t *const sa) NDM_ATTR_WUR;
 
+bool ndm_ip_sockaddr_address_is_zero(
+		const struct ndm_ip_sockaddr_t *const sa) NDM_ATTR_WUR;
+
+bool ndm_ip_sockaddr_is_v4(
+		const struct ndm_ip_sockaddr_t *const sa) NDM_ATTR_WUR;
+
+bool ndm_ip_sockaddr_is_v4_mapped(
+		const struct ndm_ip_sockaddr_t *const sa) NDM_ATTR_WUR;
+
+bool ndm_ip_sockaddr_is_v4_compat(
+		const struct ndm_ip_sockaddr_t *const sa) NDM_ATTR_WUR;
+
+bool ndm_ip_sockaddr_get_v4(
+		const struct ndm_ip_sockaddr_t *const sa,
+		struct ndm_ip_sockaddr_t *sa4) NDM_ATTR_WUR;
+
+bool ndm_ip_sockaddr_get_v4_mapped(
+		const struct ndm_ip_sockaddr_t *const sa,
+		struct ndm_ip_sockaddr_t *sa6) NDM_ATTR_WUR;
+
+bool ndm_ip_sockaddr_get_v4_compat(
+		const struct ndm_ip_sockaddr_t *const sa,
+		struct ndm_ip_sockaddr_t *sa6) NDM_ATTR_WUR;
+
+bool ndm_ip_sockaddr_is_v6(
+		const struct ndm_ip_sockaddr_t *const sa) NDM_ATTR_WUR;
+
 const char *ndm_ip_sockaddr_ntop(
 		const struct ndm_ip_sockaddr_t *const sa,
 		char *const dst,
