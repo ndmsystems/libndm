@@ -34,7 +34,7 @@ bool ndm_feedback(
 		const int64_t timeout_msec,
 		const char *const argv[],
 		const char *const env_format,
-		...) NDM_ATTR_WUR;
+		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(3, 4);
 
 #endif	/* __NDM_FEEDBACK_H__ */
 
