@@ -21,7 +21,9 @@
 enum { name = 1/(!!expr) }
 
 #ifndef NDEBUG
+#ifndef NDM_HEX_DUMP_WIDTH
 #define NDM_HEX_DUMP_WIDTH				16
+#endif	/* NDM_HEX_DUMP_WIDTH */
 #define NDM_HEX_DUMP(p, size)											\
 	do {																\
 		size_t __b__ = 0;												\
