@@ -773,7 +773,7 @@ void ndm_core_event_free(
 static struct ndm_core_response_t *__ndm_core_response_copy(
 		const struct ndm_core_response_t *response) NDM_ATTR_WUR;
 
-static size_t __ndm_core_response_size(
+static inline size_t __ndm_core_response_size(
 		const struct ndm_core_response_t *response) NDM_ATTR_WUR;
 
 static inline size_t __ndm_core_cache_entry_size(
