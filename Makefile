@@ -61,7 +61,7 @@ all: $(LIB) tests
 
 $(LIB): Makefile $(HEADERS) $(OBJS)
 	@echo LD $(LIB)
-	@$(CC) $(LDFLAGS) -shared -o $@ $(OBJS)
+	@$(CC) -shared -o $@ $(OBJS) $(LDFLAGS)
 #	$(STRIP) $(STRIPFLAGS) $@
 	-@ls --block-size=K -1s $(LIB)
 
