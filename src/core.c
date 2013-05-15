@@ -21,7 +21,11 @@
 #define NDM_CORE_EVENT_PORT_							41232
 #define NDM_CORE_ADDRESS_								"127.0.0.1"
 
-#define NDM_CORE_DEFAULT_AGENT_							"unknown"
+/**
+ * A default agent name should be an empty string
+ * to prevent NDM agent changing.
+ **/
+#define NDM_CORE_DEFAULT_AGENT_							""
 
 #define NDM_CORE_STATIC_BUFFER_SIZE_					1024
 
