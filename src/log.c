@@ -46,15 +46,27 @@ void ndm_log(
 		const char *const format,
 		...)
 {
+	va_list ap;
+
+	va_start(ap, format);
+	ndm_vlog(level, format, ap);
+	va_end(ap);
+}
+
+void ndm_vlog(
+		const enum level_t level,
+		const char *const format,
+		va_list ap)
+{
 	const char *trailer = "";
 	const bool source_empty = (__source == NULL) || (*__source == '\0');
 	char message[NDM_LOG_MESSAGE_SIZE_];
-	va_list vargs;
 	int size = 0;
+	va_list aq;
 
-	va_start(vargs, format);
-	size = vsnprintf(message, sizeof(message), format, vargs);
-	va_end(vargs);
+	va_copy(aq, ap);
+	size = vsnprintf(message, sizeof(message), format, aq);
+	va_end(aq);
 
 	if (size > 0 && size < sizeof(message) &&
 		message[size - 1] != '.' &&

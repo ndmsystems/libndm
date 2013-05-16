@@ -1,6 +1,7 @@
 #ifndef __NDM_LOG_H__
 #define __NDM_LOG_H__
 
+#include <stdarg.h>
 #include <stdbool.h>
 #include "attr.h"
 
@@ -26,6 +27,11 @@ void ndm_log(
 		const enum level_t level,
 		const char *const format,
 		...) NDM_ATTR_PRINTF(2, 3);
+
+void ndm_vlog(
+		const enum level_t level,
+		const char *const format,
+		va_list ap) NDM_ATTR_PRINTF(2, 0);
 
 #define NDM_LOG_INFO(fmt, args...)		ndm_log(LINFO, fmt, ##args)
 #define NDM_LOG_WARNING(fmt, args...) 	ndm_log(LWARNING, fmt, ##args)
