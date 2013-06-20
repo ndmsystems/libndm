@@ -58,7 +58,7 @@ struct ndm_core_event_connection_t;
 
 /**
  * Core event connection functions.
- **/
+ */
 
 struct ndm_core_event_connection_t *ndm_core_event_connection_open(
 		const int timeout) NDM_ATTR_WUR;
@@ -89,7 +89,7 @@ void ndm_core_event_free(
 
 /**
  * Core connection functions.
- **/
+ */
 
 struct ndm_core_t *ndm_core_open(
 		const char *const agent,
@@ -178,7 +178,7 @@ const struct ndm_xml_node_t *ndm_core_response_root(
 
 /**
  * Core response node functions.
- **/
+ */
 
 enum ndm_core_response_error_t ndm_core_response_first_node(
 		const struct ndm_xml_node_t *node,
@@ -225,7 +225,7 @@ enum ndm_core_response_error_t ndm_core_response_first_bool(
  * "//interface//mac///" are the same paths to a child node "mac" of a
  * child "interface" node of the root "response" node.
  * All space characters of the path considered as parts of node names.
- **/
+ */
 
 enum ndm_core_response_error_t ndm_core_request_break(
 		struct ndm_core_t *core) NDM_ATTR_WUR;
@@ -239,7 +239,7 @@ enum ndm_core_response_error_t ndm_core_request_send(
 
 /**
  * Functions with command formatting.
- **/
+ */
 
 enum ndm_core_response_error_t ndm_core_request_first_str_alloc_cf(
 		struct ndm_core_t *core,
@@ -296,7 +296,7 @@ enum ndm_core_response_error_t ndm_core_request_first_bool_cf(
 
 /**
  * Functions with path formatting.
- **/
+ */
 
 enum ndm_core_response_error_t ndm_core_request_first_str_alloc_pf(
 		struct ndm_core_t *core,
