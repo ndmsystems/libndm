@@ -1,6 +1,8 @@
 #ifndef __NDM_ATTR_H__
 #define __NDM_ATTR_H__
 
+#ifdef DOXYGEN // {
+
 /**
  * Allows to assign printf-like or scanf-like characteristics to the declared
  * function, and this enables the compiler to check the format string against
@@ -29,8 +31,12 @@
  * @endcode
  */
 
+#define NDM_ATTR_PRINTF(m, n)
+#else // } {
 #define NDM_ATTR_PRINTF(m, n) __attribute__((format(printf, m, n)))
+#endif // } !DOXYGEN
 
+#ifdef DOXYGEN // {
 /**
  * This attribute causes a warning to be emitted if a caller of the function
  * with this attribute does not use its return value. This is useful for
@@ -38,13 +44,20 @@
  * always a bug.
  */
 
+#define NDM_ATTR_WUR
+#else // } {
 #define NDM_ATTR_WUR __attribute__((warn_unused_result))
+#endif // } !DOXYGEN
 
+#ifdef DOXYGEN // {
 /**
  * @def NDM_ATTR_PACKED
  */
 
+#define NDM_ATTR_PACKED
+#else // } {
 #define NDM_ATTR_PACKED __attribute__((packed))
+#endif // } !DOXYGEN
 
 #endif	/* __NDM_ATTR_H__ */
 
