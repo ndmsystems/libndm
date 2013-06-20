@@ -40,7 +40,7 @@
 /**
  * This attribute causes a warning to be emitted if a caller of the function
  * with this attribute does not use its return value. This is useful for
- * functions where not checking the result is either a security problem or
+ * functions where result is not checked - either it is a security problem or
  * always a bug.
  */
 
