@@ -9,10 +9,14 @@
 #define NDM_MAC_SIZE 				6
 #define NDM_MAC_BUFSIZE				sizeof("00:00:00:00:00:00")
 
+/**
+ * Structure for handling MAC addresses using @c ndm_mac_addr_ functions.
+ */
+
 struct ndm_mac_addr_t
 {
-	struct sockaddr sa;
-	char str[NDM_MAC_BUFSIZE];
+	struct sockaddr sa;				//!< binary MAC address value
+	char str[NDM_MAC_BUFSIZE];		//!< human readable MAC address
 };
 
 extern const struct ndm_mac_addr_t NDM_MAC_ADDR_ZERO;
