@@ -40,8 +40,23 @@
 /**
  * This attribute causes a warning to be emitted if a caller of the function
  * with this attribute does not use its return value. This is useful for
- * functions where result is not checked - either it is a security problem or
+ * functions where not checking the result is either a security problem or
  * always a bug.
+ *
+ * @par Example
+ * @code
+ *       int fn () NDM_ATTR_WUR;
+ *       int foo ()
+ *       {
+ *         if (fn () < 0) return -1;
+ *         fn ();
+ *         return 0;
+ *        }
+ * // warning: ignoring return value of ‘fn’, declared with attribute
+ * // warn_unused_result [-Wunused-result]
+ * @endcode
+ *
+ * Results in warning on line 5.
  */
 
 #define NDM_ATTR_WUR
@@ -51,7 +66,29 @@
 
 #ifdef DOXYGEN // {
 /**
- * @def NDM_ATTR_PACKED
+ * Specifies that a variable or structure field should have the smallest
+ * possible alignment — one byte for a variable, and one bit for a field,
+ * unless you specify a larger value with the aligned attribute.
+ *
+ * @par Example
+ * Here is a structure in which the field x is packed, so that it immediately
+ * follows a:
+ * @code
+ *        struct foo
+ *        {
+ *          char a;
+ *          int x[2] NDM_ATTR_PACKED;
+ *        };
+ * @endcode
+ *
+ * If attribute is used after the whole structure it will be packed entirely:
+ * @code
+ *        struct foo
+ *        {
+ *          char a;
+ *          int x[2];
+ *        } NDM_ATTR_PACKED;
+ * @endcode
  */
 
 #define NDM_ATTR_PACKED
