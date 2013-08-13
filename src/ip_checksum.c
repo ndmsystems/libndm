@@ -19,7 +19,7 @@ uint32_t ndm_ip_checksum_get(
 	}
 
 	if (i == 1) {
-		s += htons(*words);
+		s += (htons(*words) & 0xff00);
 	}
 
 	return s;
