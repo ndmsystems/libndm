@@ -1,4 +1,5 @@
 #include <ndm/ip_checksum.h>
+#include <arpa/inet.h>
 
 uint32_t ndm_ip_checksum_get(
 		const void *data,
