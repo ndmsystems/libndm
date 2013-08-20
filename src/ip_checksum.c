@@ -20,7 +20,9 @@ uint32_t ndm_ip_checksum_get(
 	}
 
 	if (i == 1) {
-		s += (htons(*words) & 0xff00);
+		uint16_t temp = 0;
+		temp = *(uint8_t*)words << 8;
+		s += htons(temp);
 	}
 
 	return s;
