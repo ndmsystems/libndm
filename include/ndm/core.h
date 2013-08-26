@@ -7,47 +7,76 @@
 #include "code.h"
 #include "attr.h"
 
+/**
+ * Period of cached data relevance in milliseconds.
+ */
+
 #define NDM_CORE_DEFAULT_CACHE_TTL					200
+
+/**
+ * The maximum size of the cache in bytes.
+ */
 
 #define NDM_CORE_DEFAULT_CACHE_MAX_SIZE				65536
 
+/**
+ * Maximum waiting time for the completion of the network I/O operations
+ * in milliseconds.
+ */
+
 #define NDM_CORE_DEFAULT_TIMEOUT					15000
 
+/**
+ * Macro to initialize a variable of @a ndm_core_t type.
+ * @code
+ * srtuct ndm_core_t *core = NDM_CORE_INITIALIZER;
+ * @endcode
+ */
+
 #define NDM_CORE_INITIALIZER						NULL
+
+/**
+ * Macro to initialize a variable of @a ndm_core_response_t type.
+ * @code
+ * srtuct ndm_core_response_t *response = NDM_CORE_RESPONSE_INITIALIZER;
+ * @endcode
+ */
+
 #define NDM_CORE_RESPONSE_INITIALIZER				NULL
 
 struct ndm_xml_node_t;
 
 enum ndm_core_request_type_t
 {
-	NDM_CORE_REQUEST_CONFIG,
-	NDM_CORE_REQUEST_EXECUTE,
-	NDM_CORE_REQUEST_PARSE
+	NDM_CORE_REQUEST_CONFIG,	//!< Request for a command configuration
+	NDM_CORE_REQUEST_EXECUTE,	//!< Request for a command execution
+	NDM_CORE_REQUEST_PARSE		//!< Request for execution of a command in CLI
+								//!  form
 };
 
 enum ndm_core_response_type_t
 {
-	NDM_CORE_INFO,
-	NDM_CORE_WARNING,
-	NDM_CORE_ERROR,
-	NDM_CORE_CRITICAL
+	NDM_CORE_INFO,		//!< Response type is @a info
+	NDM_CORE_WARNING,	//!< Response type is @a warning
+	NDM_CORE_ERROR,		//!< Response type is @a error
+	NDM_CORE_CRITICAL	//!< Response type is @a critical
 };
 
 enum ndm_core_response_error_t
 {
-	NDM_CORE_RESPONSE_ERROR_OK,
-	NDM_CORE_RESPONSE_ERROR_SYNTAX,		/* invalid path node syntax 	*/
-	NDM_CORE_RESPONSE_ERROR_FORMAT,		/* invalid node value format	*/
-	NDM_CORE_RESPONSE_ERROR_NOT_FOUND,	/* node or attribute not found 	*/
-	NDM_CORE_RESPONSE_ERROR_BUFFER_SIZE,/* buffer size is too small		*/
-	NDM_CORE_RESPONSE_ERROR_MESSAGE,	/* core error message received	*/
-	NDM_CORE_RESPONSE_ERROR_SYSTEM		/* see errno for details		*/
+	NDM_CORE_RESPONSE_ERROR_OK,				//!< No errors occured
+	NDM_CORE_RESPONSE_ERROR_SYNTAX,			//!< Invalid path node syntax
+	NDM_CORE_RESPONSE_ERROR_FORMAT,			//!< Invalid node value format
+	NDM_CORE_RESPONSE_ERROR_NOT_FOUND,		//!< Node or attribute is not found
+	NDM_CORE_RESPONSE_ERROR_BUFFER_SIZE,	//!< Buffer size is too small
+	NDM_CORE_RESPONSE_ERROR_MESSAGE,		//!< Core error message is received
+	NDM_CORE_RESPONSE_ERROR_SYSTEM			//!< See @a errno for details
 };
 
 enum ndm_core_cache_mode_t
 {
-	NDM_CORE_MODE_CACHE,				/* cache a response				*/
-	NDM_CORE_MODE_NO_CACHE				/* do not cache a response		*/
+	NDM_CORE_MODE_CACHE,				//!< Cache a response
+	NDM_CORE_MODE_NO_CACHE				//!< Do not cache a response
 };
 
 struct ndm_core_t;
@@ -57,32 +86,108 @@ struct ndm_core_event_t;
 struct ndm_core_event_connection_t;
 
 /**
- * Core event connection functions.
+ * Open the event connection to the core.
+ *
+ * @param timeout The maximum waiting time for the event reading
+ * (see ndm_core_event_connection_get()) in milliseconds.
+ *
+ * @returns A pointer to a structure that describes an open connection, or
+ * @c NULL if an error.
  */
 
 struct ndm_core_event_connection_t *ndm_core_event_connection_open(
 		const int timeout) NDM_ATTR_WUR;
 
+/**
+ * Close the event connection if it was opened.
+ *
+ * @param connection Pointer to the connection instance. The value can be
+ * @c NULL as well as NULL-pointer to connection instance.
+ *
+ * @returns @c true if the connection is closed (a pointer to the connection
+ * instance is set to @c NULL), @c false - otherwise (@a errno contains error
+ * code).
+ */
+
 bool ndm_core_event_connection_close(
 		struct ndm_core_event_connection_t **connection) NDM_ATTR_WUR;
+
+/**
+ * Get the descriptor of the event connection.
+ *
+ * @param connection Pointer to the connection instance.
+ *
+ * @returns The event connection descriptor.
+ */
 
 int ndm_core_event_connection_fd(
 		const struct ndm_core_event_connection_t *connection) NDM_ATTR_WUR;
 
+/**
+ * Check for a core events.
+ *
+ * @param connection Pointer to the connection instance.
+ *
+ * @returns @c true if the connection contains data (core events), @c false -
+ * otherwise.
+ */
+
 bool ndm_core_event_connection_has_events(
 		struct ndm_core_event_connection_t *connection) NDM_ATTR_WUR;
+
+/**
+ * Get the instance of core event.
+ *
+ * @param connection Pointer to the connection instance.
+ *
+ * @returns Pointer to the received instance of core event if successful,
+ * @c NULL - otherwise.
+ */
 
 struct ndm_core_event_t *ndm_core_event_connection_get(
 		struct ndm_core_event_connection_t *connection) NDM_ATTR_WUR;
 
+/**
+ * Get the 'event' root node of XML-description.
+ *
+ * @param event Pointer to the event instance.
+ *
+ * @returns Pointer to the root node. @c NULL is never returned.
+ */
+
 const struct ndm_xml_node_t *ndm_core_event_root(
 		const struct ndm_core_event_t *event) NDM_ATTR_WUR;
+
+/**
+ * Get the 'class' value of the event root node.
+ *
+ * @param event Pointer to the event instance.
+ *
+ * @returns Pointer to the string that contains event type. @c NULL is never
+ * returned.
+ */
 
 const char *ndm_core_event_type(
 		const struct ndm_core_event_t *event) NDM_ATTR_WUR;
 
+/**
+ * Get the 'raise_time' value of the event root node.
+ *
+ * @param event Pointer to the event instance.
+ *
+ * @returns Event time distribution in the form of @a timespec structure.
+ */
+
 struct timespec ndm_core_event_raise_time(
 		const struct ndm_core_event_t *event) NDM_ATTR_WUR;
+
+/**
+ * Release the memory that event instance occupies. After completion assigns
+ * @c NULL to @a event.
+ *
+ * @param event Pointer to the event instance. The value can be @c NULL
+ * as well as NULL-pointer to event instance.
+ */
 
 void ndm_core_event_free(
 		struct ndm_core_event_t **event);
