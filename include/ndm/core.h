@@ -105,7 +105,7 @@ struct ndm_core_event_connection_t *ndm_core_event_connection_open(
  * @c NULL as well as NULL-pointer to connection instance.
  *
  * @returns @c true if the connection is closed (a pointer to the connection
- * instance is set to @c NULL), @c false - otherwise (@a errno contains error
+ * instance is set to @c NULL), @c false — otherwise (@a errno contains error
  * code).
  */
 
@@ -128,7 +128,7 @@ int ndm_core_event_connection_fd(
  *
  * @param connection Pointer to the connection instance.
  *
- * @returns @c true if the connection contains data (core events), @c false -
+ * @returns @c true if the connection contains data (core events), @c false —
  * otherwise.
  */
 
@@ -141,7 +141,7 @@ bool ndm_core_event_connection_has_events(
  * @param connection Pointer to the connection instance.
  *
  * @returns Pointer to the received instance of core event if successful,
- * @c NULL - otherwise.
+ * @c NULL — otherwise.
  */
 
 struct ndm_core_event_t *ndm_core_event_connection_get(
@@ -193,7 +193,16 @@ void ndm_core_event_free(
 		struct ndm_core_event_t **event);
 
 /**
- * Core connection functions.
+ * Open a connection to the NDM core, allocate memory for  the @b ndm_core_t
+ * structure.
+ *
+ * @param agent Agent name to identify which application last modified
+ * the configuration of the system.
+ * @param cache_ttl_msec Caching time for the core responses in milliseconds.
+ * @param cache_max_size Maximum size of the cache in bytes.
+ *
+ * @returnes Pointer to the instance of @b ndm_core_t structure in case of
+ * successful connection, @c NULL — otherwise, @a errno stores an error code.
  */
 
 struct ndm_core_t *ndm_core_open(
@@ -201,25 +210,94 @@ struct ndm_core_t *ndm_core_open(
 		const int cache_ttl_msec,
 		const size_t cache_max_size) NDM_ATTR_WUR;
 
+/**
+ * Close the core connection if it was opened and clear cache. Release
+ * the memory allocated for the @b ndm_core_t structure if the pointer is
+ * not equal to @c NULL.
+ *
+ * @param core Pointer to the core connection instance.
+ *
+ * @returns @c true if the core connection is closed (a pointer to the core
+ * connection instance is set to @c NULL), @c false — otherwise (@a errno
+ * contains error code).
+ */
+
 bool ndm_core_close(
 		struct ndm_core_t **core);
 
+/**
+ * Get the descriptor of the core connection.
+ *
+ * @param core Pointer to the core connection instance.
+ *
+ * @returns The core connection descriptor.
+ */
+
 int ndm_core_fd(
 		const struct ndm_core_t *core) NDM_ATTR_WUR;
+
+/**
+ * Forcibly clear the cache of the core connection.
+ *
+ * @param core Pointer to the core connection instance.
+ * @param remove_all If @c true — all content is to be removed, if @c false —
+ * only obsolete data is to be removed.
+ */
 
 void ndm_core_cache_clear(
 		struct ndm_core_t *core,
 		const bool remove_all);
 
+/**
+ * Set the timeout of data exchange through the connection.
+ *
+ * @param core Pointer to the core connection instance.
+ * @param timeout The maximum waiting time for the request sending or
+ * the response receiving in milliseconds.
+ */
+
 void ndm_core_set_timeout(
 		struct ndm_core_t *core,
 		const int timeout);
 
+/**
+ * Get the timeout of the core connection.
+ *
+ * @param core Pointer to the core connection instance.
+ *
+ * @returns Current value of the timeout.
+ */
+
 int ndm_core_get_timeout(
 		const struct ndm_core_t *core) NDM_ATTR_WUR;
 
+/**
+ * ...
+ *
+ * @param core
+ *
+ * @returns
+ */
+
 const char *ndm_core_agent(
 		const struct ndm_core_t *core) NDM_ATTR_WUR;
+
+/**
+ * Send a special request to authenticate a user-specified name and password,
+ * according to the current user database which is stored in the core. Function
+ * should be used in applications requiring access control at the user level.
+ *
+ * @param core Pointer to the core connection instance.
+ * @param user The specified user name.
+ * @param password The specified password.
+ * @param realm Realm name of the account.
+ * @param tag Tag, which a user must have for authentication success.
+ * @param authenticated A pointer to a variable that contains the authentication
+ * result.
+ *
+ * @returns @c true if completed successfully and @a authenticated contains
+ * correct value, @c false — otherwise (@a errno contains error code).
+ */
 
 bool ndm_core_authenticate(
 		struct ndm_core_t *core,
@@ -229,6 +307,22 @@ bool ndm_core_authenticate(
 		const char *const tag,
 		bool *authenticated) NDM_ATTR_WUR;
 
+/**
+ * Send request to the core.
+ *
+ * @param core Pointer to the core connection instance.
+ * @param request_type Type of request. There are three possible values ​​—
+ * NDM_CORE_REQUEST_CONFIG, NDM_CORE_REQUEST_EXECUTE or NDM_CORE_REQUEST_PARSE.
+ * @param cache_mode Cache mode of the response.
+ * @param command_args An array of command arguments (ignored if request type is
+ * NDM_CORE_REQUEST_PARSE).
+ * @param command_format String template of command.
+ *
+ * @returns Pointer to the received response (@b ndm_core_response_t structure)
+ * in case of a successful exchange with the core, @c NULL — otherwise
+ * (@a errno contains error code).
+ */
+
 struct ndm_core_response_t *ndm_core_request(
 		struct ndm_core_t *core,
 		const enum ndm_core_request_type_t request_type,
@@ -237,52 +331,296 @@ struct ndm_core_response_t *ndm_core_request(
 		const char *const command_format,
 		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(5, 6);
 
+/**
+ * Get additional description for the command.
+ * The request of the following form is sent to the core:
+ * @code
+ * <request id='5'>
+ *   <help>ser</help>
+ * </request>
+ * @endcode
+ * where 'help' node contains the command name for which an additional
+ * description is needed.
+ * The core response will have the following form:
+ * @code
+ * <response id="5">
+ *   <help>
+ *     <completion>vice</completion>
+ *     <hint/>
+ *     <command name="service">
+ *       <description>manage services</description>
+ *     </command>
+ *   </help>
+ *   <prompt>(config)</prompt>
+ * </response>
+ * @endcode
+ *
+ * @param core Pointer to the core connection instance.
+ * @param cache_mode Cache mode of the response.
+ * @param command The command name or a part of it.
+ *
+ * @returns Pointer to the received response (@b ndm_core_response_t structure)
+ * in case of a successful exchange with the core, @c NULL — otherwise
+ * (@a errno contains error code).
+ */
+
 struct ndm_core_response_t *ndm_core_get_help(
 		struct ndm_core_t *core,
 		const enum ndm_core_cache_mode_t cache_mode,
 		const char *const command);
 
+/**
+ * Send 'continue' request to the core to get a current state of an active
+ * background command.
+ * The initial request:
+ * @code
+ * <request id="0">
+ *   <parse>tools ping 127.0.0.1 count 2</parse>
+ * </request>
+ * @endcode
+ * The first response:
+ * @code
+ * <packet>
+ *   <response>
+ *     <message>Sending ICMP ECHO request to 127.0.0.1</message>
+ *     <message>PING 127.0.0.1 (127.0.0.1) 56 (84) bytes of data.</message>
+ *     <message>84 bytes from 127.0.0.1: icmp_req=1, ttl=64, time=1.48 ms.</message>
+ *     <continued/>
+ *   </response>
+ * </packet>
+ * @endcode
+ * The 'continue' request:
+ * @code
+ * <request id="1">
+ *   <continue/>
+ * </request>
+ * @endcode
+ * The second response:
+ * @code
+ * <packet>
+ *   <response id="1">
+ *     <message>84 bytes from 127.0.0.1: icmp_req=2, ttl=64, time=0.54 ms.</message>
+ *     <message/>
+ *     <message>--- 127.0.0.1 ping statistics -</message>
+ *     <message>2 packets transmitted, 2 packets received, 0% packet loss,</message>
+ *     <message>0 duplicate(s), time 1000.64 ms.</message>
+ *     <message>Round-trip min/avg/max = 0.54/1.15/1.76 ms.</message>
+ *     <continued/>
+ *   </response>
+ * </packet>
+ * @endcode
+ * The 'continue' request:
+ * @code
+ * <request id="2">
+ *   <continue/>
+ * </request>
+ * @endcode
+ * The final response:
+ * @code
+ * <packet>
+ *   <response id="2">
+ *     <message>Process terminated.</message>
+ *     <prompt>(config)</prompt>
+ *  </response>
+ * </packet>
+ * @endcode
+ *
+ * @param core Pointer to the core connection instance.
+ *
+ * @returns Pointer to the received response (@b ndm_core_response_t structure)
+ * in case of a successful exchange with the core, @c NULL — otherwise
+ * (@a errno contains error code).
+ */
+
 struct ndm_core_response_t *ndm_core_continue(
 		struct ndm_core_t *core) NDM_ATTR_WUR;
+
+/**
+ * Send 'break' request to the core to stop the execution of an active
+ * background command.
+ * The initial request:
+ * @code
+ * <request id="0">
+ *   <parse>tools ping 127.0.0.1</parse>
+ * </request>
+ * @endcode
+ * The first response:
+ * @code
+ * <packet>
+ *   <response>
+ *     <message>Sending ICMP ECHO request to 127.0.0.1</message>
+ *     <message>PING 127.0.0.1 (127.0.0.1) 56 (84) bytes of data.</message>
+ *     <message>84 bytes from 127.0.0.1: icmp_req=1, ttl=64, time=1.80 ms.</message>
+ *     <message>84 bytes from 127.0.0.1: icmp_req=2, ttl=64, time=0.53 ms.</message>
+ *     <message>84 bytes from 127.0.0.1: icmp_req=3, ttl=64, time=0.53 ms.</message>
+ *     <message>84 bytes from 127.0.0.1: icmp_req=4, ttl=64, time=0.54 ms.</message>
+ *     <message>84 bytes from 127.0.0.1: icmp_req=5, ttl=64, time=0.54 ms.</message>
+ *     <message>84 bytes from 127.0.0.1: icmp_req=6, ttl=64, time=0.54 ms.</message>
+ *     <continued/>
+ *   </response>
+ * </packet>
+ * @endcode
+ * The 'break' request:
+ * @code
+ * <request id="1">
+ *   <break/>
+ * </request>
+ * @endcode
+ * The second response:
+ * @code
+ * <packet>
+ *   <response id="1">
+ *     <prompt>(config)</prompt>
+ *  </response>
+ * </packet>
+ * @endcode
+ *
+ * @param core Pointer to the core connection instance.
+ *
+ * @returns Pointer to the received response (@b ndm_core_response_t structure)
+ * in case of a successful exchange with the core, @c NULL — otherwise
+ * (@a errno contains error code).
+ */
 
 struct ndm_core_response_t *ndm_core_break(
 		struct ndm_core_t *core) NDM_ATTR_WUR;
 
+/**
+ * Check if the last core response contains 'message' node.
+ *
+ * @param core Pointer to the core connection instance.
+ *
+ * @returns @c true if contains, @c false — otherwise.
+ */
+
 bool ndm_core_last_message_received(
 		struct ndm_core_t *core) NDM_ATTR_WUR;
+
+/**
+ * Get the type of the last message of core response. It makes sense if
+ * ndm_core_last_message_received() returned @c true.
+ *
+ * @param core Pointer to the core connection instance.
+ *
+ * @returns The type of last message.
+ */
 
 enum ndm_core_response_type_t ndm_core_last_message_type(
 		struct ndm_core_t *core) NDM_ATTR_WUR;
 
+/**
+ * Get the content of the last message of core response. It makes sense if
+ * ndm_core_last_message_received() returned @c true.
+ *
+ * @param core Pointer to the core connection instance.
+ *
+ * @returns Pointer to a string that contains the message.
+ */
+
 const char *ndm_core_last_message_string(
 		struct ndm_core_t *core) NDM_ATTR_WUR;
+
+/**
+ * Get the source-class of the last message of core response. It makes sense if
+ * ndm_core_last_message_received() returned @c true.
+ *
+ * @param core Pointer to the core connection instance.
+ *
+ * @returns Pointer to the source-class string.
+ */
 
 const char *ndm_core_last_message_ident(
 		struct ndm_core_t *core) NDM_ATTR_WUR;
 
+/**
+ * Get the source-class instance name of the last message of core response.
+ * It makes sense if ndm_core_last_message_received() returned @c true.
+ *
+ * @param core Pointer to the core connection instance.
+ *
+ * @returns Pointer to the source-class instance name string.
+ */
+
 const char *ndm_core_last_message_source(
 		struct ndm_core_t *core) NDM_ATTR_WUR;
 
+/**
+ * Get the code of the last message of core response.
+ * It makes sense if ndm_core_last_message_received() returned @c true.
+ *
+ * @param core Pointer to the core connection instance.
+ *
+ * @returns The last message code.
+ */
+
 ndm_code_t ndm_core_last_message_code(
-		struct ndm_core_t *code) NDM_ATTR_WUR;
+		struct ndm_core_t *core) NDM_ATTR_WUR;
+
+/**
+ * Release the memory that response instance occupies. After completion assigns
+ * @c NULL to @a response.
+ *
+ * @param response Pointer to the response instance. The value can be @c NULL
+ * as well as NULL-pointer to response instance.
+ */
 
 void ndm_core_response_free(
 		struct ndm_core_response_t **response);
 
+/**
+ * Check if the core response contains message code which corresponds to
+ * the result type @c INFO or @c WARNING.
+ *
+ * @param response Pointer to the response instance.
+ *
+ * @returns @c true if result type is @c INFO or @c WARNING, @c false —
+ * otherwise.
+ */
+
 bool ndm_core_response_is_ok(
 		const struct ndm_core_response_t *response) NDM_ATTR_WUR;
+
+/**
+ * Get the type of response reference to which contains in response structure.
+ *
+ * @param response Pointer to the response instance.
+ *
+ * @returns Type of response.
+ */
 
 enum ndm_core_response_type_t ndm_core_response_type(
 		const struct ndm_core_response_t *response) NDM_ATTR_WUR;
 
+/**
+ * Check if the response contains 'continue' node.
+ *
+ * @param response Pointer to the response instance.
+ *
+ * @returns @c true if contains, @c false — otherwise.
+ */
+
 bool ndm_core_response_is_continued(
 		const struct ndm_core_response_t *response) NDM_ATTR_WUR;
+
+/**
+ * Get the pointer to the root node of response XML structure.
+ *
+ * @param response Pointer to the response instance.
+ *
+ * @returns Pointer to the root node. @c NULL is never returned.
+ */
 
 const struct ndm_xml_node_t *ndm_core_response_root(
 		const struct ndm_core_response_t *response) NDM_ATTR_WUR;
 
 /**
- * Core response node functions.
+ * ...
+ *
+ * @param node
+ * @param value
+ * @param value_path_format
+ *
+ * @returns
  */
 
 enum ndm_core_response_error_t ndm_core_response_first_node(
@@ -291,11 +629,31 @@ enum ndm_core_response_error_t ndm_core_response_first_node(
 		const char *const value_path_format,
 		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(3, 4);
 
+/**
+ * ...
+ *
+ * @param node
+ * @param value
+ * @param value_path_format
+ *
+ * @returns
+ */
+
 enum ndm_core_response_error_t ndm_core_response_first_str(
 		const struct ndm_xml_node_t *node,
 		const char **value,
 		const char *const value_path_format,
 		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(3, 4);
+
+/**
+ * ...
+ *
+ * @param node
+ * @param value
+ * @param value_path_format
+ *
+ * @returns
+ */
 
 enum ndm_core_response_error_t ndm_core_response_first_int(
 		const struct ndm_xml_node_t *node,
@@ -303,11 +661,32 @@ enum ndm_core_response_error_t ndm_core_response_first_int(
 		const char *const value_path_format,
 		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(3, 4);
 
+/**
+ * ...
+ *
+ * @param node
+ * @param value
+ * @param value_path_format
+ *
+ * @returns
+ */
+
 enum ndm_core_response_error_t ndm_core_response_first_uint(
 		const struct ndm_xml_node_t *node,
 		unsigned int *value,
 		const char *const value_path_format,
 		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(3, 4);
+
+/**
+ * ...
+ *
+ * @param node
+ * @param parse_value
+ * @param value
+ * @param value_path_format
+ *
+ * @returns
+ */
 
 enum ndm_core_response_error_t ndm_core_response_first_bool(
 		const struct ndm_xml_node_t *node,
@@ -332,8 +711,27 @@ enum ndm_core_response_error_t ndm_core_response_first_bool(
  * All space characters of the path considered as parts of node names.
  */
 
+/**
+ * ...
+ *
+ * @param core
+ *
+ * @returns
+ */
+
 enum ndm_core_response_error_t ndm_core_request_break(
 		struct ndm_core_t *core) NDM_ATTR_WUR;
+
+/**
+ * ...
+ *
+ * @param core
+ * @param request_type
+ * @param command_args
+ * @param command_format
+ *
+ * @returns
+ */
 
 enum ndm_core_response_error_t ndm_core_request_send(
 		struct ndm_core_t *core,
@@ -343,7 +741,17 @@ enum ndm_core_response_error_t ndm_core_request_send(
 		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(4, 5);
 
 /**
- * Functions with command formatting.
+ * ...
+ *
+ * @param core
+ * @param request_type
+ * @param cache_mode
+ * @param value
+ * @param value_path
+ * @param command_args
+ * @param command_format
+ *
+ * @returns
  */
 
 enum ndm_core_response_error_t ndm_core_request_first_str_alloc_cf(
@@ -355,6 +763,22 @@ enum ndm_core_response_error_t ndm_core_request_first_str_alloc_cf(
 		const char *const command_args[],
 		const char *const command_format,
 		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(7, 8);
+
+/**
+ * ...
+ *
+ * @param core
+ * @param request_type
+ * @param cache_mode
+ * @param value
+ * @param value_buffer_size
+ * @param value_size
+ * @param value_path
+ * @param command_args
+ * @param command_format
+ *
+ * @returns
+ */
 
 enum ndm_core_response_error_t ndm_core_request_first_str_buffer_cf(
 		struct ndm_core_t *core,
@@ -368,6 +792,20 @@ enum ndm_core_response_error_t ndm_core_request_first_str_buffer_cf(
 		const char *const command_format,
 		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(9, 10);
 
+/**
+ * ...
+ *
+ * @param core
+ * @param request_type
+ * @param cache_mode
+ * @param value
+ * @param value_path
+ * @param command_args
+ * @param command_format
+ *
+ * @returns
+ */
+
 enum ndm_core_response_error_t ndm_core_request_first_int_cf(
 		struct ndm_core_t *core,
 		const enum ndm_core_request_type_t request_type,
@@ -378,6 +816,20 @@ enum ndm_core_response_error_t ndm_core_request_first_int_cf(
 		const char *const command_format,
 		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(7, 8);
 
+/**
+ * ...
+ *
+ * @param core
+ * @param request_type
+ * @param cache_mode
+ * @param value
+ * @param value_path
+ * @param command_args
+ * @param command_format
+ *
+ * @returns
+ */
+
 enum ndm_core_response_error_t ndm_core_request_first_uint_cf(
 		struct ndm_core_t *core,
 		const enum ndm_core_request_type_t request_type,
@@ -387,6 +839,21 @@ enum ndm_core_response_error_t ndm_core_request_first_uint_cf(
 		const char *const command_args[],
 		const char *const command_format,
 		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(7, 8);
+
+/**
+ * ...
+ *
+ * @param core
+ * @param request_type
+ * @param cache_mode
+ * @param parse_value
+ * @param value
+ * @param value_path
+ * @param command_args
+ * @param command_format
+ *
+ * @returns
+ */
 
 enum ndm_core_response_error_t ndm_core_request_first_bool_cf(
 		struct ndm_core_t *core,
@@ -400,7 +867,17 @@ enum ndm_core_response_error_t ndm_core_request_first_bool_cf(
 		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(8, 9);
 
 /**
- * Functions with path formatting.
+ * ...
+ *
+ * @param core
+ * @param request_type
+ * @param cache_mode
+ * @param command_args
+ * @param command
+ * @param value
+ * @param value_path_format
+ *
+ * @returns
  */
 
 enum ndm_core_response_error_t ndm_core_request_first_str_alloc_pf(
@@ -412,6 +889,22 @@ enum ndm_core_response_error_t ndm_core_request_first_str_alloc_pf(
 		char **value,
 		const char *const value_path_format,
 		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(7, 8);
+
+/**
+ * ...
+ *
+ * @param core
+ * @param request_type
+ * @param cache_mode
+ * @param command_args
+ * @param command
+ * @param value
+ * @param value_buffer_size
+ * @param value_size
+ * @param value_path_format
+ *
+ * @returns
+ */
 
 enum ndm_core_response_error_t ndm_core_request_first_str_buffer_pf(
 		struct ndm_core_t *core,
@@ -425,6 +918,20 @@ enum ndm_core_response_error_t ndm_core_request_first_str_buffer_pf(
 		const char *const value_path_format,
 		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(9, 10);
 
+/**
+ * ...
+ *
+ * @param core
+ * @param request_type
+ * @param cache_mode
+ * @param command_args
+ * @param command
+ * @param value
+ * @param value_path_format
+ *
+ * @returns
+ */
+
 enum ndm_core_response_error_t ndm_core_request_first_int_pf(
 		struct ndm_core_t *core,
 		const enum ndm_core_request_type_t request_type,
@@ -435,6 +942,20 @@ enum ndm_core_response_error_t ndm_core_request_first_int_pf(
 		const char *const value_path_format,
 		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(7, 8);
 
+/**
+ * ...
+ *
+ * @param core
+ * @param request_type
+ * @param cache_mode
+ * @param command_args
+ * @param command
+ * @param value
+ * @param value_path_format
+ *
+ * @returns
+ */
+
 enum ndm_core_response_error_t ndm_core_request_first_uint_pf(
 		struct ndm_core_t *core,
 		const enum ndm_core_request_type_t request_type,
@@ -444,6 +965,21 @@ enum ndm_core_response_error_t ndm_core_request_first_uint_pf(
 		unsigned int *value,
 		const char *const value_path_format,
 		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(7, 8);
+
+/**
+ * ...
+ *
+ * @param core
+ * @param request_type
+ * @param cache_mode
+ * @param command_args
+ * @param command
+ * @param parse_value
+ * @param value
+ * @param value_path_format
+ *
+ * @returns
+ */
 
 enum ndm_core_response_error_t ndm_core_request_first_bool_pf(
 		struct ndm_core_t *core,
