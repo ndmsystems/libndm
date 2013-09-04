@@ -201,7 +201,7 @@ void ndm_core_event_free(
  * @param cache_ttl_msec Caching time for the core responses in milliseconds.
  * @param cache_max_size Maximum size of the cache in bytes.
  *
- * @returnes Pointer to the instance of @b ndm_core_t structure in case of
+ * @returns Pointer to the instance of @b ndm_core_t structure in case of
  * successful connection, @c NULL — otherwise, @a errno stores an error code.
  */
 
@@ -614,13 +614,14 @@ const struct ndm_xml_node_t *ndm_core_response_root(
 		const struct ndm_core_response_t *response) NDM_ATTR_WUR;
 
 /**
- * ...
+ * Get the pointer to the response first node that matches the specified
+ * criteria.
  *
- * @param node
- * @param value
- * @param value_path_format
+ * @param node Root node, relative to which a request is made.
+ * @param[out] value Reference to the result node.
+ * @param value_path_format Path format for the node searching.
  *
- * @returns
+ * @returns Result of a function of @b ndm_core_response_error_t type.
  */
 
 enum ndm_core_response_error_t ndm_core_response_first_node(
@@ -630,13 +631,13 @@ enum ndm_core_response_error_t ndm_core_response_first_node(
 		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(3, 4);
 
 /**
- * ...
+ * Get the pointer to the response first node that contains string value.
  *
- * @param node
- * @param value
- * @param value_path_format
+ * @param node Root node, relative to which a request is made.
+ * @param[out] value Reference to the result node.
+ * @param value_path_format Path format for the node searching.
  *
- * @returns
+ * @returns Result of a function of @b ndm_core_response_error_t type.
  */
 
 enum ndm_core_response_error_t ndm_core_response_first_str(
@@ -646,13 +647,13 @@ enum ndm_core_response_error_t ndm_core_response_first_str(
 		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(3, 4);
 
 /**
- * ...
+ * Get the pointer to the response first node that contains integer value.
  *
- * @param node
- * @param value
- * @param value_path_format
+ * @param node Root node, relative to which a request is made.
+ * @param[out] value Reference to the result node.
+ * @param value_path_format Path format for the node searching.
  *
- * @returns
+ * @returns Result of a function of @b ndm_core_response_error_t type.
  */
 
 enum ndm_core_response_error_t ndm_core_response_first_int(
@@ -662,13 +663,14 @@ enum ndm_core_response_error_t ndm_core_response_first_int(
 		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(3, 4);
 
 /**
- * ...
+ * Get the pointer to the response first node that contains unsigned integer
+ * value.
  *
- * @param node
- * @param value
- * @param value_path_format
+ * @param node Root node, relative to which a request is made.
+ * @param[out] value Reference to the result node.
+ * @param value_path_format Path format for the node searching.
  *
- * @returns
+ * @returns Result of a function of @b ndm_core_response_error_t type.
  */
 
 enum ndm_core_response_error_t ndm_core_response_first_uint(
@@ -678,14 +680,19 @@ enum ndm_core_response_error_t ndm_core_response_first_uint(
 		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(3, 4);
 
 /**
- * ...
+ * Get the pointer to the response first node that contains boolean value.
+ * The following values are considered as positive: non-zero integer, strings
+ * @a yes, @a true, @a up and @a on. As negative: @c 0, @a no, @a false,
+ * @a down and @a off. All string values ​​are case-insensitive.
  *
- * @param node
- * @param parse_value
- * @param value
- * @param value_path_format
+ * @param node Root node, relative to which a request is made.
+ * @param parse_value @c true if standard function processing is needed with
+ * appropriate error handling, @c false if you need to know about the presence
+ * or absence of the required value only.
+ * @param[out] value @c true if the required value is found, @c false if not.
+ * @param value_path_format Path format for the node searching.
  *
- * @returns
+ * @returns Result of a function of @b ndm_core_response_error_t type.
  */
 
 enum ndm_core_response_error_t ndm_core_response_first_bool(
@@ -696,41 +703,30 @@ enum ndm_core_response_error_t ndm_core_response_first_bool(
 		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(4, 5);
 
 /**
- * The highest level core functions.
+ * Send 'break' request (see ndm_core_break()) followed by analysis of the core
+ * response.
  *
- * Some function prototypes contain a value_path argument to address
- * a specific first node or attribute using the following syntax:
- * "child_name1/child_name2/.../child_nameN@attr_name".
- * The path is relative name that starts addressing from
- * the root "response" node of a response XML document.
- * Any child name can be an empty string that means a "current" node.
- * For example a "@name" path addresses a "name" attribute of the root
- * "response" node. So "interface/mac", "/interface/mac", and
- * "//interface//mac///" are the same paths to a child node "mac" of a
- * child "interface" node of the root "response" node.
- * All space characters of the path considered as parts of node names.
- */
-
-/**
- * ...
+ * @param core Pointer to the core connection instance.
  *
- * @param core
- *
- * @returns
+ * @returns Result of a function of @b ndm_core_response_error_t type.
  */
 
 enum ndm_core_response_error_t ndm_core_request_break(
 		struct ndm_core_t *core) NDM_ATTR_WUR;
 
 /**
- * ...
+ * Send request (see ndm_core_request()) followed by analysis of the core
+ * response. Is used in the simplest cases, when enough to know was or was not
+ * correctly processed the request.
  *
- * @param core
- * @param request_type
- * @param command_args
- * @param command_format
+ * @param core Pointer to the core connection instance.
+ * @param request_type Type of request.
+ * @param command_args An array of command arguments (is used for
+ * @c NDM_CORE_REQUEST_CONFIG or @c NDM_CORE_REQUEST_EXECUTE types of request
+ * only).
+ * @param command_format Format of command.
  *
- * @returns
+ * @returns Result of a function of @b ndm_core_response_error_t type.
  */
 
 enum ndm_core_response_error_t ndm_core_request_send(
@@ -741,17 +737,20 @@ enum ndm_core_response_error_t ndm_core_request_send(
 		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(4, 5);
 
 /**
- * ...
+ * Send request and return the string value of the required node with memory
+ * allocation.
  *
- * @param core
- * @param request_type
- * @param cache_mode
- * @param value
- * @param value_path
- * @param command_args
- * @param command_format
+ * @param core Pointer to the core connection instance.
+ * @param request_type Type of request.
+ * @param cache_mode Cache mode of the response.
+ * @param value Pointer to the allocated memory with the stored value.
+ * @param value_path Path to the node/attribute value of which is needed.
+ * @param command_args An array of command arguments (is used for
+ * @c NDM_CORE_REQUEST_CONFIG or @c NDM_CORE_REQUEST_EXECUTE types of request
+ * only).
+ * @param command_format Format of command.
  *
- * @returns
+ * @returns Result of a function of @b ndm_core_response_error_t type.
  */
 
 enum ndm_core_response_error_t ndm_core_request_first_str_alloc_cf(
@@ -765,19 +764,22 @@ enum ndm_core_response_error_t ndm_core_request_first_str_alloc_cf(
 		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(7, 8);
 
 /**
- * ...
+ * Send request and return the string value of the required node to the buffer.
  *
- * @param core
- * @param request_type
- * @param cache_mode
- * @param value
- * @param value_buffer_size
- * @param value_size
- * @param value_path
- * @param command_args
- * @param command_format
+ * @param core Pointer to the core connection instance.
+ * @param request_type Type of request.
+ * @param cache_mode Cache mode of the response.
+ * @param value Pointer to the buffer with the stored value.
+ * @param value_buffer_size Size of the buffer.
+ * @param value_size Actual size of the data to store the value (see
+ * @c NDM_CORE_RESPONSE_ERROR_BUFFER_SIZE).
+ * @param value_path Path to the node/attribute value of which is needed.
+ * @param command_args An array of command arguments (is used for
+ * @c NDM_CORE_REQUEST_CONFIG or @c NDM_CORE_REQUEST_EXECUTE types of request
+ * only).
+ * @param command_format Format of command.
  *
- * @returns
+ * @returns Result of a function of @b ndm_core_response_error_t type.
  */
 
 enum ndm_core_response_error_t ndm_core_request_first_str_buffer_cf(
@@ -793,17 +795,19 @@ enum ndm_core_response_error_t ndm_core_request_first_str_buffer_cf(
 		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(9, 10);
 
 /**
- * ...
+ * Send request and return the integer value of the required node to the buffer.
  *
- * @param core
- * @param request_type
- * @param cache_mode
- * @param value
- * @param value_path
- * @param command_args
- * @param command_format
+ * @param core Pointer to the core connection instance.
+ * @param request_type Type of request.
+ * @param cache_mode Cache mode of the response.
+ * @param value Pointer to the buffer with the stored value.
+ * @param value_path Path to the node/attribute value of which is needed.
+ * @param command_args An array of command arguments (is used for
+ * @c NDM_CORE_REQUEST_CONFIG or @c NDM_CORE_REQUEST_EXECUTE types of request
+ * only).
+ * @param command_format Format of command.
  *
- * @returns
+ * @returns Result of a function of @b ndm_core_response_error_t type.
  */
 
 enum ndm_core_response_error_t ndm_core_request_first_int_cf(
@@ -817,17 +821,20 @@ enum ndm_core_response_error_t ndm_core_request_first_int_cf(
 		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(7, 8);
 
 /**
- * ...
+ * Send request and return the unsigned integer value of the required node
+ * to the buffer.
  *
- * @param core
- * @param request_type
- * @param cache_mode
- * @param value
- * @param value_path
- * @param command_args
- * @param command_format
+ * @param core Pointer to the core connection instance.
+ * @param request_type Type of request.
+ * @param cache_mode Cache mode of the response.
+ * @param value Pointer to the buffer with the stored value.
+ * @param value_path Path to the node/attribute value of which is needed.
+ * @param command_args An array of command arguments (is used for
+ * @c NDM_CORE_REQUEST_CONFIG or @c NDM_CORE_REQUEST_EXECUTE types of request
+ * only).
+ * @param command_format Format of command.
  *
- * @returns
+ * @returns Result of a function of @b ndm_core_response_error_t type.
  */
 
 enum ndm_core_response_error_t ndm_core_request_first_uint_cf(
@@ -841,18 +848,25 @@ enum ndm_core_response_error_t ndm_core_request_first_uint_cf(
 		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(7, 8);
 
 /**
- * ...
+ * Send request and return the boolean value of the required node to the buffer.
+ * The following values are considered as positive: non-zero integer, strings
+ * @a yes, @a true, @a up and @a on. As negative: @c 0, @a no, @a false,
+ * @a down and @a off. All string values ​​are case-insensitive.
  *
- * @param core
- * @param request_type
- * @param cache_mode
- * @param parse_value
- * @param value
- * @param value_path
- * @param command_args
- * @param command_format
+ * @param core Pointer to the core connection instance.
+ * @param request_type Type of request.
+ * @param cache_mode Cache mode of the response.
+ * @param parse_value @c true if standard function processing is needed with
+ * appropriate error handling, @c false if you need to know about the presence
+ * or absence of the required value only.
+ * @param value @c true if the required value is found, @c false if not.
+ * @param value_path Path to the node/attribute value of which is needed.
+ * @param command_args An array of command arguments (is used for
+ * @c NDM_CORE_REQUEST_CONFIG or @c NDM_CORE_REQUEST_EXECUTE types of request
+ * only).
+ * @param command_format Format of command.
  *
- * @returns
+ * @returns Result of a function of @b ndm_core_response_error_t type.
  */
 
 enum ndm_core_response_error_t ndm_core_request_first_bool_cf(
@@ -867,17 +881,21 @@ enum ndm_core_response_error_t ndm_core_request_first_bool_cf(
 		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(8, 9);
 
 /**
- * ...
+ * Send request and return the string value of the required node with memory
+ * allocation.
  *
- * @param core
- * @param request_type
- * @param cache_mode
- * @param command_args
- * @param command
- * @param value
- * @param value_path_format
+ * @param core Pointer to the core connection instance.
+ * @param request_type Type of request.
+ * @param cache_mode Cache mode of the response.
+ * @param command_args An array of command arguments (is used for
+ * @c NDM_CORE_REQUEST_CONFIG or @c NDM_CORE_REQUEST_EXECUTE types of request
+ * only).
+ * @param command Command name.
+ * @param value Pointer to the allocated memory with the stored value.
+ * @param value_path_format Format of path to the node/attribute value of which
+ * is needed.
  *
- * @returns
+ * @returns Result of a function of @b ndm_core_response_error_t type.
  */
 
 enum ndm_core_response_error_t ndm_core_request_first_str_alloc_pf(
@@ -891,19 +909,23 @@ enum ndm_core_response_error_t ndm_core_request_first_str_alloc_pf(
 		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(7, 8);
 
 /**
- * ...
+ * Send request and return the string value of the required node to the buffer.
  *
- * @param core
- * @param request_type
- * @param cache_mode
- * @param command_args
- * @param command
- * @param value
- * @param value_buffer_size
- * @param value_size
- * @param value_path_format
+ * @param core Pointer to the core connection instance.
+ * @param request_type Type of request.
+ * @param cache_mode Cache mode of the response.
+ * @param command_args An array of command arguments (is used for
+ * @c NDM_CORE_REQUEST_CONFIG or @c NDM_CORE_REQUEST_EXECUTE types of request
+ * only).
+ * @param command Command name.
+ * @param value Pointer to the buffer with the stored value.
+ * @param value_buffer_size Size of the buffer.
+ * @param value_size Actual size of the data to store the value (see
+ * @c NDM_CORE_RESPONSE_ERROR_BUFFER_SIZE).
+ * @param value_path_format Format of path to the node/attribute value of which
+ * is needed.
  *
- * @returns
+ * @returns Result of a function of @b ndm_core_response_error_t type.
  */
 
 enum ndm_core_response_error_t ndm_core_request_first_str_buffer_pf(
@@ -919,17 +941,20 @@ enum ndm_core_response_error_t ndm_core_request_first_str_buffer_pf(
 		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(9, 10);
 
 /**
- * ...
+ * Send request and return the integer value of the required node to the buffer.
  *
- * @param core
- * @param request_type
- * @param cache_mode
- * @param command_args
- * @param command
- * @param value
- * @param value_path_format
+ * @param core Pointer to the core connection instance.
+ * @param request_type Type of request.
+ * @param cache_mode Cache mode of the response.
+ * @param command_args An array of command arguments (is used for
+ * @c NDM_CORE_REQUEST_CONFIG or @c NDM_CORE_REQUEST_EXECUTE types of request
+ * only).
+ * @param command Command name.
+ * @param value Pointer to the buffer with the stored value.
+ * @param value_path_format Format of path to the node/attribute value of which
+ * is needed.
  *
- * @returns
+ * @returns Result of a function of @b ndm_core_response_error_t type.
  */
 
 enum ndm_core_response_error_t ndm_core_request_first_int_pf(
@@ -943,17 +968,21 @@ enum ndm_core_response_error_t ndm_core_request_first_int_pf(
 		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(7, 8);
 
 /**
- * ...
+ * Send request and return the unsigned integer value of the required node
+ * to the buffer.
  *
- * @param core
- * @param request_type
- * @param cache_mode
- * @param command_args
- * @param command
- * @param value
- * @param value_path_format
+ * @param core Pointer to the core connection instance.
+ * @param request_type Type of request.
+ * @param cache_mode Cache mode of the response.
+ * @param command_args An array of command arguments (is used for
+ * @c NDM_CORE_REQUEST_CONFIG or @c NDM_CORE_REQUEST_EXECUTE types of request
+ * only).
+ * @param command Command name.
+ * @param value Pointer to the buffer with the stored value.
+ * @param value_path_format Format of path to the node/attribute value of which
+ * is needed.
  *
- * @returns
+ * @returns Result of a function of @b ndm_core_response_error_t type.
  */
 
 enum ndm_core_response_error_t ndm_core_request_first_uint_pf(
@@ -967,18 +996,26 @@ enum ndm_core_response_error_t ndm_core_request_first_uint_pf(
 		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(7, 8);
 
 /**
- * ...
+ * Send request and return the boolean value of the required node to the buffer.
+ * The following values are considered as positive: non-zero integer, strings
+ * @a yes, @a true, @a up and @a on. As negative: @c 0, @a no, @a false,
+ * @a down and @a off. All string values ​​are case-insensitive.
  *
- * @param core
- * @param request_type
- * @param cache_mode
- * @param command_args
- * @param command
- * @param parse_value
- * @param value
- * @param value_path_format
+ * @param core Pointer to the core connection instance.
+ * @param request_type Type of request.
+ * @param cache_mode Cache mode of the response.
+ * @param command_args An array of command arguments (is used for
+ * @c NDM_CORE_REQUEST_CONFIG or @c NDM_CORE_REQUEST_EXECUTE types of request
+ * only).
+ * @param command Command name.
+ * @param parse_value @c true if standard function processing is needed with
+ * appropriate error handling, @c false if you need to know about the presence
+ * or absence of the required value only.
+ * @param value @c true if the required value is found, @c false if not.
+ * @param value_path_format Format of path to the node/attribute value of which
+ * is needed.
  *
- * @returns
+ * @returns Result of a function of @b ndm_core_response_error_t type.
  */
 
 enum ndm_core_response_error_t ndm_core_request_first_bool_pf(
