@@ -220,6 +220,9 @@ struct ndm_core_t *ndm_core_open(
  * @returns @c true if the core connection is closed (a pointer to the core
  * connection instance is set to @c NULL), @c false — otherwise (@a errno
  * contains error code).
+ *
+ * @par Example
+ * @snippet core_open_close.c open and close
  */
 
 bool ndm_core_close(
