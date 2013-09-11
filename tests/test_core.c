@@ -35,7 +35,7 @@ int main()
 	NDM_TEST(!authenticated);
 
 	NDM_TEST(ndm_core_authenticate(
-		core, "admin", "1234",
+		core, "admin", "",
 		"Undefined realm", "cli", &authenticated));
 	NDM_TEST(authenticated);
 

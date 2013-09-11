@@ -9,24 +9,34 @@ typedef uint32_t ndm_code_t;
 /* ndm_code_t is unsigned integer type always */
 
 /**
- * Macro is used in printf-like functions for octal format.
+ * Macro is used in printf-like functions to print a message code in
+ * octal format.
+ * @par Example
+ * @snippet core_message_code.c octal code printf
  */
 #define NDM_CODE_PRIo	PRIo32
 
 /**
- * Macro is used in printf-like functions for unsigned decimal format.
+ * Macro is used in printf-like functions to print a message code in
+ * unsigned decimal format.
+ * @par Example
+ * @snippet core_message_code.c decimal code printf
  */
 
 #define NDM_CODE_PRIu	PRIu32
 
 /**
- * Macro is used in printf-like functions for hexadecimal format.
+ * Macro is used in printf-like functions to print a message code in
+ * hexadecimal format.
+ * @par Example
+ * @snippet core_message_code.c hex code printf
  */
 
 #define NDM_CODE_PRIx	PRIx32
 
 /**
- * Macro is used in printf-like functions for hexadecimal format (uppercase).
+ * Macro is used in printf-like functions to print a message code in
+ * hexadecimal format (uppercase).
  */
 
 #define NDM_CODE_PRIX	PRIX32

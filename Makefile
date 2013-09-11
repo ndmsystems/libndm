@@ -44,6 +44,9 @@ TESTS=$(patsubst %.c,%,$(wildcard $(TEST_DIR)/$(TEST_PREFIX)*.c))
 TEST_OBJ=$(TEST_DIR)/test.o
 TEST_NO_AUTOEXEC=core core_event
 
+EXAMPLE_DIR=examples
+EXAMPLES=$(patsubst %.c,%,$(wildcard $(EXAMPLE_DIR)/*.c))
+
 ifeq ($(filter memory_debug,$(MAKECMDGOALS)),memory_debug)
 MEM_DEBUG_OBJ:=$(TEST_DIR)/memchk.o
 MEM_DEBUG_DEFS:=-D_MEMORY_LEAK_DEBUG -D_MEMORY_OVERFLOW_DEBUG -pthread
@@ -69,11 +72,14 @@ EXEC_TESTS_ALL=\
 	$(shell find $(TEST_DIR) -name "$(TEST_PREFIX)*" -executable -type f)
 EXEC_TESTS=$(filter-out $(addprefix \
 	$(TEST_DIR)/$(TEST_PREFIX),$(TEST_NO_AUTOEXEC)),$(EXEC_TESTS_ALL))
+EXEC_EXAMPLES_ALL=$(shell find $(EXAMPLE_DIR) -executable -type f)
 
 check: tests
 	-@for t in $(EXEC_TESTS); do echo; echo "Running $$t..."; $$t; done
 
 tests: $(LIB) $(TESTS)
+
+examples: $(LIB) $(EXAMPLES)
 
 memory_debug: check
 
@@ -95,13 +101,18 @@ $(TEST_DIR)/$(TEST_PREFIX)%: $(TEST_DIR)/$(TEST_PREFIX)%.c $(TEST_OBJ) $(LIB)
 	@echo "CC $<"
 	@$(CC) $< $(CFLAGS) $(TEST_OBJ) $(OBJS) $(LDFLAGS) -o $@ >/dev/null
 
+$(EXAMPLE_DIR)/%: $(EXAMPLE_DIR)/%.c $(LIB)
+	@echo "CC $<"
+	@$(CC) $< $(CFLAGS) $(OBJS) $(LDFLAGS) -o $@ >/dev/null
+
 %.o: %.c ../include/ndm/%.h
 	@echo "CC $<"
 	@$(CC) $< $(CFLAGS) -c -o $@ >/dev/null
 
 clean:
-	rm -f src/*.o *~ *.so *.o $(LIB) $(TEST_DIR)/*.o
+	rm -f src/*.o *~ *.so *.o $(LIB) $(TEST_DIR)/*.o $(EXAMPLE_DIR)/*.o
 	rm -f $(EXEC_TESTS_ALL)
+	rm -f $(EXEC_EXAMPLES_ALL)
 
 distclean: clean
 
