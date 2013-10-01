@@ -110,7 +110,7 @@ void ndm_vlog(
 			 (level == LWARNING) ?	'W' :
 			 (level == LERROR) ?	'E' :
 			 (level == LCRITICAL) ?	'C' : '-'),
-			MONTHS[((unsigned long) t.tm_mday) % NDM_ARRAY_SIZE(MONTHS)],
+			MONTHS[((unsigned long) t.tm_mon) % NDM_ARRAY_SIZE(MONTHS)],
 			WEEKDAYS[((unsigned long) t.tm_wday) % NDM_ARRAY_SIZE(WEEKDAYS)],
 			(int) t.tm_hour, (int) t.tm_min, (int) t.tm_sec,
 			__ident,
