@@ -20,9 +20,9 @@ uint32_t ndm_ip_checksum_get(
 	}
 
 	if (i == 1) {
-		uint16_t temp = 0;
-		temp = *(uint8_t*)words << 8;
-		s += htons(temp);
+		const uint16_t b = *((uint8_t *) words);
+
+		s += htons((uint16_t) (b << 8));
 	}
 
 	return s;
