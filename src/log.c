@@ -92,9 +92,6 @@ void ndm_vlog(
 			"Jan", "Feb", "Mar", "Apr", "May", "Jun",
 			"Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
 		};
-		static const char *WEEKDAYS[] = {
-			"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"
-		};
 		struct timespec s;
 		time_t now;
 		struct tm t;
@@ -105,14 +102,13 @@ void ndm_vlog(
 
 		fprintf(
 			(level == LERROR || level == LCRITICAL) ? stderr : stdout,
-			"[%c] %s %s %02i:%02i:%02i %s: %s%s%s%s\n",
+			"[%c] %s %02i %02i:%02i:%02i %s: %s%s%s%s\n",
 			((level == LINFO)  ?	'I' :
 			 (level == LWARNING) ?	'W' :
 			 (level == LERROR) ?	'E' :
 			 (level == LCRITICAL) ?	'C' : '-'),
 			MONTHS[((unsigned long) t.tm_mon) % NDM_ARRAY_SIZE(MONTHS)],
-			WEEKDAYS[((unsigned long) t.tm_wday) % NDM_ARRAY_SIZE(WEEKDAYS)],
-			(int) t.tm_hour, (int) t.tm_min, (int) t.tm_sec,
+			t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec,
 			__ident,
 			source_empty ? "" : __source,
 			source_empty ? "" : ": ",
