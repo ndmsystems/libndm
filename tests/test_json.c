@@ -1596,7 +1596,7 @@ static void test_printer_()
 			NDM_JSON_PARSE_ERROR_OK);
 
 	char *out_compact = ndm_json_object_print(
-		o, NDM_JSON_PRINT_COMPACT, NULL);
+		o, NDM_JSON_PRINT_FLAGS_COMPACT, NULL);
 
 	NDM_TEST_BREAK_IF(out_compact == NULL);
 	NDM_TEST(strcmp(out_compact, in) == 0);
@@ -1646,7 +1646,7 @@ static void test_printer_()
 
 	size_t out_size = 0;
 	char *out_crlf_expanded =
-		ndm_json_object_print(o, NDM_JSON_PRINT_CRLF, &out_size);
+		ndm_json_object_print(o, NDM_JSON_PRINT_FLAGS_CRLF, &out_size);
 
 	NDM_TEST_BREAK_IF(out_crlf_expanded == NULL);
 	NDM_TEST(out_size == strlen(out_crlf_expanded));

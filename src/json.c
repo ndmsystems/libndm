@@ -2322,8 +2322,8 @@ static char *ndm_json_print_done_(
 static void ndm_json_print_ident_(
 		struct ndm_json_print_context_t_ *ctx)
 {
-	if (!(ctx->flags & NDM_JSON_PRINT_COMPACT)) {
-		if (ctx->flags & NDM_JSON_PRINT_CRLF) {
+	if (!(ctx->flags & NDM_JSON_PRINT_FLAGS_COMPACT)) {
+		if (ctx->flags & NDM_JSON_PRINT_FLAGS_CRLF) {
 			NDM_JSON_PRINT_CSTR_(ctx, "\r\n");
 		} else {
 			ndm_json_print_char_(ctx, '\n');
@@ -2465,7 +2465,7 @@ static void ndm_json_print_object_(
 		ndm_json_print_string_(ctx, ndm_json_object_member_name(m));
 		ndm_json_print_char_(ctx, ':');
 
-		if (!(ctx->flags & NDM_JSON_PRINT_COMPACT)) {
+		if (!(ctx->flags & NDM_JSON_PRINT_FLAGS_COMPACT)) {
 			ndm_json_print_char_(ctx, ' ');
 		}
 

@@ -1,16 +1,16 @@
-#ifndef __NDM_JSON__
-#define __NDM_JSON__
+#ifndef __NDM_JSON_H__
+#define __NDM_JSON_H__
 
 #include <stdbool.h>
 #include "attr.h"
 
 enum ndm_json_print_flags_t
 {
-	NDM_JSON_PRINT_COMPACT								= 0x0001,
-	NDM_JSON_PRINT_CRLF									= 0x0002,
+	NDM_JSON_PRINT_FLAGS_COMPACT						= 0x0001,
+	NDM_JSON_PRINT_FLAGS_CRLF							= 0x0002,
 
-	NDM_JSON_PRINT_DEFAULT								=
-		NDM_JSON_PRINT_COMPACT
+	NDM_JSON_PRINT_FLAGS_DEFAULT						=
+		NDM_JSON_PRINT_FLAGS_COMPACT
 };
 
 enum ndm_json_parse_error_t
@@ -479,5 +479,5 @@ enum ndm_json_parse_error_t ndm_json_object_parse(
 		char *json,
 		struct ndm_json_object_t **object) NDM_ATTR_WUR;
 
-#endif /* __NDM_JSON__ */
+#endif /* __NDM_JSON_H__ */
 
