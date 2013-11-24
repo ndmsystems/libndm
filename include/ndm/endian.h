@@ -2,6 +2,7 @@
 #define __NDM_ENDIAN_H__
 
 #include <stdint.h>
+#include <stdbool.h>
 
 static inline bool ndm_endian_is_le()
 {
