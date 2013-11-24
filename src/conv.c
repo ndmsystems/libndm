@@ -679,9 +679,9 @@ void ndm_conv_close(
 
 enum ndm_conv_error_t ndm_conv(
 		const ndm_conv_t *conv,
-		const void **inp,
+		const char **inp,
 		const size_t inp_bytes,
-		void **outp,
+		char **outp,
 		const size_t outp_bytes,
 		size_t *bytes_converted)
 {

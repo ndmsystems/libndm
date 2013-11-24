@@ -23,7 +23,7 @@ do {																	\
 																		\
 	NDM_TEST(ndm_conv(													\
 		&encoder_,														\
-		(const void **) &inp_, in_bytes,								\
+		&inp_, in_bytes,												\
 		NULL, 0, &size_) == res);										\
 	NDM_TEST(inp_ == ba_ + in_stop);									\
 	NDM_TEST(size_ == out_stop);										\
@@ -38,8 +38,8 @@ do {																	\
 																		\
 	NDM_TEST(ndm_conv(													\
 		&encoder_,														\
-		(const void **) &inp_, in_bytes,								\
-		(void **) &outp_, size_, NULL) == res);							\
+		&inp_, in_bytes,												\
+		&outp_, size_, NULL) == res);									\
 	NDM_TEST(outp_ == output_ + out_stop);								\
 	NDM_TEST(memcmp(output_, out, size_) == 0);							\
 																		\
@@ -405,16 +405,16 @@ static void test_conv_utf_range_(
 
 			NDM_TEST(ndm_conv(
 				&dcoder,
-				(const void **) &in, sizeof(src),
-				(void **) &out, sizeof(enc), &size) == NDM_CONV_ERROR_OK);
+				&in, sizeof(src),
+				&out, sizeof(enc), &size) == NDM_CONV_ERROR_OK);
 
 			in = (const char *) &enc;
 			out = (char *) &dst;
 
 			NDM_TEST(ndm_conv(
 				&icoder,
-				(const void **) &in, size,
-				(void **) &out, sizeof(dst), NULL) == NDM_CONV_ERROR_OK);
+				&in, size,
+				&out, sizeof(dst), NULL) == NDM_CONV_ERROR_OK);
 
 			NDM_TEST(src == dst);
 		}

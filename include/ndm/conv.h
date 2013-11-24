@@ -40,9 +40,9 @@ void ndm_conv_close(
 
 enum ndm_conv_error_t ndm_conv(
 		const ndm_conv_t *conv,
-		const void **in,
+		const char **in,
 		const size_t in_bytes,
-		void **out,
+		char **out,
 		const size_t out_bytes,
 		size_t *bytes_converted) NDM_ATTR_WUR;
 
