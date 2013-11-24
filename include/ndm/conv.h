@@ -46,5 +46,8 @@ enum ndm_conv_error_t ndm_conv(
 		const size_t out_bytes,
 		size_t *bytes_converted) NDM_ATTR_WUR;
 
+const char *ndm_conv_strerror(
+		const enum ndm_conv_error_t error);
+
 #endif	/* __NDM_CONV_H__ */
 

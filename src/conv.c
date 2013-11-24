@@ -745,3 +745,18 @@ enum ndm_conv_error_t ndm_conv(
 	return code;
 }
 
+const char *ndm_conv_strerror(
+		const enum ndm_conv_error_t error)
+{
+	static const char *const NDM_CONV_ERRORS_[] =
+	{
+		[NDM_CONV_ERROR_OK]				  = "success",
+		[NDM_CONV_ERROR_INPUT_TRUNCATED]  = "truncated input sequence",
+		[NDM_CONV_ERROR_INPUT_ILLEGAL]	  = "illegal byte sequence",
+		[NDM_CONV_ERROR_INPUT_NON_MAPPED] = "no destination character"
+	};
+
+	return error < NDM_ARRAY_SIZE(NDM_CONV_ERRORS_) ?
+		NDM_CONV_ERRORS_[error] : "unknown error";
+}
+
