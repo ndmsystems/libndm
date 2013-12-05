@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ndm/conv.h>
@@ -5,48 +6,42 @@
 #include "test.h"
 
 #define NDM_CONV_TEST_(													\
-		from, to, flags,												\
+		to, from, flags,												\
 		in, in_bytes, in_stop,											\
 		out_stop, out,													\
 		res)															\
 do {																	\
-	ndm_conv_t encoder_ = ndm_conv_open(from, to, flags);				\
-	size_t size_ = 0;													\
-	char *ba_;															\
+	ndm_conv_t cd_ = ndm_conv_open_ex(to, from, flags);					\
+	size_t out_bytes = 2 * out_stop;									\
+	char *input_ = malloc(in_bytes);									\
+	char *output_ = malloc(out_bytes);									\
 																		\
-	NDM_TEST_BREAK_IF(encoder_ < 0);									\
-	NDM_TEST_BREAK_IF((ba_ = malloc(in_bytes)) == NULL);				\
-																		\
-	memcpy(ba_, in, in_bytes);											\
-																		\
-	const char *inp_ = ba_;												\
-																		\
-	NDM_TEST(ndm_conv(													\
-		&encoder_,														\
-		&inp_, in_bytes,												\
-		NULL, 0, &size_) == res);										\
-	NDM_TEST(inp_ == ba_ + in_stop);									\
-	NDM_TEST(size_ == out_stop);										\
-																		\
-	char *output_ = malloc(size_);										\
-																		\
+	NDM_TEST_BREAK_IF(cd_ == (ndm_conv_t) -1);							\
+	NDM_TEST_BREAK_IF(input_ == NULL);									\
 	NDM_TEST_BREAK_IF(output_ == NULL);									\
 																		\
+	memcpy(input_, in, in_bytes);										\
+																		\
+	const char *inp_ = input_;											\
 	char *outp_ = output_;												\
+	size_t inb_ = in_bytes;												\
+	size_t outb_ = out_bytes;											\
+	const size_t conv_res = ndm_conv(cd_, &inp_, &inb_, &outp_, &outb_);\
 																		\
-	inp_ = ba_;															\
+	NDM_TEST(															\
+		(res == 0 && conv_res == 0) ||									\
+		(res != 0 && conv_res == (size_t) -1 && errno == res));			\
 																		\
-	NDM_TEST(ndm_conv(													\
-		&encoder_,														\
-		&inp_, in_bytes,												\
-		&outp_, size_, NULL) == res);									\
+	NDM_TEST(inp_ == input_ + in_stop);									\
 	NDM_TEST(outp_ == output_ + out_stop);								\
-	NDM_TEST(memcmp(output_, out, size_) == 0);							\
+	NDM_TEST(in_bytes - inb_ == in_stop);								\
+	NDM_TEST(out_bytes - outb_ == out_stop);							\
+	NDM_TEST(memcmp(output_, out, out_bytes - outb_) == 0);				\
 																		\
-	free(ba_);															\
+	free(input_);														\
 	free(output_);														\
 																		\
-	ndm_conv_close(&encoder_);											\
+	NDM_TEST(ndm_conv_close(cd_) == 0);									\
 } while (0)
 
 static void test_conv_utf16_(
@@ -60,11 +55,11 @@ static void test_conv_utf16_(
 	}
 
 	NDM_CONV_TEST_(
-		from, "ISO-8859-1",
+		"ISO-8859-1", from,
 		NDM_CONV_FLAGS_ENCODE_STRICTLY,
 		in, in_bytes,
 		in_bytes, in_bytes / 2,
-		"test UTF-16", NDM_CONV_ERROR_OK);
+		"test UTF-16", 0);
 
 	/**
 	 * Surrogate pairs:
@@ -77,36 +72,36 @@ static void test_conv_utf16_(
 	in[5] = from_host(0xd800);
 
 	NDM_CONV_TEST_(
-		from, "ISO-8859-1",
+		"ISO-8859-1", from,
 		NDM_CONV_FLAGS_ENCODE_STRICTLY,
 		in, in_bytes,
 		5 * 2, 5,
-		"test ", NDM_CONV_ERROR_INPUT_ILLEGAL);
+		"test ", EILSEQ);
 
 	NDM_CONV_TEST_(
-		from, "ISO-8859-1",
+		"ISO-8859-1", from,
 		NDM_CONV_FLAGS_ENCODE_ILLEGAL,
 		in, in_bytes,
 		in_bytes, in_bytes / 2,
-		"test ?TF-16", NDM_CONV_ERROR_OK);
+		"test ?TF-16", 0);
 
 	/* Low word only. */
 
 	in[5] = from_host(0xdcff);
 
 	NDM_CONV_TEST_(
-		from, "ISO-8859-1",
+		"ISO-8859-1", from,
 		NDM_CONV_FLAGS_ENCODE_STRICTLY,
 		in, in_bytes,
 		5 * 2, 5,
-		"test ", NDM_CONV_ERROR_INPUT_ILLEGAL);
+		"test ", EILSEQ);
 
 	NDM_CONV_TEST_(
-		from, "ISO-8859-1",
+		"ISO-8859-1", from,
 		NDM_CONV_FLAGS_ENCODE_ILLEGAL,
 		in, in_bytes,
 		in_bytes, in_bytes / 2,
-		"test ?TF-16", NDM_CONV_ERROR_OK);
+		"test ?TF-16", 0);
 
 	/* Valid surrogate pair. */
 
@@ -114,19 +109,19 @@ static void test_conv_utf16_(
 	in[6] = from_host(0xdcff);
 
 	NDM_CONV_TEST_(
-		from, "ISO-8859-1",
+		"ISO-8859-1", from,
 		NDM_CONV_FLAGS_ENCODE_STRICTLY,
 		in, in_bytes,
 		5 * 2, 5,
-		"test ", NDM_CONV_ERROR_INPUT_NON_MAPPED);
+		"test ", EINVAL);
 
 	NDM_CONV_TEST_(
-		from, "UTF-8",
+		"UTF-8", from,
 		NDM_CONV_FLAGS_ENCODE_STRICTLY,
 		in, in_bytes,
 		in_bytes, in_bytes / 2 + 2,
 		"test \xf0\x90\x83\xbf""F-16",
-		NDM_CONV_ERROR_OK);
+		0);
 
 	in[5] = from_host('U');
 	in[6] = from_host('T');
@@ -134,50 +129,50 @@ static void test_conv_utf16_(
 	/* Truncated code. */
 
 	NDM_CONV_TEST_(
-		from, "ISO-8859-1",
+		"ISO-8859-1", from,
 		NDM_CONV_FLAGS_ENCODE_STRICTLY,
 		in, in_bytes - 1,
 		in_bytes - 2, in_bytes / 2 - 1,
-		"test UTF-16", NDM_CONV_ERROR_INPUT_TRUNCATED);
+		"test UTF-16", E2BIG);
 
 	NDM_CONV_TEST_(
-		from, "ISO-8859-1",
+		"ISO-8859-1", from,
 		NDM_CONV_FLAGS_ENCODE_TRUNCATED,
 		in, in_bytes - 1,
 		in_bytes - 1, in_bytes / 2,
-		"test UTF-1?", NDM_CONV_ERROR_OK);
+		"test UTF-1?", 0);
 
 	NDM_CONV_TEST_(
-		from, "ISO-8859-1",
+		"ISO-8859-1", from,
 		NDM_CONV_FLAGS_ENCODE_STRICTLY,
 		in, 1,
 		0, 0,
-		"", NDM_CONV_ERROR_INPUT_TRUNCATED);
+		"", E2BIG);
 
 	NDM_CONV_TEST_(
-		from, "ISO-8859-1",
+		"ISO-8859-1", from,
 		NDM_CONV_FLAGS_ENCODE_TRUNCATED,
 		in, 1,
 		1, 1,
-		"?", NDM_CONV_ERROR_OK);
+		"?", 0);
 
 	/* Last high surrogate. */
 
 	in[10] = from_host(0xd8ff);
 
 	NDM_CONV_TEST_(
-		from, "ISO-8859-1",
+		"ISO-8859-1", from,
 		NDM_CONV_FLAGS_ENCODE_STRICTLY,
 		in, in_bytes,
 		in_bytes - 2, in_bytes / 2 - 1,
-		"test UTF-1", NDM_CONV_ERROR_INPUT_TRUNCATED);
+		"test UTF-1", E2BIG);
 
 	NDM_CONV_TEST_(
-		from, "ISO-8859-1",
+		"ISO-8859-1", from,
 		NDM_CONV_FLAGS_ENCODE_TRUNCATED,
 		in, in_bytes,
 		in_bytes, in_bytes / 2,
-		"test UTF-1?", NDM_CONV_ERROR_OK);
+		"test UTF-1?", 0);
 
 	/* Last high and truncated low surrogates. */
 
@@ -185,18 +180,18 @@ static void test_conv_utf16_(
 	in[10]= from_host(0xdcff);
 
 	NDM_CONV_TEST_(
-		from, "ISO-8859-1",
+		"ISO-8859-1", from,
 		NDM_CONV_FLAGS_ENCODE_STRICTLY,
 		in, in_bytes - 1,
 		in_bytes - 4, in_bytes / 2 - 2,
-		"test UTF-", NDM_CONV_ERROR_INPUT_TRUNCATED);
+		"test UTF-", E2BIG);
 
 	NDM_CONV_TEST_(
-		from, "ISO-8859-1",
+		"ISO-8859-1", from,
 		NDM_CONV_FLAGS_ENCODE_TRUNCATED,
 		in, in_bytes - 1,
 		in_bytes - 1, in_bytes / 2 - 1,
-		"test UTF-?", NDM_CONV_ERROR_OK);
+		"test UTF-?", 0);
 
 	/* Several surrogate starts. */
 
@@ -206,26 +201,26 @@ static void test_conv_utf16_(
 	in[10]= from_host(0xd880);
 
 	NDM_CONV_TEST_(
-		from, "ISO-8859-1",
+		"ISO-8859-1", from,
 		NDM_CONV_FLAGS_ENCODE_STRICTLY,
 		in, in_bytes,
 		7 * 2, 7,
-		"test UT", NDM_CONV_ERROR_INPUT_ILLEGAL);
+		"test UT", EILSEQ);
 
 	NDM_CONV_TEST_(
-		from, "ISO-8859-1",
+		"ISO-8859-1", from,
 		NDM_CONV_FLAGS_ENCODE_ILLEGAL,
 		in, in_bytes,
 		in_bytes - 2, in_bytes / 2 - 1,
-		"test UT""?""?""?", NDM_CONV_ERROR_INPUT_TRUNCATED);
+		"test UT""?""?""?", E2BIG);
 
 	NDM_CONV_TEST_(
-		from, "ISO-8859-1",
+		"ISO-8859-1", from,
 		NDM_CONV_FLAGS_ENCODE_ILLEGAL  |
 		NDM_CONV_FLAGS_ENCODE_TRUNCATED,
 		in, in_bytes,
 		in_bytes, in_bytes / 2,
-		"test UT?""?""?""?", NDM_CONV_ERROR_OK);
+		"test UT?""?""?""?", 0);
 
 	/* Several surrogate ends. */
 
@@ -235,18 +230,18 @@ static void test_conv_utf16_(
 	in[10]= from_host(0xdc80);
 
 	NDM_CONV_TEST_(
-		from, "ISO-8859-1",
+		"ISO-8859-1", from,
 		NDM_CONV_FLAGS_ENCODE_STRICTLY,
 		in, in_bytes,
 		7 * 2, 7,
-		"test UT", NDM_CONV_ERROR_INPUT_ILLEGAL);
+		"test UT", EILSEQ);
 
 	NDM_CONV_TEST_(
-		from, "ISO-8859-1",
+		"ISO-8859-1", from,
 		NDM_CONV_FLAGS_ENCODE_ILLEGAL,
 		in, in_bytes,
 		in_bytes, in_bytes / 2 - 3,
-		"test UT?", NDM_CONV_ERROR_OK);
+		"test UT?", 0);
 }
 
 static void test_conv_utf32_(
@@ -260,98 +255,98 @@ static void test_conv_utf32_(
 	}
 
 	NDM_CONV_TEST_(
-		from, "ISO-8859-1",
+		"ISO-8859-1", from,
 		NDM_CONV_FLAGS_ENCODE_STRICTLY,
 		in, in_bytes,
 		in_bytes, in_bytes / 4,
-		"test UTF-32", NDM_CONV_ERROR_OK);
+		"test UTF-32", 0);
 
 	/* Illegal code point. */
 
 	in[5] = from_host(0x200000);
 
 	NDM_CONV_TEST_(
-		from, "ISO-8859-1",
+		"ISO-8859-1", from,
 		NDM_CONV_FLAGS_ENCODE_STRICTLY,
 		in, in_bytes,
 		5 * 4, 5,
-		"test ", NDM_CONV_ERROR_INPUT_ILLEGAL);
+		"test ", EILSEQ);
 
 	NDM_CONV_TEST_(
-		from, "ISO-8859-1",
+		"ISO-8859-1", from,
 		NDM_CONV_FLAGS_ENCODE_ILLEGAL,
 		in, in_bytes,
 		in_bytes, in_bytes / 4,
-		"test ?TF-32", NDM_CONV_ERROR_OK);
+		"test ?TF-32", 0);
 
 	/* Non-mapped code point. */
 
 	in[5] = from_host(0x20000);
 
 	NDM_CONV_TEST_(
-		from, "ISO-8859-1",
+		"ISO-8859-1", from,
 		NDM_CONV_FLAGS_ENCODE_STRICTLY,
 		in, in_bytes,
 		5 * 4, 5,
-		"test ", NDM_CONV_ERROR_INPUT_NON_MAPPED);
+		"test ", EINVAL);
 
 	NDM_CONV_TEST_(
-		from, "ISO-8859-1",
+		"ISO-8859-1", from,
 		NDM_CONV_FLAGS_ENCODE_ILLEGAL   |
 		NDM_CONV_FLAGS_ENCODE_NON_MAPPED,
 		in, in_bytes,
 		in_bytes, in_bytes / 4,
-		"test ?TF-32", NDM_CONV_ERROR_OK);
+		"test ?TF-32", 0);
 
 	in[5] = from_host('U');
 
 	/* Truncated, only 1 byte presented. */
 
 	NDM_CONV_TEST_(
-		from, "ISO-8859-1",
+		"ISO-8859-1", from,
 		NDM_CONV_FLAGS_ENCODE_STRICTLY,
 		in, in_bytes - 3,
 		10 * 4, 10,
-		"test UTF-3", NDM_CONV_ERROR_INPUT_TRUNCATED);
+		"test UTF-3", E2BIG);
 
 	NDM_CONV_TEST_(
-		from, "ISO-8859-1",
+		"ISO-8859-1", from,
 		NDM_CONV_FLAGS_ENCODE_TRUNCATED,
 		in, in_bytes - 3,
 		in_bytes - 3, in_bytes / 4,
-		"test UTF-3?", NDM_CONV_ERROR_OK);
+		"test UTF-3?", 0);
 
 	/* Truncated, only 2 bytes presented. */
 
 	NDM_CONV_TEST_(
-		from, "ISO-8859-1",
+		"ISO-8859-1", from,
 		NDM_CONV_FLAGS_ENCODE_STRICTLY,
 		in, in_bytes - 2,
 		10 * 4, 10,
-		"test UTF-3", NDM_CONV_ERROR_INPUT_TRUNCATED);
+		"test UTF-3", E2BIG);
 
 	NDM_CONV_TEST_(
-		from, "ISO-8859-1",
+		"ISO-8859-1", from,
 		NDM_CONV_FLAGS_ENCODE_TRUNCATED,
 		in, in_bytes - 2,
 		in_bytes - 2, in_bytes / 4,
-		"test UTF-3?", NDM_CONV_ERROR_OK);
+		"test UTF-3?", 0);
 
 	/* Truncated, only 3 bytes presented. */
 
 	NDM_CONV_TEST_(
-		from, "ISO-8859-1",
+		"ISO-8859-1", from,
 		NDM_CONV_FLAGS_ENCODE_STRICTLY,
 		in, in_bytes - 3,
 		10 * 4, 10,
-		"test UTF-3", NDM_CONV_ERROR_INPUT_TRUNCATED);
+		"test UTF-3", E2BIG);
 
 	NDM_CONV_TEST_(
-		from, "ISO-8859-1",
+		"ISO-8859-1", from,
 		NDM_CONV_FLAGS_ENCODE_TRUNCATED,
 		in, in_bytes - 3,
 		in_bytes - 3, in_bytes / 4,
-		"test UTF-3?", NDM_CONV_ERROR_OK);
+		"test UTF-3?", 0);
 
 	/* Several invalid code points (from a surrogate range). */
 
@@ -361,18 +356,18 @@ static void test_conv_utf32_(
 	in[10]= from_host(0xdfff);
 
 	NDM_CONV_TEST_(
-		from, "ISO-8859-1",
+		"ISO-8859-1", from,
 		NDM_CONV_FLAGS_ENCODE_STRICTLY,
 		in, in_bytes,
 		7 * 4, 7,
-		"test UT", NDM_CONV_ERROR_INPUT_ILLEGAL);
+		"test UT", EILSEQ);
 
 	NDM_CONV_TEST_(
-		from, "ISO-8859-1",
+		"ISO-8859-1", from,
 		NDM_CONV_FLAGS_ENCODE_ILLEGAL,
 		in, in_bytes,
 		in_bytes, in_bytes / 4 - 3,
-		"test UT?", NDM_CONV_ERROR_OK);
+		"test UT?", 0);
 }
 
 static void test_conv_utf_range_(
@@ -385,43 +380,39 @@ static void test_conv_utf_range_(
 	uint32_t (*from_host)(const uint32_t x) =
 		is_le ? ndm_endian_htole32 : ndm_endian_htobe32;
 
-	ndm_conv_t dcoder = ndm_conv_open(
-		from, to, NDM_CONV_FLAGS_ENCODE_STRICTLY);
+	ndm_conv_t dcd = ndm_conv_open(to, from);
+	ndm_conv_t icd = ndm_conv_open(from, to);
 
-	ndm_conv_t icoder = ndm_conv_open(
-		to, from, NDM_CONV_FLAGS_ENCODE_STRICTLY);
+	NDM_TEST(dcd >= 0);
+	NDM_TEST(icd >= 0);
 
-	NDM_TEST(dcoder >= 0);
-	NDM_TEST(icoder >= 0);
-
-	if (dcoder >= 0 && icoder >= 0) {
+	if (dcd != (ndm_conv_t) -1 && icd != (ndm_conv_t) -1) {
 		for (uint32_t i = start; i < end; i++) {
 			uint32_t enc = 0;
 			uint32_t dst = 0;
-			size_t size = 0;
 			uint32_t src = from_host(i);
 			const char *in = (const char *) &src;
 			char *out = (char *) &enc;
+			size_t in_bytes = sizeof(src);
+			size_t out_bytes = sizeof(enc);
 
-			NDM_TEST(ndm_conv(
-				&dcoder,
-				&in, sizeof(src),
-				&out, sizeof(enc), &size) == NDM_CONV_ERROR_OK);
+			NDM_TEST(ndm_conv(dcd, &in, &in_bytes, &out, &out_bytes) == 0);
+
+			size_t size = sizeof(enc) - out_bytes;
 
 			in = (const char *) &enc;
 			out = (char *) &dst;
+			in_bytes = sizeof(enc);
+			out_bytes = sizeof(dst);
 
-			NDM_TEST(ndm_conv(
-				&icoder,
-				&in, size,
-				&out, sizeof(dst), NULL) == NDM_CONV_ERROR_OK);
-
+			NDM_TEST(ndm_conv(icd, &in, &size, &out, &out_bytes) == 0);
+			NDM_TEST(size == 0);
 			NDM_TEST(src == dst);
 		}
 	}
 
-	ndm_conv_close(&dcoder);
-	ndm_conv_close(&icoder);
+	NDM_TEST(ndm_conv_close(dcd) == 0);
+	NDM_TEST(ndm_conv_close(icd) == 0);
 }
 
 int main()
@@ -432,48 +423,48 @@ int main()
 		char in[] = "test ISO-8859-1";
 
 		NDM_CONV_TEST_(
-			"ISO-8859-1", "UTF-8",
+			"UTF-8", "ISO-8859-1",
 			NDM_CONV_FLAGS_ENCODE_STRICTLY,
 			in, strlen(in) + 1,
 			strlen(in) + 1, strlen(in) + 1,
 			"test ISO-8859-1",
-			NDM_CONV_ERROR_OK);
+			0);
 
 		in[5] = '\x80';
 
 		NDM_CONV_TEST_(
-			"ISO-8859-1", "UTF-8",
+			"UTF-8", "ISO-8859-1",
 			NDM_CONV_FLAGS_ENCODE_STRICTLY,
 			in, strlen(in) + 1,
 			5, 5,
 			"test ",
-			NDM_CONV_ERROR_INPUT_ILLEGAL);
+			EILSEQ);
 
 		NDM_CONV_TEST_(
-			"ISO-8859-1", "UTF-8",
+			"UTF-8", "ISO-8859-1",
 			NDM_CONV_FLAGS_ENCODE_NON_STRICTLY,
 			in, strlen(in) + 1,
 			strlen(in) + 1, strlen(in) + 1,
 			"test ?SO-8859-1",
-			NDM_CONV_ERROR_OK);
+			0);
 
 		char iin[sizeof("тест")] = "тест";
 
 		NDM_CONV_TEST_(
-			"UTF-8", "ISO-8859-1",
+			"ISO-8859-1", "UTF-8",
 			NDM_CONV_FLAGS_ENCODE_STRICTLY,
 			iin, strlen(iin) + 1,
 			0, 0,
 			"",
-			NDM_CONV_ERROR_INPUT_NON_MAPPED);
+			EINVAL);
 
 		NDM_CONV_TEST_(
-			"UTF-8", "ISO-8859-1",
+			"ISO-8859-1", "UTF-8",
 			NDM_CONV_FLAGS_ENCODE_NON_STRICTLY,
 			iin, strlen(iin) + 1,
 			strlen(iin) + 1, 5,
 			"????",
-			NDM_CONV_ERROR_OK);
+			0);
 	}
 
 	{
@@ -482,22 +473,22 @@ int main()
 		char in[] = "test UTF-8";
 
 		NDM_CONV_TEST_(
-			"UTF-8", "ISO-8859-1",
+			"ISO-8859-1", "UTF-8",
 			NDM_CONV_FLAGS_ENCODE_STRICTLY,
 			in, strlen(in) + 1,
 			strlen(in) + 1, strlen(in) + 1,
 			"test UTF-8",
-			NDM_CONV_ERROR_OK);
+			0);
 
 		in[4] = '\x80';
 
 		NDM_CONV_TEST_(
-			"UTF-8", "ISO-8859-1",
+			"ISO-8859-1", "UTF-8",
 			NDM_CONV_FLAGS_ENCODE_STRICTLY,
 			in, strlen(in) + 1,
 			4, 4,
 			"test",
-			NDM_CONV_ERROR_INPUT_ILLEGAL);
+			EILSEQ);
 
 		/* Illegal character. */
 
@@ -505,40 +496,40 @@ int main()
 		in[5] = '\xd0';
 
 		NDM_CONV_TEST_(
-			"UTF-8", "ISO-8859-1",
+			"ISO-8859-1", "UTF-8",
 			NDM_CONV_FLAGS_ENCODE_STRICTLY,
 			in, strlen(in) + 1,
 			5, 5,
 			"test ",
-			NDM_CONV_ERROR_INPUT_ILLEGAL);
+			EILSEQ);
 
 		/* 1-byte illegal sequence. */
 
 		in[5] = '\xc1';
 
 		NDM_CONV_TEST_(
-			"UTF-8", "ISO-8859-1",
+			"ISO-8859-1", "UTF-8",
 			NDM_CONV_FLAGS_ENCODE_STRICTLY,
 			in, strlen(in) + 1,
 			5, 5,
 			"test ",
-			NDM_CONV_ERROR_INPUT_ILLEGAL);
+			EILSEQ);
 
 		NDM_CONV_TEST_(
-			"UTF-8", "ISO-8859-1",
+			"ISO-8859-1", "UTF-8",
 			NDM_CONV_FLAGS_ENCODE_ILLEGAL,
 			in, strlen(in) + 1,
 			strlen(in) + 1, strlen(in) + 1,
 			"test ?TF-8",
-			NDM_CONV_ERROR_OK);
+			0);
 
 		NDM_CONV_TEST_(
-			"UTF-8", "ISO-8859-1",
+			"ISO-8859-1", "UTF-8",
 			NDM_CONV_FLAGS_ENCODE_NON_STRICTLY,
 			in, strlen(in) + 1,
 			strlen(in) + 1, strlen(in) + 1,
 			"test ?TF-8",
-			NDM_CONV_ERROR_OK);
+			0);
 
 		/* 2-byte non mapped character. */
 
@@ -546,12 +537,12 @@ int main()
 		in[6] = '\x90'; /* 2-byte Cyrillic 'A' */
 
 		NDM_CONV_TEST_(
-			"UTF-8", "ISO-8859-1",
+			"ISO-8859-1", "UTF-8",
 			NDM_CONV_FLAGS_ENCODE_STRICTLY,
 			in, strlen(in) + 1,
 			5, 5,
 			"test ",
-			NDM_CONV_ERROR_INPUT_NON_MAPPED);
+			EINVAL);
 
 		/* 2-byte illegal sequence. */
 
@@ -559,30 +550,30 @@ int main()
 		in[6] = '\xf3';
 
 		NDM_CONV_TEST_(
-			"UTF-8", "ISO-8859-1",
+			"ISO-8859-1", "UTF-8",
 			NDM_CONV_FLAGS_ENCODE_STRICTLY,
 			in, strlen(in) + 1,
 			5, 5,
 			"test ",
-			NDM_CONV_ERROR_INPUT_ILLEGAL);
+			EILSEQ);
 
 		NDM_CONV_TEST_(
-			"UTF-8", "ISO-8859-1",
+			"ISO-8859-1", "UTF-8",
 			NDM_CONV_FLAGS_ENCODE_ILLEGAL,
 			in, strlen(in) + 1,
 			11, 11,
 			"test ??F-8",
-			NDM_CONV_ERROR_OK);
+			0);
 
 		in[6] = '\xf5';	/* 2-byte skip. */
 
 		NDM_CONV_TEST_(
-			"UTF-8", "ISO-8859-1",
+			"ISO-8859-1", "UTF-8",
 			NDM_CONV_FLAGS_ENCODE_ILLEGAL,
 			in, strlen(in) + 1,
 			11, 10,
 			"test ?F-8",
-			NDM_CONV_ERROR_OK);
+			0);
 
 		/* 2-byte truncated sequence. */
 
@@ -592,20 +583,20 @@ int main()
 		in[10] = '\xc2';
 
 		NDM_CONV_TEST_(
-			"UTF-8", "ISO-8859-1",
+			"ISO-8859-1", "UTF-8",
 			NDM_CONV_FLAGS_ENCODE_STRICTLY,
 			in, 11,
 			10, 10,
 			"test UTF-8",
-			NDM_CONV_ERROR_INPUT_TRUNCATED);
+			E2BIG);
 
 		NDM_CONV_TEST_(
-			"UTF-8", "ISO-8859-1",
+			"ISO-8859-1", "UTF-8",
 			NDM_CONV_FLAGS_ENCODE_TRUNCATED,
 			in, 11,
 			11, 11,
 			"test UTF-8?",
-			NDM_CONV_ERROR_OK);
+			0);
 
 		in[10] = '\0';
 
@@ -616,20 +607,20 @@ int main()
 		in[7] = '\x81';
 
 		NDM_CONV_TEST_(
-			"UTF-8", "ISO-8859-1",
+			"ISO-8859-1", "UTF-8",
 			NDM_CONV_FLAGS_ENCODE_STRICTLY,
 			in, strlen(in) + 1,
 			5, 5,
 			"test ",
-			NDM_CONV_ERROR_INPUT_ILLEGAL);
+			EILSEQ);
 
 		NDM_CONV_TEST_(
-			"UTF-8", "ISO-8859-1",
+			"ISO-8859-1", "UTF-8",
 			NDM_CONV_FLAGS_ENCODE_ILLEGAL,
 			in, strlen(in) + 1,
 			11, 9,
 			"test ?-8",
-			NDM_CONV_ERROR_OK);
+			0);
 
 		/* 3-byte illegal sequence, 3rd error byte. */
 
@@ -638,12 +629,12 @@ int main()
 		in[7] = '\xe2';
 
 		NDM_CONV_TEST_(
-			"UTF-8", "ISO-8859-1",
+			"ISO-8859-1", "UTF-8",
 			NDM_CONV_FLAGS_ENCODE_ILLEGAL,
 			in, strlen(in) + 1,
 			11, 10,
 			"test ?""?-8",
-			NDM_CONV_ERROR_OK);
+			0);
 
 		/* 3-byte non mapped sequence. */
 
@@ -652,28 +643,28 @@ int main()
 		in[7] = '\xbf';
 
 		NDM_CONV_TEST_(
-			"UTF-8", "ISO-8859-1",
+			"ISO-8859-1", "UTF-8",
 			NDM_CONV_FLAGS_ENCODE_STRICTLY,
 			in, strlen(in) + 1,
 			5, 5,
 			"test ",
-			NDM_CONV_ERROR_INPUT_NON_MAPPED);
+			EINVAL);
 
 		NDM_CONV_TEST_(
-			"UTF-8", "ISO-8859-1",
+			"ISO-8859-1", "UTF-8",
 			NDM_CONV_FLAGS_ENCODE_ILLEGAL,
 			in, strlen(in) + 1,
 			5, 5,
 			"test ",
-			NDM_CONV_ERROR_INPUT_NON_MAPPED);
+			EINVAL);
 
 		NDM_CONV_TEST_(
-			"UTF-8", "ISO-8859-1",
+			"ISO-8859-1", "UTF-8",
 			NDM_CONV_FLAGS_ENCODE_NON_MAPPED,
 			in, strlen(in) + 1,
 			11, 9,
 			"test ?-8",
-			NDM_CONV_ERROR_OK);
+			0);
 
 		/* 3-byte truncated sequence, only 1 byte presented. */
 
@@ -683,20 +674,20 @@ int main()
 		in[10]= '\xe1';
 
 		NDM_CONV_TEST_(
-			"UTF-8", "ISO-8859-1",
+			"ISO-8859-1", "UTF-8",
 			NDM_CONV_FLAGS_ENCODE_STRICTLY,
 			in, 11,
 			10, 10,
 			"test UTF-8",
-			NDM_CONV_ERROR_INPUT_TRUNCATED);
+			E2BIG);
 
 		NDM_CONV_TEST_(
-			"UTF-8", "ISO-8859-1",
+			"ISO-8859-1", "UTF-8",
 			NDM_CONV_FLAGS_ENCODE_TRUNCATED,
 			in, 11,
 			11, 11,
 			"test UTF-8?",
-			NDM_CONV_ERROR_OK);
+			0);
 
 		in[10] = '\0';
 
@@ -709,20 +700,20 @@ int main()
 		in[10]= '\xbf';
 
 		NDM_CONV_TEST_(
-			"UTF-8", "ISO-8859-1",
+			"ISO-8859-1", "UTF-8",
 			NDM_CONV_FLAGS_ENCODE_STRICTLY,
 			in, 11,
 			9, 9,
 			"test UTF-",
-			NDM_CONV_ERROR_INPUT_TRUNCATED);
+			E2BIG);
 
 		NDM_CONV_TEST_(
-			"UTF-8", "ISO-8859-1",
+			"ISO-8859-1", "UTF-8",
 			NDM_CONV_FLAGS_ENCODE_TRUNCATED,
 			in, 11,
 			11, 10,
 			"test UTF-?",
-			NDM_CONV_ERROR_OK);
+			0);
 
 		in[9] = '8';
 		in[10]= '\0';
@@ -734,20 +725,20 @@ int main()
 		in[7] = 'F';
 
 		NDM_CONV_TEST_(
-			"UTF-8", "ISO-8859-1",
+			"ISO-8859-1", "UTF-8",
 			NDM_CONV_FLAGS_ENCODE_STRICTLY,
 			in, strlen(in) + 1,
 			5, 5,
 			"test ",
-			NDM_CONV_ERROR_INPUT_ILLEGAL);
+			EILSEQ);
 
 		NDM_CONV_TEST_(
-			"UTF-8", "ISO-8859-1",
+			"ISO-8859-1", "UTF-8",
 			NDM_CONV_FLAGS_ENCODE_ILLEGAL,
 			in, strlen(in) + 1,
 			11, 10,
 			"test ?F-8",
-			NDM_CONV_ERROR_OK);
+			0);
 
 		/* 4-byte illegal sequence, 3rd error byte. */
 
@@ -756,20 +747,20 @@ int main()
 		in[7] = '\xc0';
 
 		NDM_CONV_TEST_(
-			"UTF-8", "ISO-8859-1",
+			"ISO-8859-1", "UTF-8",
 			NDM_CONV_FLAGS_ENCODE_STRICTLY,
 			in, strlen(in) + 1,
 			5, 5,
 			"test ",
-			NDM_CONV_ERROR_INPUT_ILLEGAL);
+			EILSEQ);
 
 		NDM_CONV_TEST_(
-			"UTF-8", "ISO-8859-1",
+			"ISO-8859-1", "UTF-8",
 			NDM_CONV_FLAGS_ENCODE_ILLEGAL,
 			in, strlen(in) + 1,
 			11, 9,
 			"test ?-8",
-			NDM_CONV_ERROR_OK);
+			0);
 
 		/* 4-byte illegal sequence, 4th error byte. */
 
@@ -779,20 +770,20 @@ int main()
 		in[8] = '\xc0';
 
 		NDM_CONV_TEST_(
-			"UTF-8", "ISO-8859-1",
+			"ISO-8859-1", "UTF-8",
 			NDM_CONV_FLAGS_ENCODE_STRICTLY,
 			in, strlen(in) + 1,
 			5, 5,
 			"test ",
-			NDM_CONV_ERROR_INPUT_ILLEGAL);
+			EILSEQ);
 
 		NDM_CONV_TEST_(
-			"UTF-8", "ISO-8859-1",
+			"ISO-8859-1", "UTF-8",
 			NDM_CONV_FLAGS_ENCODE_ILLEGAL,
 			in, strlen(in) + 1,
 			11, 8,
 			"test ?8",
-			NDM_CONV_ERROR_OK);
+			0);
 
 		/* 4-byte non mapped sequence. */
 
@@ -802,28 +793,28 @@ int main()
 		in[8] = '\x80';
 
 		NDM_CONV_TEST_(
-			"UTF-8", "ISO-8859-1",
+			"ISO-8859-1", "UTF-8",
 			NDM_CONV_FLAGS_ENCODE_STRICTLY,
 			in, strlen(in) + 1,
 			5, 5,
 			"test ",
-			NDM_CONV_ERROR_INPUT_NON_MAPPED);
+			EINVAL);
 
 		NDM_CONV_TEST_(
-			"UTF-8", "ISO-8859-1",
+			"ISO-8859-1", "UTF-8",
 			NDM_CONV_FLAGS_ENCODE_ILLEGAL,
 			in, strlen(in) + 1,
 			5, 5,
 			"test ",
-			NDM_CONV_ERROR_INPUT_NON_MAPPED);
+			EINVAL);
 
 		NDM_CONV_TEST_(
-			"UTF-8", "ISO-8859-1",
+			"ISO-8859-1", "UTF-8",
 			NDM_CONV_FLAGS_ENCODE_NON_MAPPED,
 			in, strlen(in) + 1,
 			11, 8,
 			"test ?8",
-			NDM_CONV_ERROR_OK);
+			0);
 
 		/* 4-byte truncated sequence, only 1 byte presented. */
 
@@ -835,20 +826,20 @@ int main()
 		in[10]= '\xf4';
 
 		NDM_CONV_TEST_(
-			"UTF-8", "ISO-8859-1",
+			"ISO-8859-1", "UTF-8",
 			NDM_CONV_FLAGS_ENCODE_STRICTLY,
 			in, 11,
 			10, 10,
 			"test UTF-8",
-			NDM_CONV_ERROR_INPUT_TRUNCATED);
+			E2BIG);
 
 		NDM_CONV_TEST_(
-			"UTF-8", "ISO-8859-1",
+			"ISO-8859-1", "UTF-8",
 			NDM_CONV_FLAGS_ENCODE_TRUNCATED,
 			in, 11,
 			11, 11,
 			"test UTF-8?",
-			NDM_CONV_ERROR_OK);
+			0);
 
 		/* 4-byte truncated sequence, only 2 bytes presented. */
 
@@ -856,20 +847,20 @@ int main()
 		in[10]= '\x8f';
 
 		NDM_CONV_TEST_(
-			"UTF-8", "ISO-8859-1",
+			"ISO-8859-1", "UTF-8",
 			NDM_CONV_FLAGS_ENCODE_STRICTLY,
 			in, 11,
 			9, 9,
 			"test UTF-",
-			NDM_CONV_ERROR_INPUT_TRUNCATED);
+			E2BIG);
 
 		NDM_CONV_TEST_(
-			"UTF-8", "ISO-8859-1",
+			"ISO-8859-1", "UTF-8",
 			NDM_CONV_FLAGS_ENCODE_TRUNCATED,
 			in, 11,
 			11, 10,
 			"test UTF-?",
-			NDM_CONV_ERROR_OK);
+			0);
 
 		/* 4-byte truncated sequence, only 3 bytes presented. */
 
@@ -878,56 +869,56 @@ int main()
 		in[10]= '\xbf';
 
 		NDM_CONV_TEST_(
-			"UTF-8", "ISO-8859-1",
+			"ISO-8859-1", "UTF-8",
 			NDM_CONV_FLAGS_ENCODE_STRICTLY,
 			in, 11,
 			8, 8,
 			"test UTF",
-			NDM_CONV_ERROR_INPUT_TRUNCATED);
+			E2BIG);
 
 		NDM_CONV_TEST_(
-			"UTF-8", "ISO-8859-1",
+			"ISO-8859-1", "UTF-8",
 			NDM_CONV_FLAGS_ENCODE_TRUNCATED,
 			in, 11,
 			11, 9,
 			"test UTF?",
-			NDM_CONV_ERROR_OK);
+			0);
 
 		NDM_CONV_TEST_(
-			"UTF-8", "ISO-8859-1",
+			"ISO-8859-1", "UTF-8",
 			NDM_CONV_FLAGS_ENCODE_STRICTLY,
 			"\xc1\xc1\xc1\xc1\xc1\xc1", 6,
 			0, 0,
-			"", NDM_CONV_ERROR_INPUT_ILLEGAL);
+			"", EILSEQ);
 
 		NDM_CONV_TEST_(
-			"UTF-8", "ISO-8859-1",
+			"ISO-8859-1", "UTF-8",
 			NDM_CONV_FLAGS_ENCODE_ILLEGAL,
 			"\xc1\xc1\xc1\xc1\xc1\xc1", 6,
 			6, 1,
-			"?", NDM_CONV_ERROR_OK);
+			"?", 0);
 
 		NDM_CONV_TEST_(
-			"UTF-8", "ISO-8859-1",
+			"ISO-8859-1", "UTF-8",
 			NDM_CONV_FLAGS_ENCODE_STRICTLY,
 			"\xc2\xc2\xc2\xc2\xc2\xc2", 6,
 			0, 0,
-			"", NDM_CONV_ERROR_INPUT_ILLEGAL);
+			"", EILSEQ);
 
 		NDM_CONV_TEST_(
-			"UTF-8", "ISO-8859-1",
+			"ISO-8859-1", "UTF-8",
 			NDM_CONV_FLAGS_ENCODE_ILLEGAL,
 			"\xc2\xc2\xc2\xc2\xc2\xc2", 6,
 			5, 5,
-			"?????", NDM_CONV_ERROR_INPUT_TRUNCATED);
+			"?????", E2BIG);
 
 		NDM_CONV_TEST_(
-			"UTF-8", "ISO-8859-1",
+			"ISO-8859-1", "UTF-8",
 			NDM_CONV_FLAGS_ENCODE_ILLEGAL |
 			NDM_CONV_FLAGS_ENCODE_TRUNCATED,
 			"\xc2\xc2\xc2\xc2\xc2\xc2", 6,
 			6, 6,
-			"??????", NDM_CONV_ERROR_OK);
+			"??????", 0);
 	}
 
 	{

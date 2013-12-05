@@ -22,32 +22,37 @@ enum ndm_conv_flags_t
 		NDM_CONV_FLAGS_ENCODE_NON_MAPPED
 };
 
-enum ndm_conv_error_t
-{
-	NDM_CONV_ERROR_OK,
-	NDM_CONV_ERROR_INPUT_TRUNCATED,			//!< unterminated sequence
-	NDM_CONV_ERROR_INPUT_ILLEGAL,			//!< illegal byte sequence
-	NDM_CONV_ERROR_INPUT_NON_MAPPED			//!< no destination code
-};
+typedef int32_t ndm_conv_t;
 
-ndm_conv_t ndm_conv_open(
-		const char *const from,
+ndm_conv_t ndm_conv_open_ex(
 		const char *const to,
+		const char *const from,
 		const enum ndm_conv_flags_t flags) NDM_ATTR_WUR;
 
-void ndm_conv_close(
-		ndm_conv_t *conv);
+/* iconv compatibility functions. */
 
-enum ndm_conv_error_t ndm_conv(
-		const ndm_conv_t *conv,
-		const char **in,
-		const size_t in_bytes,
-		char **out,
-		const size_t out_bytes,
-		size_t *bytes_converted) NDM_ATTR_WUR;
+#ifdef NDM_CONV_ICONV_COMPAT
 
-const char *ndm_conv_strerror(
-		const enum ndm_conv_error_t error);
+#define iconv_t		ndm_conv_t
+#define iconv_open	ndm_conv_open
+#define iconv		ndm_conv
+#define iconv_close	ndm_conv_close
+
+#endif /* NDM_CONV_ICONV_COMPAT */
+
+ndm_conv_t ndm_conv_open(
+		const char *const to,
+		const char *const from) NDM_ATTR_WUR;
+
+size_t ndm_conv(
+		const ndm_conv_t cd,
+		const char **inp,
+		size_t *in_bytes_left,
+		char **outp,
+		size_t *out_bytes_left) NDM_ATTR_WUR;
+
+int ndm_conv_close(
+		ndm_conv_t cd);
 
 #endif	/* __NDM_CONV_H__ */
 

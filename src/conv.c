@@ -640,16 +640,16 @@ static ssize_t ndm_conv_find_(const char *const name)
 	return -1;
 }
 
-ndm_conv_t ndm_conv_open(
-		const char *const from,
+ndm_conv_t ndm_conv_open_ex(
 		const char *const to,
+		const char *const from,
 		const enum ndm_conv_flags_t flags)
 {
-	const ssize_t from_index = ndm_conv_find_(from);
 	const ssize_t to_index = ndm_conv_find_(to);
+	const ssize_t from_index = ndm_conv_find_(from);
 
 	if (from_index < 0 || to_index < 0) {
-		errno = ENOENT;
+		errno = EINVAL;
 
 		return NDM_CONV_INVALID_;
 	}
@@ -671,92 +671,72 @@ ndm_conv_t ndm_conv_open(
 		(ndm_conv_t) ((flags << NDM_CONV_SHIFT_FLAGS_));
 }
 
-void ndm_conv_close(
-		ndm_conv_t *conv)
+ndm_conv_t ndm_conv_open(
+		const char *const to,
+		const char *const from)
 {
-	*conv = NDM_CONV_INVALID_;
+	return ndm_conv_open_ex(to, from, NDM_CONV_FLAGS_ENCODE_STRICTLY);
 }
 
-enum ndm_conv_error_t ndm_conv(
-		const ndm_conv_t *conv,
+size_t ndm_conv(
+		const ndm_conv_t cd,
 		const char **inp,
-		const size_t inp_bytes,
+		size_t *in_bytes_left,
 		char **outp,
-		const size_t outp_bytes,
-		size_t *bytes_converted)
+		size_t *out_bytes_left)
 {
-	size_t converted = 0;
-	enum ndm_conv_error_t code = NDM_CONV_ERROR_OK;
-	const unsigned long flags = (unsigned long) NDM_CONV_FLAGS_(*conv);
-	decode_func_t_ decode =	NDM_CONV_PAIRS_[NDM_CONV_FROM_(*conv)].decode_;
-	encode_func_t_ encode =	NDM_CONV_PAIRS_[NDM_CONV_TO_(*conv)].encode_;
-	const uint8_t *in = (const uint8_t *) (*inp);
-	const uint8_t *in_end = in + inp_bytes;
-	uint8_t *out = (uint8_t *)(
-		(outp == NULL || outp_bytes == 0) ? NULL : *outp);
-	uint8_t *out_end = (out == NULL) ? NULL : out + outp_bytes;
+	if (inp == NULL || *inp == NULL) {
+		/* Reset @c conv to its initial shift state
+		 * for state-dependent encodings, @c outp value ignored.
+		 * Here the state-dependent encondings do not supported,
+		 * so zero returned. */
 
-	while (in < in_end) {
+		return 0;
+	}
+
+	assert (outp != NULL && *outp != NULL);
+
+	const unsigned long flags = (unsigned long) NDM_CONV_FLAGS_(cd);
+	decode_func_t_ decode =	NDM_CONV_PAIRS_[NDM_CONV_FROM_(cd)].decode_;
+	encode_func_t_ encode =	NDM_CONV_PAIRS_[NDM_CONV_TO_(cd)].encode_;
+
+	while (*in_bytes_left != 0 && out_bytes_left != 0) {
 		uint32_t cp;
-		const long d = decode(in, (size_t) (in_end - in), &cp, flags);
+		const long d = decode(
+			(const uint8_t *) *inp, *in_bytes_left, &cp, flags);
 
 		if (d > 0) {
-			const long e = encode(cp, out, (size_t) (out_end - out), flags);
+			const long e = encode(
+				cp, (uint8_t *) *outp, *out_bytes_left, flags);
 
 			if (e > 0) {
-				in += d;
-				converted += (size_t) e;
-
-				if (out != NULL) {
-					out += e;
-				}
+				*inp += d;
+				*in_bytes_left -= (size_t) d;
+				*outp += e;
+				*out_bytes_left -= (size_t) e;
 			} else {
-				code = NDM_CONV_ERROR_INPUT_NON_MAPPED;
+				errno = EINVAL;
 
-				break;
+				return (size_t) -1;
 			}
 		} else
 		if (d == 0) {
-			code = NDM_CONV_ERROR_INPUT_TRUNCATED;
+			errno = E2BIG;
 
-			break;
+			return (size_t) -1;
 		} else {
-			code = NDM_CONV_ERROR_INPUT_ILLEGAL;
+			errno = EILSEQ;
 
-			break;
+			return (size_t) -1;
 		}
 	}
 
-	*inp = in;
-
-	/**
-	 * Do not change an @a outp value,
-	 * if it was @a NULL or an input size is zero.
-	 **/
-
-	if (outp != NULL && out != NULL) {
-		*outp = out;
-	}
-
-	if (bytes_converted != NULL) {
-		*bytes_converted = converted;
-	}
-
-	return code;
+	return 0;
 }
 
-const char *ndm_conv_strerror(
-		const enum ndm_conv_error_t error)
+int ndm_conv_close(
+		ndm_conv_t cd)
 {
-	static const char *const NDM_CONV_ERRORS_[] =
-	{
-		[NDM_CONV_ERROR_OK]				  = "success",
-		[NDM_CONV_ERROR_INPUT_TRUNCATED]  = "truncated input sequence",
-		[NDM_CONV_ERROR_INPUT_ILLEGAL]	  = "illegal byte sequence",
-		[NDM_CONV_ERROR_INPUT_NON_MAPPED] = "no destination character"
-	};
-
-	return error < NDM_ARRAY_SIZE(NDM_CONV_ERRORS_) ?
-		NDM_CONV_ERRORS_[error] : "unknown error";
+	return 0;
 }
 
