@@ -5,8 +5,6 @@
 #include <stdint.h>
 #include "attr.h"
 
-typedef int32_t ndm_conv_t;
-
 enum ndm_conv_flags_t
 {
 	NDM_CONV_FLAGS_ENCODE_STRICTLY			= 0x0000,
