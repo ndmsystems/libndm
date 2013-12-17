@@ -292,10 +292,15 @@ static void __ndm_core_message_update(
 			} while (*m != '\0' && p < pend);
 
 			if (p == pend) {
+				--p;
+				*p = '\0';
+
 				/* message was truncated, append trailing dots */
 				__ndm_core_message_append_dots(
 					message->string,
 					sizeof(message->string));
+			} else {
+				*p = '\0';
 			}
 		}
 	}
