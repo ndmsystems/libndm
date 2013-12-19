@@ -14,6 +14,12 @@ static const char *__source = NULL;
 static bool __console_mode = false;
 static int __facility = LOG_USER;
 
+#ifndef NDEBUG
+static int __debug_level = LDEBUG_ALL;
+#else	/* NDEBUG */
+static int __debug_level = LDEBUG_OFF;
+#endif	/* NDEBUG */
+
 const char *ndm_log_get_ident(
 		char *argv[])
 {
@@ -51,6 +57,30 @@ void ndm_log(
 	va_start(ap, format);
 	ndm_vlog(level, format, ap);
 	va_end(ap);
+}
+
+bool ndm_log_debug(
+		const enum debug_level_t debug_level,
+		const char *const format,
+		...)
+{
+	va_list ap;
+
+	if (debug_level <= __debug_level) {
+		va_start(ap, format);
+		ndm_vlog(LDEBUG, format, ap);
+		va_end(ap);
+
+		return true;
+	}
+
+	return false;
+}
+
+void ndm_log_set_debug(
+		const enum debug_level_t debug_level)
+{
+	__debug_level = debug_level;
 }
 
 void ndm_vlog(

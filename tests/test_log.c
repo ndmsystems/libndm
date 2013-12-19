@@ -27,7 +27,36 @@ int main(int argc, char *argv[])
 	NDM_LOG_WARNING("warning %i", i++);
 	NDM_LOG_ERROR("error %i", i++);
 	NDM_LOG_CRITICAL("critical %i", i++);
-	NDM_LOG_DEBUG("debug %i", i++);
+
+	/* default debug level is LDEBUG_ALL if NDEBUG is undefined */
+	NDM_TEST(NDM_LOG_DEBUG("debug [default] %i", i++));
+	NDM_TEST(NDM_LOG_DEBUG_1("debug [level 1] %i", i++));
+	NDM_TEST(NDM_LOG_DEBUG_2("debug [level 2] %i", i++));
+	NDM_TEST(NDM_LOG_DEBUG_3("debug [level 3] %i", i++));
+
+	ndm_log_set_debug(LDEBUG_1);
+	NDM_TEST(NDM_LOG_DEBUG("debug [default] %i", i++));
+	NDM_TEST(NDM_LOG_DEBUG_1("debug [level 1] %i", i++));
+	NDM_TEST(!NDM_LOG_DEBUG_2("debug [level 2] %i", i++));
+	NDM_TEST(!NDM_LOG_DEBUG_3("debug [level 3] %i", i++));
+
+	ndm_log_set_debug(LDEBUG_2);
+	NDM_TEST(NDM_LOG_DEBUG("debug [default] %i", i++));
+	NDM_TEST(NDM_LOG_DEBUG_1("debug [level 1] %i", i++));
+	NDM_TEST(NDM_LOG_DEBUG_2("debug [level 2] %i", i++));
+	NDM_TEST(!NDM_LOG_DEBUG_3("debug [level 3] %i", i++));
+
+	ndm_log_set_debug(LDEBUG_3);
+	NDM_TEST(NDM_LOG_DEBUG("debug [default] %i", i++));
+	NDM_TEST(NDM_LOG_DEBUG_1("debug [level 1] %i", i++));
+	NDM_TEST(NDM_LOG_DEBUG_2("debug [level 2] %i", i++));
+	NDM_TEST(NDM_LOG_DEBUG_3("debug [level 3] %i", i++));
+
+	ndm_log_set_debug(LDEBUG_OFF);
+	NDM_TEST(!NDM_LOG_DEBUG("debug [default] %i", i++));
+	NDM_TEST(!NDM_LOG_DEBUG_1("debug [level 1] %i", i++));
+	NDM_TEST(!NDM_LOG_DEBUG_2("debug [level 2] %i", i++));
+	NDM_TEST(!NDM_LOG_DEBUG_3("debug [level 3] %i", i++));
 
 	test_vlog(LINFO, "info %i", i++);
 	test_vlog(LWARNING, "warning %i", i++);
