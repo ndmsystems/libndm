@@ -14,23 +14,35 @@
 #define NDM_IP_SOCKADDR_LEN				INET6_ADDRSTRLEN
 
 /**
- * Structure to store the sockets IPv4 or IPv6.
- *
- * @param family Address family - AF_INET or AF_INET6 value.
- * @param in IPv4 address.
- * @param in6 IPv6 address.
- * @param size Size of @a in or @a in6 (depends on the value stored in
- * @a family).
+ * Structure to store IPv4 or IPv6 address information.
  */
 
 struct ndm_ip_sockaddr_t
 {
-	union
+	union ndm_ip_sockaddr_un_t
 	{
+		/**
+		 * Address family: AF_INET or AF_INET6.
+		 */
+
 		sa_family_t family;
+
+		/**
+		 * IPv4 address.
+		 */
+
 		struct sockaddr_in in;
+
+		/**
+		 * IPv6 address.
+		 */
+
 		struct sockaddr_in6 in6;
 	} un;
+
+	/**
+	 * Size of @a in or @a in6 depending on the value stored in @a un.family.
+	 */
 
 	socklen_t size;
 };
