@@ -60,7 +60,7 @@ $(MEM_DEBUG_OBJ): $(TEST_DIR)/memchk.c
 	@$(CC) $< $(MEM_DEBUG_CFLAGS) -c -o $@ >/dev/null
 endif
 
-all: $(LIB) tests
+all: $(LIB)
 
 $(LIB): Makefile $(HEADERS) $(OBJS)
 	@echo LD $(LIB)
