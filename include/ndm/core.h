@@ -637,7 +637,7 @@ enum ndm_core_response_error_t ndm_core_response_first_node(
  * Get the pointer to the response first node that contains string value.
  *
  * @param node Root node, relative to which a request is made.
- * @param[out] value Reference to the result node.
+ * @param[out] value Pointer to a resulting string pointer.
  * @param value_path_format Path format for the node searching.
  *
  * @returns Result of a function of @b ndm_core_response_error_t type.
@@ -650,10 +650,78 @@ enum ndm_core_response_error_t ndm_core_response_first_str(
 		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(3, 4);
 
 /**
+ * Get the pointer to the response first node that contains
+ * char integer value.
+ *
+ * @param node Root node, relative to which a request is made.
+ * @param[out] value Pointer to a resulting char integer.
+ * @param value_path_format Path format for the node searching.
+ *
+ * @returns Result of a function of @b ndm_core_response_error_t type.
+ */
+
+enum ndm_core_response_error_t ndm_core_response_first_char(
+		const struct ndm_xml_node_t *node,
+		char *value,
+		const char *const value_path_format,
+		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(3, 4);
+
+/**
+ * Get the pointer to the response first node that contains
+ * unsigned char integer value.
+ *
+ * @param node Root node, relative to which a request is made.
+ * @param[out] value Pointer to a resulting unsigned char interger.
+ * @param value_path_format Path format for the node searching.
+ *
+ * @returns Result of a function of @b ndm_core_response_error_t type.
+ */
+
+enum ndm_core_response_error_t ndm_core_response_first_uchar(
+		const struct ndm_xml_node_t *node,
+		unsigned char *value,
+		const char *const value_path_format,
+		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(3, 4);
+
+/**
+ * Get the pointer to the response first node that contains
+ * short integer value.
+ *
+ * @param node Root node, relative to which a request is made.
+ * @param[out] value Pointer to a resulting short integer.
+ * @param value_path_format Path format for the node searching.
+ *
+ * @returns Result of a function of @b ndm_core_response_error_t type.
+ */
+
+enum ndm_core_response_error_t ndm_core_response_first_short(
+		const struct ndm_xml_node_t *node,
+		short *value,
+		const char *const value_path_format,
+		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(3, 4);
+
+/**
+ * Get the pointer to the response first node that contains
+ * unsigned short integer value.
+ *
+ * @param node Root node, relative to which a request is made.
+ * @param[out] value Pointer to a resulting unsigned short interger.
+ * @param value_path_format Path format for the node searching.
+ *
+ * @returns Result of a function of @b ndm_core_response_error_t type.
+ */
+
+enum ndm_core_response_error_t ndm_core_response_first_ushort(
+		const struct ndm_xml_node_t *node,
+		unsigned short *value,
+		const char *const value_path_format,
+		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(3, 4);
+
+/**
  * Get the pointer to the response first node that contains integer value.
  *
  * @param node Root node, relative to which a request is made.
- * @param[out] value Reference to the result node.
+ * @param[out] value Pointer to a resulting integer.
  * @param value_path_format Path format for the node searching.
  *
  * @returns Result of a function of @b ndm_core_response_error_t type.
@@ -666,11 +734,11 @@ enum ndm_core_response_error_t ndm_core_response_first_int(
 		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(3, 4);
 
 /**
- * Get the pointer to the response first node that contains unsigned integer
- * value.
+ * Get the pointer to the response first node that contains
+ * unsigned integer value.
  *
  * @param node Root node, relative to which a request is made.
- * @param[out] value Reference to the result node.
+ * @param[out] value Pointer to a resulting unsigned interger.
  * @param value_path_format Path format for the node searching.
  *
  * @returns Result of a function of @b ndm_core_response_error_t type.
@@ -679,6 +747,74 @@ enum ndm_core_response_error_t ndm_core_response_first_int(
 enum ndm_core_response_error_t ndm_core_response_first_uint(
 		const struct ndm_xml_node_t *node,
 		unsigned int *value,
+		const char *const value_path_format,
+		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(3, 4);
+
+/**
+ * Get the pointer to the response first node that contains
+ * long integer value.
+ *
+ * @param node Root node, relative to which a request is made.
+ * @param[out] value Pointer to a resulting long integer.
+ * @param value_path_format Path format for the node searching.
+ *
+ * @returns Result of a function of @b ndm_core_response_error_t type.
+ */
+
+enum ndm_core_response_error_t ndm_core_response_first_long(
+		const struct ndm_xml_node_t *node,
+		long *value,
+		const char *const value_path_format,
+		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(3, 4);
+
+/**
+ * Get the pointer to the response first node that contains
+ * unsigned long integer value.
+ *
+ * @param node Root node, relative to which a request is made.
+ * @param[out] value Pointer to a resulting unsigned long integer.
+ * @param value_path_format Path format for the node searching.
+ *
+ * @returns Result of a function of @b ndm_core_response_error_t type.
+ */
+
+enum ndm_core_response_error_t ndm_core_response_first_ulong(
+		const struct ndm_xml_node_t *node,
+		unsigned long *value,
+		const char *const value_path_format,
+		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(3, 4);
+
+/**
+ * Get the pointer to the response first node that contains
+ * long long integer value.
+ *
+ * @param node Root node, relative to which a request is made.
+ * @param[out] value Pointer to a resulting long long integer.
+ * @param value_path_format Path format for the node searching.
+ *
+ * @returns Result of a function of @b ndm_core_response_error_t type.
+ */
+
+enum ndm_core_response_error_t ndm_core_response_first_llong(
+		const struct ndm_xml_node_t *node,
+		long long *value,
+		const char *const value_path_format,
+		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(3, 4);
+
+/**
+ * Get the pointer to the response first node that contains
+ * unsigned long long integer value.
+ *
+ * @param node Root node, relative to which a request is made.
+ * @param[out] value Pointer to a resulting unsigned long long integer.
+ * @param value_path_format Path format for the node searching.
+ *
+ * @returns Result of a function of @b ndm_core_response_error_t type.
+ */
+
+enum ndm_core_response_error_t ndm_core_response_first_ullong(
+		const struct ndm_xml_node_t *node,
+		unsigned long long *value,
 		const char *const value_path_format,
 		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(3, 4);
 

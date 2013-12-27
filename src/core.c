@@ -1879,75 +1879,82 @@ enum ndm_core_response_error_t ndm_core_response_first_str(
 	return e;
 }
 
-static enum ndm_core_response_error_t __ndm_core_response_first_int(
-		const struct ndm_xml_node_t *node,
-		int *value,
-		const char *const path_format,
-		va_list ap)
-{
-	const char *str_value = NULL;
-	enum ndm_core_response_error_t e =
-		__ndm_core_response_first_str(node, &str_value, path_format, ap);
-
-	if (e == NDM_CORE_RESPONSE_ERROR_OK &&
-		!ndm_int_parse_int(str_value, value))
-	{
-		e = NDM_CORE_RESPONSE_ERROR_FORMAT;
-	}
-
-	return e;
+#define NDM_CORE_RESPONSE_FIRST_INTEGER_(tabbr, type)						\
+static enum ndm_core_response_error_t __ndm_core_response_first_##tabbr(	\
+		const struct ndm_xml_node_t *node,									\
+		type *value,														\
+		const char *const path_format,										\
+		va_list ap)															\
+{																			\
+	const char *str_value = NULL;											\
+	enum ndm_core_response_error_t e =										\
+		__ndm_core_response_first_str(node, &str_value, path_format, ap);	\
+																			\
+	if (e == NDM_CORE_RESPONSE_ERROR_OK &&									\
+		!ndm_int_parse_##tabbr(str_value, value))							\
+	{																		\
+		e = NDM_CORE_RESPONSE_ERROR_FORMAT;									\
+	}																		\
+																			\
+	return e;																\
+}																			\
+																			\
+enum ndm_core_response_error_t ndm_core_response_first_##tabbr(				\
+		const struct ndm_xml_node_t *node,									\
+		type *value,														\
+		const char *const path_format,										\
+		...)																\
+{																			\
+	va_list ap;																\
+	enum ndm_core_response_error_t e = NDM_CORE_RESPONSE_ERROR_OK;			\
+																			\
+	va_start(ap, path_format);												\
+	e = __ndm_core_response_first_##tabbr(node, value, path_format, ap);	\
+	va_end(ap);																\
+																			\
+	return e;																\
+}																			\
+																			\
+static enum ndm_core_response_error_t __ndm_core_response_first_u##tabbr(	\
+		const struct ndm_xml_node_t *node,									\
+		unsigned type *value,												\
+		const char *const path_format,										\
+		va_list ap)															\
+{																			\
+	const char *str_value = NULL;											\
+	enum ndm_core_response_error_t e =										\
+		__ndm_core_response_first_str(node, &str_value, path_format, ap);	\
+																			\
+	if (e == NDM_CORE_RESPONSE_ERROR_OK &&									\
+		!ndm_int_parse_u##tabbr(str_value, value))							\
+	{																		\
+		e = NDM_CORE_RESPONSE_ERROR_FORMAT;									\
+	}																		\
+																			\
+	return e;																\
+}																			\
+																			\
+enum ndm_core_response_error_t ndm_core_response_first_u##tabbr(			\
+		const struct ndm_xml_node_t *node,									\
+		unsigned type *value,												\
+		const char *const path_format,										\
+		...)																\
+{																			\
+	va_list ap;																\
+	enum ndm_core_response_error_t e = NDM_CORE_RESPONSE_ERROR_OK;			\
+																			\
+	va_start(ap, path_format);												\
+	e = __ndm_core_response_first_u##tabbr(node, value, path_format, ap);	\
+	va_end(ap);																\
+																			\
+	return e;																\
 }
 
-enum ndm_core_response_error_t ndm_core_response_first_int(
-		const struct ndm_xml_node_t *node,
-		int *value,
-		const char *const path_format,
-		...)
-{
-	va_list ap;
-	enum ndm_core_response_error_t e = NDM_CORE_RESPONSE_ERROR_OK;
-
-	va_start(ap, path_format);
-	e = __ndm_core_response_first_int(node, value, path_format, ap);
-	va_end(ap);
-
-	return e;
-}
-
-static enum ndm_core_response_error_t __ndm_core_response_first_uint(
-		const struct ndm_xml_node_t *node,
-		unsigned int *value,
-		const char *const path_format,
-		va_list ap)
-{
-	const char *str_value = NULL;
-	enum ndm_core_response_error_t e =
-		__ndm_core_response_first_str(node, &str_value, path_format, ap);
-
-	if (e == NDM_CORE_RESPONSE_ERROR_OK &&
-		!ndm_int_parse_uint(str_value, value))
-	{
-		e = NDM_CORE_RESPONSE_ERROR_FORMAT;
-	}
-
-	return e;
-}
-
-enum ndm_core_response_error_t ndm_core_response_first_uint(
-		const struct ndm_xml_node_t *node,
-		unsigned int *value,
-		const char *const path_format,
-		...)
-{
-	va_list ap;
-	enum ndm_core_response_error_t e = NDM_CORE_RESPONSE_ERROR_OK;
-
-	va_start(ap, path_format);
-	e = __ndm_core_response_first_uint(node, value, path_format, ap);
-	va_end(ap);
-
-	return e;
-}
+NDM_CORE_RESPONSE_FIRST_INTEGER_(char, char)
+NDM_CORE_RESPONSE_FIRST_INTEGER_(short, short)
+NDM_CORE_RESPONSE_FIRST_INTEGER_(int, int)
+NDM_CORE_RESPONSE_FIRST_INTEGER_(long, long)
+NDM_CORE_RESPONSE_FIRST_INTEGER_(llong, long long)
 
 static enum ndm_core_response_error_t __ndm_core_response_first_bool(
 		const struct ndm_xml_node_t *node,

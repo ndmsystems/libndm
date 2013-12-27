@@ -184,8 +184,16 @@ int main()
 	NDM_TEST(r != NULL);
 
 	if (r != NULL) {
+		char c = 0;
+		unsigned char uc = 0;
+		short sh = 0;
+		unsigned short ush = 0;
 		int i = 0;
-		unsigned int u = 0;
+		unsigned int ui = 0;
+		long l = 0;
+		unsigned long ul = 0;
+		long long ll = 0;
+		unsigned long long ull = 0;
 		bool b = false;
 		const struct ndm_xml_node_t *n = ndm_core_response_root(r);
 		const char *s = NULL;
@@ -252,15 +260,55 @@ int main()
 		/* <response/interface@name> value */
 		NDM_TEST(s != NULL && *s != '\0');
 
+		NDM_TEST(ndm_core_response_first_char(n, &c, "interface/index") ==
+			NDM_CORE_RESPONSE_ERROR_OK);
+		/* <response/interface/mtu> value */
+		NDM_TEST(c == 0);
+
+		NDM_TEST(ndm_core_response_first_uchar(n, &uc, "interface/index") ==
+			NDM_CORE_RESPONSE_ERROR_OK);
+		/* <response/interface/mtu> value */
+		NDM_TEST(uc == 0);
+
+		NDM_TEST(ndm_core_response_first_short(n, &sh, "interface/mtu") ==
+			NDM_CORE_RESPONSE_ERROR_OK);
+		/* <response/interface/mtu> value */
+		NDM_TEST(sh == 1500);
+
+		NDM_TEST(ndm_core_response_first_ushort(n, &ush, "interface/mtu") ==
+			NDM_CORE_RESPONSE_ERROR_OK);
+		/* <response/interface/mtu> value */
+		NDM_TEST(ush == 1500);
+
 		NDM_TEST(ndm_core_response_first_int(n, &i, "interface/mtu") ==
 			NDM_CORE_RESPONSE_ERROR_OK);
 		/* <response/interface/mtu> value */
 		NDM_TEST(i == 1500);
 
-		NDM_TEST(ndm_core_response_first_uint(n, &u, "interface/mtu") ==
+		NDM_TEST(ndm_core_response_first_uint(n, &ui, "interface/mtu") ==
 			NDM_CORE_RESPONSE_ERROR_OK);
 		/* <response/interface/mtu> value */
-		NDM_TEST(u == 1500);
+		NDM_TEST(ui == 1500);
+
+		NDM_TEST(ndm_core_response_first_long(n, &l, "interface/mtu") ==
+			NDM_CORE_RESPONSE_ERROR_OK);
+		/* <response/interface/mtu> value */
+		NDM_TEST(l == 1500);
+
+		NDM_TEST(ndm_core_response_first_ulong(n, &ul, "interface/mtu") ==
+			NDM_CORE_RESPONSE_ERROR_OK);
+		/* <response/interface/mtu> value */
+		NDM_TEST(ul == 1500);
+
+		NDM_TEST(ndm_core_response_first_llong(n, &ll, "interface/mtu") ==
+			NDM_CORE_RESPONSE_ERROR_OK);
+		/* <response/interface/mtu> value */
+		NDM_TEST(ll == 1500);
+
+		NDM_TEST(ndm_core_response_first_ullong(n, &ull, "interface/mtu") ==
+			NDM_CORE_RESPONSE_ERROR_OK);
+		/* <response/interface/mtu> value */
+		NDM_TEST(ull == 1500);
 
 		NDM_TEST(ndm_core_response_first_bool(
 			n, true, &b, "interface/global") == NDM_CORE_RESPONSE_ERROR_OK);
