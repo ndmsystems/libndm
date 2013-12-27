@@ -44,7 +44,8 @@
 	((t) (~((t) 0) - NDM_INT_MIN(t)))
 
 /**
- * The minimum length of the string, enough to store the maximum value of @a t.
+ * The minimum length of the string, enough to store
+ * the maximum value of @a t.
  *
  * @param t Type name.
  */
@@ -55,8 +56,8 @@
 	 (NDM_INT_IS_SIGNED(t) ? 1 : 0) + 1)
 
 /**
- * Size of buffer, enough to store the maximum value of @a t. Is defined as \n
- * NDM_INT_MAX_STRLEN + 1.
+ * Size of buffer, enough to store the maximum value of @a t.
+ * Is defined as \n NDM_INT_MAX_STRLEN + 1.
  *
  * @param t Type name.
  */
@@ -65,9 +66,9 @@
 	(NDM_INT_MAX_STRLEN(t) + 1)
 
 /**
- * The minimum length of the buffer (including the final null character), enough
- * to store the maximum value of the largest integer type for the current
- * architecture.
+ * The minimum length of the buffer (including the final null character),
+ * enough to store the maximum value of the largest integer type for
+ * the current architecture.
  */
 
 #define NDM_INT_BUFSIZE									\
@@ -97,8 +98,64 @@
 	 (((n - ((n) % (align))) + (((n) % (align)) == 0 ? 0 : (align)))))
 
 /**
- * Convert string entry to its integer representation. String must not contain
- * any characters except digits.
+ * Convert string entry to its integer representation.
+ * String must not contain any characters except digits.
+ *
+ * @param str String for conversion.
+ * @param value Resulting value of the char type.
+ *
+ * @returns @c true if conversion process is successful, @c false — otherwise.
+ */
+
+bool ndm_int_parse_char(
+		const char *const str,
+		char *value) NDM_ATTR_WUR;
+
+/**
+ * Convert string entry to its unsigned char representation.
+ * String must not contain any characters except digits.
+ *
+ * @param str String for conversion.
+ * @param value Resulting value of the unsigned char type.
+ *
+ * @returns @c true if conversion process is successful, @c false — otherwise.
+ */
+
+bool ndm_int_parse_uchar(
+		const char *const str,
+		unsigned char *value) NDM_ATTR_WUR;
+
+/**
+ * Convert string entry to its integer representation.
+ * String must not contain any characters except digits.
+ *
+ * @param str String for conversion.
+ * @param value Resulting value of the short type.
+ *
+ * @returns @c true if conversion process is successful, @c false — otherwise.
+ */
+
+bool ndm_int_parse_short(
+		const char *const str,
+		short *value) NDM_ATTR_WUR;
+
+/**
+ * Convert string entry to its unsigned char representation.
+ * String must not contain any characters except digits.
+ *
+ * @param str String for conversion.
+ * @param value Resulting value of the unsigned short type.
+ *
+ * @returns @c true if conversion process is successful, @c false — otherwise.
+ */
+
+bool ndm_int_parse_ushort(
+		const char *const str,
+		unsigned short *value) NDM_ATTR_WUR;
+
+/**
+ * Convert string entry to its integer representation.
+ * String must not contain any characters except digits.
  *
  * @param str String for conversion.
  * @param value Resulting value of the integer type.
@@ -111,8 +168,8 @@ bool ndm_int_parse_int(
 		int *value) NDM_ATTR_WUR;
 
 /**
- * Convert string entry to its unsigned integer representation. String must not
- * contain any characters except digits.
+ * Convert string entry to its unsigned integer representation.
+ * String must not contain any characters except digits.
  *
  * @param str String for conversion.
  * @param value Resulting value of the unsigned integer type.
@@ -125,8 +182,8 @@ bool ndm_int_parse_uint(
 		unsigned int *value) NDM_ATTR_WUR;
 
 /**
- * Convert string entry to its long representation. String must not contain
- * any characters except digits.
+ * Convert string entry to its long representation.
+ * String must not contain any characters except digits.
  *
  * @param str String for conversion.
  * @param value Resulting value of the long type.
@@ -139,8 +196,8 @@ bool ndm_int_parse_long(
 		long *value) NDM_ATTR_WUR;
 
 /**
- * Convert string entry to its unsigned long representation. String must not
- * contain any characters except digits.
+ * Convert string entry to its unsigned long representation.
+ * String must not contain any characters except digits.
  *
  * @param str String for conversion.
  * @param value Resulting value of the unsigned long type.
@@ -153,8 +210,8 @@ bool ndm_int_parse_ulong(
 		unsigned long *value) NDM_ATTR_WUR;
 
 /**
- * Convert string entry to its long long representation. String must not contain
- * any characters except digits.
+ * Convert string entry to its long long representation.
+ * String must not contain any characters except digits.
  *
  * @param str String for conversion.
  * @param value Resulting value of the long long type.
@@ -167,8 +224,8 @@ bool ndm_int_parse_llong(
 		long long *value) NDM_ATTR_WUR;
 
 /**
- * Convert string entry to its unsigned long long representation. String
- * must not contain any characters except digits.
+ * Convert string entry to its unsigned long long representation.
+ * String must not contain any characters except digits.
  *
  * @param str String for conversion.
  * @param value Resulting value of the unsigned long long type.
