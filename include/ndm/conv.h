@@ -5,27 +5,7 @@
 #include <stdint.h>
 #include "attr.h"
 
-enum ndm_conv_flags_t
-{
-	NDM_CONV_FLAGS_ENCODE_STRICTLY			= 0x0000,
-
-	/* Encode with a replacement character. */
-	NDM_CONV_FLAGS_ENCODE_TRUNCATED			= 0x0001,
-	NDM_CONV_FLAGS_ENCODE_ILLEGAL			= 0x0002,
-	NDM_CONV_FLAGS_ENCODE_NON_MAPPED		= 0x0004,
-
-	NDM_CONV_FLAGS_ENCODE_NON_STRICTLY		=
-		NDM_CONV_FLAGS_ENCODE_TRUNCATED		|
-		NDM_CONV_FLAGS_ENCODE_ILLEGAL		|
-		NDM_CONV_FLAGS_ENCODE_NON_MAPPED
-};
-
 typedef int32_t ndm_conv_t;
-
-ndm_conv_t ndm_conv_open_ex(
-		const char *const to,
-		const char *const from,
-		const enum ndm_conv_flags_t flags) NDM_ATTR_WUR;
 
 /* iconv compatibility functions. */
 
