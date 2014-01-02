@@ -25,7 +25,7 @@ struct ndm_dlist_entry_t
  * @param name The list name.
  */
 
-#define NDM_DLIST_INITIALIZER(name) 								\
+#define NDM_DLIST_INITIALIZER(name)									\
 	{&(name), &(name)}
 
 /**
@@ -35,7 +35,7 @@ struct ndm_dlist_entry_t
  * @param name The list name.
  */
 
-#define NDM_DLIST_HEAD(name) 										\
+#define NDM_DLIST_HEAD(name)										\
 	struct ndm_dlist_entry_t name = NDM_DLIST_INITIALIZER(name)
 
 /**
@@ -122,8 +122,30 @@ static inline bool ndm_dlist_is_empty(
 }
 
 /**
- * Convert a pointer to the base entry of the list to a pointer to the structure
- * that contains this entry.
+ * Count list elements.
+ *
+ * @param head Pointer to the head entry.
+ *
+ * @returns Size of a list.
+ */
+
+static inline size_t ndm_dlist_size(
+		const struct ndm_dlist_entry_t *head)
+{
+	size_t size = 0;
+	const struct ndm_dlist_entry_t *entry = head->next;
+
+	while (entry != head) {
+		size++;
+		entry = entry->next;
+	}
+
+	return size;
+}
+
+/**
+ * Convert a pointer to the base entry of the list to a pointer to
+ * the structure that contains this entry.
  *
  * @param ptr Pointer to the parent structure.
  * @param type Type of the parent structure.
@@ -135,7 +157,7 @@ static inline bool ndm_dlist_is_empty(
 	((type *) (((char *) ptr) - ((char *) &((type *) 0)->member)))
 
 /**
- * Macro for declaring a cycle that goes through all the entrys of the list
+ * Macro for declaring a cycle that goes through all the entries of the list
  * in the forward order. The current list entry can not be removed.
  *
  * @param e Pointer to the list entry.
@@ -147,11 +169,11 @@ static inline bool ndm_dlist_is_empty(
 
 #define ndm_dlist_foreach_entry(e, type, member, head)				\
 	for (e = ndm_dlist_entry((head)->next, type, member);			\
-		 &e->member != (head); 										\
+		 &e->member != (head);										\
 	     e = ndm_dlist_entry(e->member.next, type, member))
 
 /**
- * Macro for declaring a cycle that goes through all the entrys of the list
+ * Macro for declaring a cycle that goes through all the entries of the list
  * in the forward order. The current list entry can be removed.
  *
  * @param e Pointer to the list entry.
@@ -166,7 +188,7 @@ static inline bool ndm_dlist_is_empty(
 #define ndm_dlist_foreach_entry_safe(e, type, member, head, n)		\
 	for (e = ndm_dlist_entry((head)->next, type, member),			\
 		 n = ndm_dlist_entry(e->member.next, type, member);			\
-		 &e->member != (head); 										\
+		 &e->member != (head);										\
 		 e = n, n = ndm_dlist_entry(n->member.next, type, member))
 
 #endif	/* __NDM_DLIST_H__ */

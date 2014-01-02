@@ -22,6 +22,7 @@ int main()
 	NDM_TEST(ndm_dlist_is_empty(&h));
 	NDM_TEST(ndm_dlist_is_empty(&head));
 	NDM_TEST(ndm_dlist_is_empty(&shead));
+	NDM_TEST(ndm_dlist_size(&h) == 0);
 
 	NDM_TEST_BREAK_IF((e = malloc(sizeof(*e))) == NULL);
 
@@ -45,6 +46,7 @@ int main()
 
 	ndm_dlist_insert_after(&e->list, &p->list);
 	NDM_TEST(!ndm_dlist_is_empty(&h));
+	NDM_TEST(ndm_dlist_size(&h) == 3);
 
 	int i = 0;
 
