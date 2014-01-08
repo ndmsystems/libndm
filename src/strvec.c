@@ -139,7 +139,7 @@ bool ndm_strvec_assign(
 
 static bool __ndm_strvec_append_array(
 		struct ndm_strvec_t *v,
-		const char **a)
+		const char *const *a)
 {
 	size_t i = 0;
 
@@ -156,7 +156,7 @@ static bool __ndm_strvec_append_array(
 
 bool ndm_strvec_assign_array(
 		struct ndm_strvec_t *v,
-		const char **a)
+		const char *const *a)
 {
 	ndm_strvec_clear(v);
 

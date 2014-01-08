@@ -128,7 +128,7 @@ bool ndm_strvec_assign(
 
 bool ndm_strvec_assign_array(
 		struct ndm_strvec_t *v,
-		const char **vec) NDM_ATTR_WUR;
+		const char *const *vec) NDM_ATTR_WUR;
 
 bool ndm_strvec_append(
 		struct ndm_strvec_t *v,
