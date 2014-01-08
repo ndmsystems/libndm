@@ -308,7 +308,19 @@ int ndm_ip_sockaddr_domain(
 sa_family_t ndm_ip_sockaddr_family(
 		const struct ndm_ip_sockaddr_t *const sa) NDM_ATTR_WUR;
 
+/**
+ * IP address that indicates that the server must listen for client activity
+ * on all network interfaces. It is equal to <tt>0.0.0.0</tt>.
+ */
+
 extern const struct ndm_ip_sockaddr_t NDM_IP_SOCKADDR_ANY;
+
+/**
+ * IPv6 address that indicates that the server must listen for client
+ * activity on all network interfaces. It is equal to <tt>::</tt>. See also
+ * @c #NDM_IP_SOCKADDR_ANY.
+ */
+
 extern const struct ndm_ip_sockaddr_t NDM_IP_SOCKADDR_ANY6;
 
 #endif	/* __NDM_IP_SOCKADDR_H__ */
