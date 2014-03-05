@@ -23,29 +23,29 @@ static inline void ndm_ptrvec_init(
 }
 
 static size_t ndm_ptrvec_size(
-		struct ndm_ptrvec_t *v) NDM_ATTR_WUR;
+		const struct ndm_ptrvec_t *v) NDM_ATTR_WUR;
 
 static inline size_t ndm_ptrvec_size(
-		struct ndm_ptrvec_t *v)
+		const struct ndm_ptrvec_t *v)
 {
 	return v->size_;
 }
 
 static size_t ndm_ptrvec_is_empty(
-		struct ndm_ptrvec_t *v) NDM_ATTR_WUR;
+		const struct ndm_ptrvec_t *v) NDM_ATTR_WUR;
 
 static inline size_t ndm_ptrvec_is_empty(
-		struct ndm_ptrvec_t *v)
+		const struct ndm_ptrvec_t *v)
 {
 	return ndm_ptrvec_size(v) == 0;
 }
 
 static void *ndm_ptrvec_at(
-		struct ndm_ptrvec_t *v,
+		const struct ndm_ptrvec_t *v,
 		const size_t index) NDM_ATTR_WUR;
 
 static inline void *ndm_ptrvec_at(
-		struct ndm_ptrvec_t *v,
+		const struct ndm_ptrvec_t *v,
 		const size_t index)
 {
 	assert (index < v->size_);
