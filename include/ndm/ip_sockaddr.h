@@ -13,6 +13,18 @@
 
 #define NDM_IP_SOCKADDR_LEN				INET6_ADDRSTRLEN
 
+#ifndef INADDR_LOOPBACK
+#define INADDR_LOOPBACK					((uint32_t) 0x7f000001)
+#endif
+
+#ifndef PF_INET
+#define PF_INET							AF_INET
+#endif
+
+#ifndef PF_INET6
+#define PF_INET6						AF_INET6
+#endif
+
 /**
  * Structure to store IPv4 or IPv6 address information.
  */

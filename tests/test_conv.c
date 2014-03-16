@@ -6,8 +6,10 @@
 #include <stddef.h>
 #include <string.h>
 #include <assert.h>
+#include <stdint.h>
 #include <inttypes.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <ndm/sys.h>
 #include <ndm/conv.h>
 #include <ndm/macro.h>

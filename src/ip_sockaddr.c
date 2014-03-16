@@ -1,6 +1,9 @@
 #include <string.h>
 #include <assert.h>
 #include <arpa/inet.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
 #include <ndm/ip_sockaddr.h>
 
 const struct ndm_ip_sockaddr_t NDM_IP_SOCKADDR_ANY =
@@ -27,12 +30,15 @@ const struct ndm_ip_sockaddr_t NDM_IP_SOCKADDR_ANY6 =
 		.in6 =
 		{
 #ifdef SIN6_LEN
-			.sin6_len = SIN6_LEN,
+			.sin6_len = sizeof(struct sockaddr_in6),
 #endif	/* SIN6_LEN */
 			.sin6_family = AF_INET6,
 			.sin6_flowinfo = 0,
 			.sin6_port = 0,
-			.sin6_addr = IN6ADDR_ANY_INIT
+			.sin6_addr =
+			{
+				.s6_addr = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+			}
 		}
 	},
 	.size = sizeof(struct sockaddr_in6)
@@ -56,7 +62,7 @@ void ndm_ip_sockaddr_assign6(
 
 	sa->un.in6 = *in6;
 #ifdef SIN6_LEN
-	sa->un.in6.sin6_len = sizeof(*in6);
+	sa->un.in6.sin6_len = sizeof(struct sockaddr_in6);
 #endif	/* SIN6_LEN */
 	sa->un.in6.sin6_family = AF_INET6;
 	sa->size = sizeof(*in6);
@@ -300,7 +306,7 @@ void ndm_ip_sockaddr_get_loopback(
 		sa->size = sizeof(struct sockaddr_in);
 	} else {
 #ifdef SIN6_LEN
-		sa->un.in6.sin6_len = SIN6_LEN;
+		sa->un.in6.sin6_len = sizeof(struct sockaddr_in6);
 #endif	/* SIN6_LEN */
 		sa->un.in6.sin6_family = AF_INET6;
 		sa->un.in6.sin6_flowinfo = 0;

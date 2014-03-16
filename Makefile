@@ -20,14 +20,14 @@ STRIPFLAGS=-s -R.comment -R.note -R.eh_frame -R.eh_frame_hdr
 CFLAGS?=\
 	-g3 -pipe -fPIC -std=c99 \
 	-D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 \
-	-D_POSIX_C_SOURCE=200112L -D_BSD_SOURCE \
+	-D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE \
 	-ffunction-sections -fdata-sections -fstack-protector-all \
-	-Wall -Winit-self -Wswitch-enum -Wundef -Wunsafe-loop-optimizations \
-	-Wmissing-field-initializers -Wnormalized=nfkc -Wconversion \
+	-Wall -Winit-self -Wswitch-enum -Wundef \
+	-Wmissing-field-initializers -Wconversion \
 	-Wredundant-decls -Wstack-protector -ftabstop=4 -Wshadow \
 	-Wpointer-arith -I$(PWD)/include/
 #	-Wempty-body -Wclobbered -Waddress -Wvla -Wtype-limits
-LDFLAGS=-lrt #-Wl,--gc-sections,--relax
+LDFLAGS=-lc -lrt #-Wl,--gc-sections,--relax
 LIB=libndm.so
 
 PREFIX=/usr
@@ -66,13 +66,13 @@ $(LIB): Makefile $(HEADERS) $(OBJS)
 	@echo LD $(LIB)
 	@$(CC) -shared -o $@ $(OBJS) $(LDFLAGS)
 #	$(STRIP) $(STRIPFLAGS) $@
-	-@ls --block-size=K -1s $(LIB)
+	-@ls -k -1s $(LIB)
 
 EXEC_TESTS_ALL=\
-	$(shell find $(TEST_DIR) -name "$(TEST_PREFIX)*" -executable -type f)
+	$(shell find $(TEST_DIR) -name "$(TEST_PREFIX)*" -perm +u=x -type f)
 EXEC_TESTS=$(filter-out $(addprefix \
 	$(TEST_DIR)/$(TEST_PREFIX),$(TEST_NO_AUTOEXEC)),$(EXEC_TESTS_ALL))
-EXEC_EXAMPLES_ALL=$(shell find $(EXAMPLE_DIR) -executable -type f)
+EXEC_EXAMPLES_ALL=$(shell find $(EXAMPLE_DIR) -perm +u=x -type f)
 
 check: tests
 	-@for t in $(EXEC_TESTS); do echo; echo "Running $$t..."; $$t; done

@@ -5,6 +5,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <arpa/inet.h>
+#include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <ndm/macro.h>
@@ -179,7 +180,7 @@ int main()
 	/* IPv6 any address test */
 
 #ifdef SIN6_LEN
-	in6.sin6_len = SIN6_LEN;
+	in6.sin6_len = sizeof(struct sockaddr_in6);
 #endif  /* SIN6_LEN */
 	in6.sin6_family = AF_INET6;
 	in6.sin6_flowinfo = 0;
@@ -243,7 +244,7 @@ int main()
 	/* IPv6 loopback address test */
 
 #ifdef SIN6_LEN
-	in6.sin6_len = SIN6_LEN;
+	in6.sin6_len = sizeof(struct sockaddr_in6);
 #endif  /* SIN6_LEN */
 	in6.sin6_family = AF_INET6;
 	in6.sin6_flowinfo = 0;
@@ -292,7 +293,7 @@ int main()
 	/* IPv6 address test */
 
 #ifdef SIN6_LEN
-	in6.sin6_len = SIN6_LEN;
+	in6.sin6_len = sizeof(struct sockaddr_in6);
 #endif  /* SIN6_LEN */
 	in6.sin6_family = AF_INET6;
 	in6.sin6_flowinfo = 0;

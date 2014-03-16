@@ -6,8 +6,8 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
-#include <netpacket/packet.h>
 #include <ndm/mac_socket.h>
+#include <netpacket/packet.h>
 
 bool ndm_mac_socket_open(
 		struct ndm_mac_socket_t *s,
@@ -123,4 +123,3 @@ ssize_t ndm_mac_socket_recv(
 
 	return recvb;
 }
-

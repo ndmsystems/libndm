@@ -5,6 +5,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <arpa/inet.h>
+#include <sys/types.h>
+#include <sys/socket.h>
 #include <ndm/sys.h>
 #include <ndm/xml.h>
 #include <ndm/core.h>

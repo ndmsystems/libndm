@@ -1,5 +1,6 @@
 #include <string.h>
 #include <stdbool.h>
+#include <sys/types.h>
 #include <ndm/int.h>
 #include <ndm/endian.h>
 #include "test.h"

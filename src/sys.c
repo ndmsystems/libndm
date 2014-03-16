@@ -54,13 +54,13 @@ bool ndm_sys_set_default_signals()
 	struct sigaction terminate_action;
 	sigset_t signals;
 
-	ignore_action.sa_restorer = NULL;
-	ignore_action.sa_sigaction = NULL;
+	memset(&ignore_action, 0, sizeof(ignore_action));
+
 	ignore_action.sa_handler = SIG_IGN;
 	ignore_action.sa_flags = 0;
 
-	terminate_action.sa_restorer = NULL;
-	terminate_action.sa_sigaction = NULL;
+	memset(&terminate_action, 0, sizeof(terminate_action));
+
 	terminate_action.sa_handler = __ndm_sys_signal_handler;
 	terminate_action.sa_flags = 0;
 

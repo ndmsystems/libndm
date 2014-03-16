@@ -1,9 +1,14 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
+#include <stdint.h>
 #include <inttypes.h>
-#include <net/if_arp.h>
+#include <sys/socket.h>
 #include <ndm/mac_addr.h>
+
+#ifndef ARPHRD_ETHER
+#define ARPHRD_ETHER									1
+#endif
 
 const struct ndm_mac_addr_t NDM_MAC_ADDR_ZERO = {
 	.sa =
