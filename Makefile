@@ -69,10 +69,10 @@ $(LIB): Makefile $(HEADERS) $(OBJS)
 	-@ls -k -1s $(LIB)
 
 EXEC_TESTS_ALL=\
-	$(shell find $(TEST_DIR) -name "$(TEST_PREFIX)*" -perm +u=x -type f)
+	$(shell find $(TEST_DIR) -name "$(TEST_PREFIX)*" -perm -u=x -type f)
 EXEC_TESTS=$(filter-out $(addprefix \
 	$(TEST_DIR)/$(TEST_PREFIX),$(TEST_NO_AUTOEXEC)),$(EXEC_TESTS_ALL))
-EXEC_EXAMPLES_ALL=$(shell find $(EXAMPLE_DIR) -perm +u=x -type f)
+EXEC_EXAMPLES_ALL=$(shell find $(EXAMPLE_DIR) -perm -u=x -type f)
 
 check: tests
 	-@for t in $(EXEC_TESTS); do echo; echo "Running $$t..."; $$t; done
