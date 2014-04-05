@@ -447,9 +447,9 @@ static bool __ndm_core_read_string(
 			*s = "";
 			done = true;
 		} else {
-			char *p = (char *) *s;
+			char *p = ndm_xml_document_alloc(doc, size + 1);
 
-			if ((p = ndm_xml_document_alloc(doc, size + 1)) != NULL &&
+			if (p != NULL &&
 				__ndm_core_buffer_read_all(
 					buffer, fd, deadline, p, size))
 			{
