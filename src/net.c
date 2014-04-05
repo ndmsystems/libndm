@@ -22,8 +22,6 @@ bool ndm_net_is_domain_name(const char *const name)
 	{
 		size_t i = (size_t) -1;
 
-		valid = true;
-
 		do {
 			/* A subdomain name should start with
 			 * an alphanumeric character. */
