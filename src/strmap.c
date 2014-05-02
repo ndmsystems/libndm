@@ -3,8 +3,6 @@
 #include <strings.h>
 #include <ndm/strmap.h>
 
-#include <stdio.h>
-
 struct ndm_strmap_entry_t
 {
 	char *value;
@@ -129,10 +127,10 @@ const char *ndm_strmap_nget(
 		const char *const key,
 		const size_t key_size)
 {
-	const size_t index = ndm_strmap_nfind(map, key, key_size);
+	const size_t idx = ndm_strmap_nfind(map, key, key_size);
 
-	if (index < ndm_ptrvec_size(&map->vec_)) {
-		return ndm_strmap_get_by_index(map, index);
+	if (idx < ndm_ptrvec_size(&map->vec_)) {
+		return ndm_strmap_get_by_index(map, idx);
 	}
 
 	return "";
@@ -140,12 +138,12 @@ const char *ndm_strmap_nget(
 
 const char *ndm_strmap_get_by_index(
 		struct ndm_strmap_t *map,
-		const size_t index)
+		const size_t idx)
 {
-	assert (index < ndm_ptrvec_size(&map->vec_));
+	assert (idx < ndm_ptrvec_size(&map->vec_));
 
 	return ((struct ndm_strmap_entry_t *)
-		ndm_ptrvec_at(&map->vec_, index))->value;
+		ndm_ptrvec_at(&map->vec_, idx))->value;
 }
 
 bool ndm_strmap_nremove(
@@ -153,10 +151,10 @@ bool ndm_strmap_nremove(
 		const char *const key,
 		const size_t key_size)
 {
-	const size_t index = ndm_strmap_nfind(map, key, key_size);
+	const size_t idx = ndm_strmap_nfind(map, key, key_size);
 
-	if (index < ndm_ptrvec_size(&map->vec_)) {
-		ndm_strmap_remove_by_index(map, index);
+	if (idx < ndm_ptrvec_size(&map->vec_)) {
+		ndm_strmap_remove_by_index(map, idx);
 
 		return true;
 	}
@@ -166,26 +164,26 @@ bool ndm_strmap_nremove(
 
 void ndm_strmap_remove_by_index(
 		struct ndm_strmap_t *map,
-		const size_t index)
+		const size_t idx)
 {
 	struct ndm_ptrvec_t *v = &map->vec_;
 
-	assert (index < ndm_ptrvec_size(v));
+	assert (idx < ndm_ptrvec_size(v));
 
 	ndm_strmap_entry_free_(
 		(struct ndm_strmap_entry_t *)
-			ndm_ptrvec_at(v, index));
-	ndm_ptrvec_remove(v, index);
+			ndm_ptrvec_at(v, idx));
+	ndm_ptrvec_remove(v, idx);
 }
 
 const char *ndm_strmap_get_key(
 		struct ndm_strmap_t *map,
-		const size_t index)
+		const size_t idx)
 {
-	assert (index < ndm_ptrvec_size(&map->vec_));
+	assert (idx < ndm_ptrvec_size(&map->vec_));
 
 	return ((struct ndm_strmap_entry_t *)
-		ndm_ptrvec_at(&map->vec_, index))->key;
+		ndm_ptrvec_at(&map->vec_, idx))->key;
 }
 
 inline bool ndm_strmap_assign(

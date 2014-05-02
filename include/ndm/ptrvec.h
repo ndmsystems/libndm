@@ -42,35 +42,35 @@ static inline size_t ndm_ptrvec_is_empty(
 
 static void *ndm_ptrvec_at(
 		const struct ndm_ptrvec_t *v,
-		const size_t index) NDM_ATTR_WUR;
+		const size_t idx) NDM_ATTR_WUR;
 
 static inline void *ndm_ptrvec_at(
 		const struct ndm_ptrvec_t *v,
-		const size_t index)
+		const size_t idx)
 {
-	assert (index < v->size_);
+	assert (idx < v->size_);
 
-	return v->data_[index];
+	return v->data_[idx];
 }
 
 static inline void ndm_ptrvec_set(
 		struct ndm_ptrvec_t *v,
-		const size_t index,
+		const size_t idx,
 		void *p)
 {
-	assert (index < v->size_);
+	assert (idx < v->size_);
 
-	v->data_[index] = p;
+	v->data_[idx] = p;
 }
 
 bool ndm_ptrvec_insert(
 		struct ndm_ptrvec_t *v,
-		const size_t index,
+		const size_t idx,
 		void *p) NDM_ATTR_WUR;
 
 void ndm_ptrvec_remove(
 		struct ndm_ptrvec_t *v,
-		const size_t index);
+		const size_t idx);
 
 static bool ndm_ptrvec_push_back(
 		struct ndm_ptrvec_t *v,

@@ -36,10 +36,10 @@ static void ndm_ptrvec_bubble_sort_(
 
 bool ndm_ptrvec_insert(
 		struct ndm_ptrvec_t *v,
-		const size_t index,
+		const size_t idx,
 		void *p)
 {
-	assert (index <= v->size_);
+	assert (idx <= v->size_);
 
 	const bool do_realloc = v->size_ > 0 ?
 		(v->size_ & (NDM_PTRVEC_BLOCK_SIZE_ - 1)) == 0 :
@@ -57,14 +57,14 @@ bool ndm_ptrvec_insert(
 		v->data_ = data;
 	}
 
-	if (index < v->size_) {
+	if (idx < v->size_) {
 		memmove(
-			v->data_ + index + 1,
-			v->data_ + index,
-			(v->size_ - index) * sizeof(void *));
+			v->data_ + idx + 1,
+			v->data_ + idx,
+			(v->size_ - idx) * sizeof(void *));
 	}
 
-	v->data_[index] = p;
+	v->data_[idx] = p;
 	++v->size_;
 
 	return true;
@@ -72,15 +72,15 @@ bool ndm_ptrvec_insert(
 
 void ndm_ptrvec_remove(
 		struct ndm_ptrvec_t *v,
-		const size_t index)
+		const size_t idx)
 {
-	assert (index < v->size_);
+	assert (idx < v->size_);
 
-	if (index < v->size_ - 1) {
+	if (idx < v->size_ - 1) {
 		memmove(
-			v->data_ + index,
-			v->data_ + index + 1,
-			(v->size_ - index - 1) * sizeof(void *));
+			v->data_ + idx,
+			v->data_ + idx + 1,
+			(v->size_ - idx - 1) * sizeof(void *));
 	}
 
 	--v->size_;
