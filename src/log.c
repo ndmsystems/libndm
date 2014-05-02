@@ -132,7 +132,7 @@ void ndm_vlog(
 
 		fprintf(
 			(level == LERROR || level == LCRITICAL) ? stderr : stdout,
-			"[%c] %s %02i %02i:%02i:%02i %s: %s%s%s%s%s\n",
+			"[%c] %s % 2i %02i:%02i:%02i %s: %s%s%s%s%s\n",
 			((level == LINFO)  ?	'I' :
 			 (level == LWARNING) ?	'W' :
 			 (level == LERROR) ?	'E' :
