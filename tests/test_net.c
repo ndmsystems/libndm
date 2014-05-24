@@ -12,9 +12,9 @@ int main()
 		test_domain[1] = (char) i;
 
 		NDM_TEST(
-			((isalnum(i) || i == '-' || i == '.') &&
+			((isalnum((int) i) || i == '-' || i == '.') &&
 			 ndm_net_is_domain_name(test_domain)) ||
-			(!(isalnum(i) || i == '-' || i == '.') &&
+			(!(isalnum((int) i) || i == '-' || i == '.') &&
 			 !ndm_net_is_domain_name(test_domain)));
 	}
 

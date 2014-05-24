@@ -1,14 +1,16 @@
 #ifndef __NDM_IP_SOCKADDR_H__
 #define __NDM_IP_SOCKADDR_H__
 
+#include <assert.h>
 #include <stdint.h>
+#include <string.h>
 #include <stdbool.h>
 #include <netinet/in.h>
 #include "attr.h"
 
 /**
  * Size of the buffer to store the string representation of IP address
- * of maximum length.
+ * of the maximum length.
  */
 
 #define NDM_IP_SOCKADDR_LEN				INET6_ADDRSTRLEN
@@ -31,33 +33,45 @@
 
 struct ndm_ip_sockaddr_t
 {
-	union ndm_ip_sockaddr_un_t
+	union
 	{
-		/**
-		 * Address family: AF_INET or AF_INET6.
-		 */
-
-		sa_family_t family;
-
-		/**
-		 * IPv4 address.
-		 */
-
 		struct sockaddr_in in;
-
-		/**
-		 * IPv6 address.
-		 */
-
 		struct sockaddr_in6 in6;
+		struct sockaddr_storage ss;
 	} un;
-
-	/**
-	 * Size of @a in or @a in6 depending on the value stored in @a un.family.
-	 */
-
-	socklen_t size;
 };
+
+/**
+ * IP address that indicates that the server must listen for client activity
+ * on all network interfaces. It is equal to <tt>0.0.0.0</tt>.
+ */
+
+extern const struct ndm_ip_sockaddr_t const NDM_IP_SOCKADDR_ANY;
+
+/**
+ * IPv6 address that indicates that the server must listen for client
+ * activity on all network interfaces. It is equal to <tt>::</tt>. See also
+ * @c #NDM_IP_SOCKADDR_ANY.
+ */
+
+extern const struct ndm_ip_sockaddr_t const NDM_IP_SOCKADDR_ANY6;
+
+/**
+ * Get the address family for @a sa.
+ *
+ * @param sa Socket address.
+ *
+ * @returns @c AF_INET or @c AF_INET6 value.
+ */
+
+static sa_family_t ndm_ip_sockaddr_family(
+		const struct ndm_ip_sockaddr_t *const sa) NDM_ATTR_WUR;
+
+static inline sa_family_t ndm_ip_sockaddr_family(
+		const struct ndm_ip_sockaddr_t *const sa)
+{
+	return sa->un.ss.ss_family;
+}
 
 /**
  * Assign IPv4 address to socket.
@@ -66,9 +80,18 @@ struct ndm_ip_sockaddr_t
  * @param[in] in IPv4 address to assign.
  */
 
-void ndm_ip_sockaddr_assign(
+static void ndm_ip_sockaddr_assign(
 		struct ndm_ip_sockaddr_t *sa,
-		const struct sockaddr_in *in);
+		const struct sockaddr_in *const in);
+
+static inline void ndm_ip_sockaddr_assign(
+		struct ndm_ip_sockaddr_t *sa,
+		const struct sockaddr_in *const in)
+{
+	assert(in->sin_family == AF_INET);
+
+	memcpy(sa, in, sizeof(*in));
+}
 
 /**
  * Assign IPv6 address to socket.
@@ -77,9 +100,18 @@ void ndm_ip_sockaddr_assign(
  * @param[in] in6 IPv6 address to assign.
  */
 
-void ndm_ip_sockaddr_assign6(
+static void ndm_ip_sockaddr_assign6(
 		struct ndm_ip_sockaddr_t *sa,
-		const struct sockaddr_in6 *in6);
+		const struct sockaddr_in6 *const in6);
+
+static inline void ndm_ip_sockaddr_assign6(
+		struct ndm_ip_sockaddr_t *sa,
+		const struct sockaddr_in6 *const in6)
+{
+	assert(in6->sin6_family == AF_INET6);
+
+	memcpy(sa, in6, sizeof(*in6));
+}
 
 /**
  * Equality checking for two sockets.
@@ -109,8 +141,7 @@ bool ndm_ip_sockaddr_address_is_equal(
 		const struct ndm_ip_sockaddr_t *const sa2) NDM_ATTR_WUR;
 
 /**
- * Check if the socket is equal to @c NDM_IP_SOCKADDR_ANY or
- * @c NDM_IP_SOCKADDR_ANY6.
+ * Check if the socket is equal to any (zero) IPv4 or IPv6 socket address.
  *
  * @param sa Socket for comparing.
  *
@@ -121,12 +152,12 @@ bool ndm_ip_sockaddr_is_any(
 		const struct ndm_ip_sockaddr_t *const sa) NDM_ATTR_WUR;
 
 /**
- * Check if the IP address of socket is equal to @c INADDR_ANY or
- * @c IN6ADDR_ANY_INIT.
+ * Check if the IP address of a socket is equal to any (zero) IPv4 or
+ * IPv6 address.
  *
  * @param sa Socket for comparing.
  *
- * @returns @c true if the IP addreses are equal, @c false - otherwise.
+ * @returns @c true if the IP address is zero, @c false - otherwise.
  */
 
 bool ndm_ip_sockaddr_address_is_any(
@@ -140,8 +171,14 @@ bool ndm_ip_sockaddr_address_is_any(
  * @returns @c true if contains, @c false - otherwise.
  */
 
-bool ndm_ip_sockaddr_is_v4(
+static bool ndm_ip_sockaddr_is_v4(
 		const struct ndm_ip_sockaddr_t *const sa) NDM_ATTR_WUR;
+
+static inline bool ndm_ip_sockaddr_is_v4(
+		const struct ndm_ip_sockaddr_t *const sa)
+{
+	return (ndm_ip_sockaddr_family(sa) == AF_INET) ? true : false;
+}
 
 /**
  * Check if IPv6 address of socket is IPv4-mapped IPv6 address (has
@@ -221,8 +258,14 @@ bool ndm_ip_sockaddr_get_v4_compat(
  * @returns @c true if contains, @c false - otherwise.
  */
 
-bool ndm_ip_sockaddr_is_v6(
+static bool ndm_ip_sockaddr_is_v6(
 		const struct ndm_ip_sockaddr_t *const sa) NDM_ATTR_WUR;
+
+static inline bool ndm_ip_sockaddr_is_v6(
+		const struct ndm_ip_sockaddr_t *const sa)
+{
+	return (ndm_ip_sockaddr_family(sa) == AF_INET6) ? true : false;
+}
 
 /**
  * Convert socket address from network view to string view.
@@ -238,7 +281,7 @@ bool ndm_ip_sockaddr_is_v6(
 const char *ndm_ip_sockaddr_ntop(
 		const struct ndm_ip_sockaddr_t *const sa,
 		char *const dst,
-		socklen_t size);
+		const socklen_t size);
 
 /**
  * Convert socket address from string view to network view.
@@ -262,8 +305,20 @@ bool ndm_ip_sockaddr_pton(
  * @returns Value of requested constant.
  */
 
-const struct ndm_ip_sockaddr_t *ndm_ip_sockaddr_get_any(
-		const int family) NDM_ATTR_WUR;
+static const struct ndm_ip_sockaddr_t *ndm_ip_sockaddr_get_any(
+		const sa_family_t family) NDM_ATTR_WUR;
+
+static inline const struct ndm_ip_sockaddr_t *ndm_ip_sockaddr_get_any(
+		const sa_family_t family)
+{
+	assert(
+		family == (sa_family_t) AF_INET ||
+		family == (sa_family_t) AF_INET6);
+
+	return (family == (sa_family_t) AF_INET) ?
+		&NDM_IP_SOCKADDR_ANY :
+		&NDM_IP_SOCKADDR_ANY6;
+}
 
 /**
  * Get loopback IP address for @a sa depending on @a family.
@@ -273,7 +328,7 @@ const struct ndm_ip_sockaddr_t *ndm_ip_sockaddr_get_any(
  */
 
 void ndm_ip_sockaddr_get_loopback(
-		const int family,
+		const sa_family_t family,
 		struct ndm_ip_sockaddr_t *sa);
 
 /**
@@ -299,41 +354,44 @@ uint16_t ndm_ip_sockaddr_port(
 		const struct ndm_ip_sockaddr_t *const sa) NDM_ATTR_WUR;
 
 /**
- * Get the protocol family for @a sa.
+ * Get the protocol domain for @a sa.
  *
  * @param sa Socket address.
  *
  * @returns @c PF_INET or @c PF_INET6 value.
  */
 
-int ndm_ip_sockaddr_domain(
+static int ndm_ip_sockaddr_domain(
 		const struct ndm_ip_sockaddr_t *const sa) NDM_ATTR_WUR;
 
+static inline int ndm_ip_sockaddr_domain(
+		const struct ndm_ip_sockaddr_t *const sa)
+{
+	assert(ndm_ip_sockaddr_is_v4(sa) || ndm_ip_sockaddr_is_v6(sa));
+
+	return (ndm_ip_sockaddr_family(sa) == AF_INET) ? PF_INET : PF_INET6;
+}
+
 /**
- * Get the address family for @a sa.
+ * Get the address size for @a sa.
  *
  * @param sa Socket address.
  *
- * @returns @c AF_INET or @c AF_INET6 value.
+ * @returns socket address size in bytes.
  */
 
-sa_family_t ndm_ip_sockaddr_family(
+static socklen_t ndm_ip_sockaddr_size(
 		const struct ndm_ip_sockaddr_t *const sa) NDM_ATTR_WUR;
 
-/**
- * IP address that indicates that the server must listen for client activity
- * on all network interfaces. It is equal to <tt>0.0.0.0</tt>.
- */
+static inline socklen_t ndm_ip_sockaddr_size(
+		const struct ndm_ip_sockaddr_t *const sa)
+{
+	assert(ndm_ip_sockaddr_is_v4(sa) || ndm_ip_sockaddr_is_v6(sa));
 
-extern const struct ndm_ip_sockaddr_t NDM_IP_SOCKADDR_ANY;
-
-/**
- * IPv6 address that indicates that the server must listen for client
- * activity on all network interfaces. It is equal to <tt>::</tt>. See also
- * @c #NDM_IP_SOCKADDR_ANY.
- */
-
-extern const struct ndm_ip_sockaddr_t NDM_IP_SOCKADDR_ANY6;
+	return (socklen_t) (ndm_ip_sockaddr_family(sa) == AF_INET ?
+		sizeof(struct sockaddr_in) :
+		sizeof(struct sockaddr_in6));
+}
 
 #endif	/* __NDM_IP_SOCKADDR_H__ */
 

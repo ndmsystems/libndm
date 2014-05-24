@@ -626,12 +626,12 @@ struct ndm_core_event_connection_t *ndm_core_event_connection_open(
 		} else {
 			struct ndm_ip_sockaddr_t sa = NDM_IP_SOCKADDR_ANY;
 
-			sa.un.in.sin_port = (uint16_t) htons(NDM_CORE_EVENT_PORT_);
+			ndm_ip_sockaddr_set_port(&sa, NDM_CORE_EVENT_PORT_);
 
 			if (ndm_ip_sockaddr_pton(NDM_CORE_ADDRESS_, &sa) &&
 				connect(connection->fd,
-					(struct sockaddr *) &sa.un.in,
-					sizeof(sa.un.in)) == 0)
+					(struct sockaddr *) &sa,
+					(socklen_t) ndm_ip_sockaddr_size(&sa)) == 0)
 			{
 				connected = true;
 				connection->timeout = timeout;
@@ -1019,12 +1019,12 @@ struct ndm_core_t *ndm_core_open(
 		} else {
 			struct ndm_ip_sockaddr_t sa = NDM_IP_SOCKADDR_ANY;
 
-			sa.un.in.sin_port = (uint16_t) htons(NDM_CORE_PORT_);
+			ndm_ip_sockaddr_set_port(&sa, NDM_CORE_PORT_);
 
 			if (!ndm_ip_sockaddr_pton(NDM_CORE_ADDRESS_, &sa) ||
 				connect(core->fd,
-					(struct sockaddr *) &sa.un.in,
-					sizeof(sa.un.in)) != 0)
+					(struct sockaddr *) &sa,
+					(socklen_t) ndm_ip_sockaddr_size(&sa)) != 0)
 			{
 				/* failed to parse a defined core address or connect */
 				close(core->fd);

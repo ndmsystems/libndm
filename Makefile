@@ -4,6 +4,7 @@ LIBNDM_MAJOR := 0
 LIBNDM_MINOR := 0.0
 -include version.mk
 
+UNAME  =$(shell uname)
 VERSION=$(LIBNDM_MAJOR).$(LIBNDM_MINOR)
 
 ifeq ($(CC),)
@@ -27,7 +28,10 @@ CFLAGS?=\
 	-Wredundant-decls -Wstack-protector -ftabstop=4 -Wshadow \
 	-Wpointer-arith -I$(PWD)/include/
 #	-Wempty-body -Wclobbered -Waddress -Wvla -Wtype-limits
-LDFLAGS=-lc -lrt #-Wl,--gc-sections,--relax
+LDFLAGS=-lc #-Wl,--gc-sections,--relax
+ifneq ($(UNAME),Darwin)
+LDFLAGS+=-lrt
+endif
 LIB=libndm.so
 
 PREFIX=/usr

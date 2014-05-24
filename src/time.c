@@ -1,13 +1,48 @@
+#include <errno.h>
 #include <unistd.h>
 #include <assert.h>
 #include <sys/time.h>
 #include <ndm/int.h>
 #include <ndm/time.h>
 
+#ifdef __MACH__
+#include <mach/mach.h>
+#include <mach/clock.h>
+
+#define CLOCK_MONOTONIC		SYSTEM_CLOCK
+#define CLOCK_REALTIME		CALENDAR_CLOCK
+
+static int clock_gettime(
+		const clock_id_t type,
+		struct timespec *t)
+{
+	int ret = -1;
+	clock_serv_t csrv;
+	mach_timespec_t mts;
+
+	if (host_get_clock_service(mach_host_self(), type, &csrv) != KERN_SUCCESS) {
+		errno = EINVAL;
+	} else
+	if (clock_get_time(csrv, &mts) != KERN_SUCCESS) {
+		errno = EINVAL;
+	} else {
+		t->tv_sec = mts.tv_sec;
+		t->tv_nsec = mts.tv_nsec;
+
+		ret = 0;
+	}
+
+	return ret;
+}
+
+#else  // __MACH__
+
 #if !defined (_POSIX_TIMERS) || (_POSIX_TIMERS <= 0) ||	\
 	!defined (_POSIX_MONOTONIC_CLOCK)
 #error POSIX timer support required.
 #endif
+
+#endif // __MACH__
 
 const struct timespec NDM_TIME_ZERO = {
 	.tv_sec = 0,
@@ -105,7 +140,7 @@ void ndm_time_add(
 
 		t->tv_nsec += u->tv_nsec;
 
-		carry = t->tv_nsec/NDM_TIME_PREC;
+		carry = (suseconds_t) t->tv_nsec/NDM_TIME_PREC;
 		correction = carry*NDM_TIME_PREC;
 
 		t->tv_sec += u->tv_sec + carry;
@@ -174,7 +209,7 @@ void ndm_time_to_timeval(
 		const struct timespec *u)
 {
 	t->tv_sec = u->tv_sec;
-	t->tv_usec = u->tv_nsec/(NDM_TIME_PREC/NDM_TIME_USEC);
+	t->tv_usec = (suseconds_t) u->tv_nsec/(NDM_TIME_PREC/NDM_TIME_USEC);
 }
 
 void ndm_time_from_timeval(
