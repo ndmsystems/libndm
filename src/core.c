@@ -38,7 +38,10 @@
 #define NDM_CORE_REQUEST_STATIC_SIZE_					2048
 #define NDM_CORE_REQUEST_DYNAMIC_BLOCK_SIZE_			1024
 
-#define NDM_CORE_REQUEST_STATIC_COMMAND_BUFFER_SIZE_	256
+#define NDM_CORE_REQUEST_STATIC_COMMAND_BUFFER_SIZE_	512
+
+#define NDM_CORE_REQUEST_ATTR_NAME_						"name"
+#define NDM_CORE_REQUEST_ATTR_PREFIX_					'@'
 
 #define NDM_CORE_RESPONSE_STATIC_SIZE_					1024
 #define NDM_CORE_RESPONSE_INITIAL_BUFFER_SIZE_			2048
@@ -728,9 +731,9 @@ struct ndm_core_event_t *ndm_core_event_connection_get(
 
 				if ((strchr(raise_time_value, '.') == NULL &&
 					 sscanf(raise_time_value, "%ld%c",
-					 	&seconds, &end) == 1) ||
+						&seconds, &end) == 1) ||
 					 sscanf(raise_time_value, "%ld.%ld%c",
-					 	&seconds, &milliseconds, &end) == 2)
+						&seconds, &milliseconds, &end) == 2)
 				{
 					event->raise_time.tv_sec = (time_t) seconds;
 					event->raise_time.tv_nsec = milliseconds*NDM_TIME_MSEC;
@@ -841,7 +844,7 @@ void ndm_core_cache_clear(
 
 		ndm_time_get_max(&cache->next_expiration_time);
 	} else {
-		/* remove only expired entries */
+		/* remove expired entries only */
 		struct timespec now;
 
 		ndm_time_get_monotonic(&now);
@@ -941,9 +944,9 @@ static void __ndm_core_cache(
 		const size_t request_size,
 		const struct ndm_core_response_t *response)
 {
-	/* there is no a check of duplicating entries here due to speed up
+	/* there is no check of duplicating entries here due to performance
 	 * reasons; make sure that this function called only
-	 * when __ndm_core_cache_get() failed because of cache miss */
+	 * when __ndm_core_cache_get() failed because of a cache miss */
 
 	/* try to add a new entry */
 	const size_t need_size =
@@ -1448,18 +1451,31 @@ static struct ndm_core_response_t *__ndm_core_request(
 		va_end(aq);
 
 		if (command != NULL) {
-			/* build different requests */
 			struct ndm_xml_node_t *command_node = NULL;
 
-			if (request_type == NDM_CORE_REQUEST_CONFIG ||
-				request_type == NDM_CORE_REQUEST_EXECUTE)
+			if (request_type != NDM_CORE_REQUEST_CONFIG  &&
+				request_type != NDM_CORE_REQUEST_EXECUTE &&
+				request_type != NDM_CORE_REQUEST_PARSE)
 			{
-				if ((command_node = ndm_xml_node_append_child_str(
-						request_node,
-						(request_type == NDM_CORE_REQUEST_CONFIG) ?
-						"config" : "command", NULL)) == NULL ||
-					ndm_xml_node_append_attr_str(
-						command_node, "name", command) == NULL)
+				errno = EINVAL;
+			} else {
+				bool has_args = false;
+
+				command_node = ndm_xml_node_append_child_str(
+					request_node,
+					(request_type == NDM_CORE_REQUEST_CONFIG)  ? "config"  :
+					(request_type == NDM_CORE_REQUEST_EXECUTE) ? "command" :
+																 "parse",
+					(request_type == NDM_CORE_REQUEST_PARSE)   ? command   :
+																 NULL);
+
+				if (command_node == NULL) {
+					errno = ENOMEM;
+				} else
+				if ((request_type == NDM_CORE_REQUEST_CONFIG ||
+					 request_type == NDM_CORE_REQUEST_EXECUTE) &&
+					 ndm_xml_node_append_attr_str(command_node,
+						NDM_CORE_REQUEST_ATTR_NAME_, command) == NULL)
 				{
 					errno = ENOMEM;
 					command_node = NULL;
@@ -1468,38 +1484,68 @@ static struct ndm_core_response_t *__ndm_core_request(
 					size_t i = 0;
 
 					while (
+						command_node != NULL &&
 						command_args[i] != NULL &&
-						command_args[i + 1] != NULL &&
-						ndm_xml_node_append_child_str(command_node,
-							command_args[i], command_args[i + 1]) != NULL)
+						command_args[i + 1] != NULL)
 					{
+						const char *const name = command_args[i];
+						const char *const value = command_args[i + 1];
+
+						if (*name == NDM_CORE_REQUEST_ATTR_PREFIX_) {
+							if (strcmp(
+									name +
+									sizeof(NDM_CORE_REQUEST_ATTR_PREFIX_),
+									NDM_CORE_REQUEST_ATTR_NAME_) == 0)
+							{
+								/* reserved attribute */
+								errno = EINVAL;
+								command_node = NULL;
+							} else
+							if (ndm_xml_node_append_attr_str(
+									command_node, name, value) == NULL)
+							{
+								errno = ENOMEM;
+								command_node = NULL;
+							}
+						} else
+						if (ndm_xml_node_append_child_str(
+								command_node, name, value) == NULL)
+						{
+							errno = ENOMEM;
+							command_node = NULL;
+						} else {
+							has_args = true;
+						}
+
 						i += 2;
 					}
 
-					if (command_args[i] != NULL) {
+					if (command_node != NULL &&
+						command_args[i] != NULL)
+					{
 						if (command_args[i + 1] == NULL) {
 							errno = EINVAL;
 						} else {
-							/* ENOMEM */
+							/* ENOMEM or EINVAL */
 						}
 
 						command_node = NULL;
 					}
 				}
-			} else
-			if (command_args != NULL) {
-				/* no arguments allowed for "parse" request */
-				errno = EINVAL;
-				command_node = NULL;
-			} else {
-				command_node = ndm_xml_node_append_child_str(
-					request_node, "parse", command);
-			}
 
-			if (command_node != NULL) {
-				response = __ndm_core_do_request(core,
-					cache_mode, copy_cached_response,
-					request_node, response_copied);
+				if (command_node != NULL) {
+					if (request_type == NDM_CORE_REQUEST_PARSE &&
+						has_args)
+					{
+						/* no arguments allowed for "parse" request */
+						errno = EINVAL;
+						command_node = NULL;
+					} else {
+						response = __ndm_core_do_request(core,
+							cache_mode, copy_cached_response,
+							request_node, response_copied);
+					}
+				}
 			}
 
 			if (command != command_buffer) {
@@ -1737,7 +1783,7 @@ static inline void __ndm_core_response_find_end(char **p)
 {
 	char *q = *p;
 
-	while (*q != '/' && *q != '@' && *q != '\0') {
+	while (*q != '/' && *q != NDM_CORE_REQUEST_ATTR_PREFIX_ && *q != '\0') {
 		++q;
 	}
 
@@ -1759,7 +1805,7 @@ static enum ndm_core_response_error_t __ndm_core_response_first_node(
 
 		__ndm_core_response_find_end(&p);
 
-		if (*p == '@') {
+		if (*p == NDM_CORE_REQUEST_ATTR_PREFIX_) {
 			/* no attribute reference allowed here */
 			e = NDM_CORE_RESPONSE_ERROR_SYNTAX;
 		} else {
@@ -1832,11 +1878,15 @@ static enum ndm_core_response_error_t __ndm_core_response_first_str(
 		char *p = path + path_size - 1;
 		char *attr_name = NULL;
 
-		while (path < p && *p != '@' && *p != '/') {
+		while (
+			path < p &&
+			*p != NDM_CORE_REQUEST_ATTR_PREFIX_ &&
+			*p != '/')
+		{
 			--p;
 		}
 
-		if (path <= p && *p == '@') {
+		if (path <= p && *p == NDM_CORE_REQUEST_ATTR_PREFIX_) {
 			*p = '\0';
 			attr_name = p + 1;
 		}

@@ -317,8 +317,11 @@ bool ndm_core_authenticate(
  * @param request_type Type of request. There are three possible values ​​—
  * NDM_CORE_REQUEST_CONFIG, NDM_CORE_REQUEST_EXECUTE or NDM_CORE_REQUEST_PARSE.
  * @param cache_mode Cache mode of the response.
- * @param command_args An array of command arguments (ignored if request type is
- * NDM_CORE_REQUEST_PARSE).
+ * @param command_args An array of command arguments. If an argument name
+ * starts with '@' symbol it considered as a request attribute.
+ * @c NDM_CORE_REQUEST_PARSE request accepts request attributes only.
+ * A special "name" attribute is reserved and should not be used in
+ * the command arguments array.
  * @param command_format String template of command.
  *
  * @returns Pointer to the received response (@b ndm_core_response_t structure)
@@ -860,9 +863,11 @@ enum ndm_core_response_error_t ndm_core_request_break(
  *
  * @param core Pointer to the core connection instance.
  * @param request_type Type of request.
- * @param command_args An array of command arguments (is used for
- * @c NDM_CORE_REQUEST_CONFIG or @c NDM_CORE_REQUEST_EXECUTE types of request
- * only).
+ * @param command_args An array of command arguments. If an argument name
+ * starts with '@' symbol it considered as a request attribute.
+ * @c NDM_CORE_REQUEST_PARSE request accepts request attributes only.
+ * A special "name" attribute is reserved and should not be used in
+ * the command arguments array.
  * @param command_format Format of command.
  *
  * @returns Result of a function of @b ndm_core_response_error_t type.
@@ -884,9 +889,11 @@ enum ndm_core_response_error_t ndm_core_request_send(
  * @param cache_mode Cache mode of the response.
  * @param value Pointer to the allocated memory with the stored value.
  * @param value_path Path to the node/attribute value of which is needed.
- * @param command_args An array of command arguments (is used for
- * @c NDM_CORE_REQUEST_CONFIG or @c NDM_CORE_REQUEST_EXECUTE types of request
- * only).
+ * @param command_args An array of command arguments. If an argument name
+ * starts with '@' symbol it considered as a request attribute.
+ * @c NDM_CORE_REQUEST_PARSE request accepts request attributes only.
+ * A special "name" attribute is reserved and should not be used in
+ * the command arguments array.
  * @param command_format Format of command.
  *
  * @returns Result of a function of @b ndm_core_response_error_t type.
@@ -913,9 +920,11 @@ enum ndm_core_response_error_t ndm_core_request_first_str_alloc_cf(
  * @param value_size Actual size of the data to store the value (see
  * @c NDM_CORE_RESPONSE_ERROR_BUFFER_SIZE).
  * @param value_path Path to the node/attribute value of which is needed.
- * @param command_args An array of command arguments (is used for
- * @c NDM_CORE_REQUEST_CONFIG or @c NDM_CORE_REQUEST_EXECUTE types of request
- * only).
+ * @param command_args An array of command arguments. If an argument name
+ * starts with '@' symbol it considered as a request attribute.
+ * @c NDM_CORE_REQUEST_PARSE request accepts request attributes only.
+ * A special "name" attribute is reserved and should not be used in
+ * the command arguments array.
  * @param command_format Format of command.
  *
  * @returns Result of a function of @b ndm_core_response_error_t type.
@@ -941,9 +950,11 @@ enum ndm_core_response_error_t ndm_core_request_first_str_buffer_cf(
  * @param cache_mode Cache mode of the response.
  * @param value Pointer to the buffer with the stored value.
  * @param value_path Path to the node/attribute value of which is needed.
- * @param command_args An array of command arguments (is used for
- * @c NDM_CORE_REQUEST_CONFIG or @c NDM_CORE_REQUEST_EXECUTE types of request
- * only).
+ * @param command_args An array of command arguments. If an argument name
+ * starts with '@' symbol it considered as a request attribute.
+ * @c NDM_CORE_REQUEST_PARSE request accepts request attributes only.
+ * A special "name" attribute is reserved and should not be used in
+ * the command arguments array.
  * @param command_format Format of command.
  *
  * @returns Result of a function of @b ndm_core_response_error_t type.
@@ -968,9 +979,11 @@ enum ndm_core_response_error_t ndm_core_request_first_int_cf(
  * @param cache_mode Cache mode of the response.
  * @param value Pointer to the buffer with the stored value.
  * @param value_path Path to the node/attribute value of which is needed.
- * @param command_args An array of command arguments (is used for
- * @c NDM_CORE_REQUEST_CONFIG or @c NDM_CORE_REQUEST_EXECUTE types of request
- * only).
+ * @param command_args An array of command arguments. If an argument name
+ * starts with '@' symbol it considered as a request attribute.
+ * @c NDM_CORE_REQUEST_PARSE request accepts request attributes only.
+ * A special "name" attribute is reserved and should not be used in
+ * the command arguments array.
  * @param command_format Format of command.
  *
  * @returns Result of a function of @b ndm_core_response_error_t type.
@@ -1000,9 +1013,11 @@ enum ndm_core_response_error_t ndm_core_request_first_uint_cf(
  * or absence of the required value only.
  * @param value @c true if the required value is found, @c false if not.
  * @param value_path Path to the node/attribute value of which is needed.
- * @param command_args An array of command arguments (is used for
- * @c NDM_CORE_REQUEST_CONFIG or @c NDM_CORE_REQUEST_EXECUTE types of request
- * only).
+ * @param command_args An array of command arguments. If an argument name
+ * starts with '@' symbol it considered as a request attribute.
+ * @c NDM_CORE_REQUEST_PARSE request accepts request attributes only.
+ * A special "name" attribute is reserved and should not be used in
+ * the command arguments array.
  * @param command_format Format of command.
  *
  * @returns Result of a function of @b ndm_core_response_error_t type.
@@ -1026,9 +1041,11 @@ enum ndm_core_response_error_t ndm_core_request_first_bool_cf(
  * @param core Pointer to the core connection instance.
  * @param request_type Type of request.
  * @param cache_mode Cache mode of the response.
- * @param command_args An array of command arguments (is used for
- * @c NDM_CORE_REQUEST_CONFIG or @c NDM_CORE_REQUEST_EXECUTE types of request
- * only).
+ * @param command_args An array of command arguments. If an argument name
+ * starts with '@' symbol it considered as a request attribute.
+ * @c NDM_CORE_REQUEST_PARSE request accepts request attributes only.
+ * A special "name" attribute is reserved and should not be used in
+ * the command arguments array.
  * @param command Command name.
  * @param value Pointer to the allocated memory with the stored value.
  * @param value_path_format Format of path to the node/attribute value of which
@@ -1053,9 +1070,11 @@ enum ndm_core_response_error_t ndm_core_request_first_str_alloc_pf(
  * @param core Pointer to the core connection instance.
  * @param request_type Type of request.
  * @param cache_mode Cache mode of the response.
- * @param command_args An array of command arguments (is used for
- * @c NDM_CORE_REQUEST_CONFIG or @c NDM_CORE_REQUEST_EXECUTE types of request
- * only).
+ * @param command_args An array of command arguments. If an argument name
+ * starts with '@' symbol it considered as a request attribute.
+ * @c NDM_CORE_REQUEST_PARSE request accepts request attributes only.
+ * A special "name" attribute is reserved and should not be used in
+ * the command arguments array.
  * @param command Command name.
  * @param value Pointer to the buffer with the stored value.
  * @param value_buffer_size Size of the buffer.
@@ -1085,9 +1104,11 @@ enum ndm_core_response_error_t ndm_core_request_first_str_buffer_pf(
  * @param core Pointer to the core connection instance.
  * @param request_type Type of request.
  * @param cache_mode Cache mode of the response.
- * @param command_args An array of command arguments (is used for
- * @c NDM_CORE_REQUEST_CONFIG or @c NDM_CORE_REQUEST_EXECUTE types of request
- * only).
+ * @param command_args An array of command arguments. If an argument name
+ * starts with '@' symbol it considered as a request attribute.
+ * @c NDM_CORE_REQUEST_PARSE request accepts request attributes only.
+ * A special "name" attribute is reserved and should not be used in
+ * the command arguments array.
  * @param command Command name.
  * @param value Pointer to the buffer with the stored value.
  * @param value_path_format Format of path to the node/attribute value of which
@@ -1113,9 +1134,11 @@ enum ndm_core_response_error_t ndm_core_request_first_int_pf(
  * @param core Pointer to the core connection instance.
  * @param request_type Type of request.
  * @param cache_mode Cache mode of the response.
- * @param command_args An array of command arguments (is used for
- * @c NDM_CORE_REQUEST_CONFIG or @c NDM_CORE_REQUEST_EXECUTE types of request
- * only).
+ * @param command_args An array of command arguments. If an argument name
+ * starts with '@' symbol it considered as a request attribute.
+ * @c NDM_CORE_REQUEST_PARSE request accepts request attributes only.
+ * A special "name" attribute is reserved and should not be used in
+ * the command arguments array.
  * @param command Command name.
  * @param value Pointer to the buffer with the stored value.
  * @param value_path_format Format of path to the node/attribute value of which
@@ -1143,9 +1166,11 @@ enum ndm_core_response_error_t ndm_core_request_first_uint_pf(
  * @param core Pointer to the core connection instance.
  * @param request_type Type of request.
  * @param cache_mode Cache mode of the response.
- * @param command_args An array of command arguments (is used for
- * @c NDM_CORE_REQUEST_CONFIG or @c NDM_CORE_REQUEST_EXECUTE types of request
- * only).
+ * @param command_args An array of command arguments. If an argument name
+ * starts with '@' symbol it considered as a request attribute.
+ * @c NDM_CORE_REQUEST_PARSE request accepts request attributes only.
+ * A special "name" attribute is reserved and should not be used in
+ * the command arguments array.
  * @param command Command name.
  * @param parse_value @c true if standard function processing is needed with
  * appropriate error handling, @c false if you need to know about the presence
