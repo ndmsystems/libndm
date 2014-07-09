@@ -17,8 +17,15 @@ int main()
 		CACHE_TTL_MS, NDM_CORE_DEFAULT_CACHE_MAX_SIZE);
 	struct ndm_core_response_t *r = NULL;
 	bool authenticated = false;
+	bool found = false;
 
 	NDM_TEST_BREAK_IF(core == NULL);
+
+	NDM_TEST(ndm_core_find_command(core, "service htt", &found));
+	NDM_TEST(!found);
+
+	NDM_TEST(ndm_core_find_command(core, "service http", &found));
+	NDM_TEST(found);
 
 	r = ndm_core_request(core, NDM_CORE_REQUEST_PARSE,
 		NDM_CORE_MODE_NO_CACHE, NULL, "no service http");

@@ -1421,6 +1421,65 @@ bool ndm_core_authenticate(
 	return done;
 }
 
+bool ndm_core_find_command(
+		struct ndm_core_t *core,
+		const char *const command,
+		bool* found)
+{
+	bool done = false;
+	uint8_t request_buffer[NDM_CORE_REQUEST_STATIC_SIZE_];
+	struct ndm_xml_document_t request;
+	struct ndm_xml_node_t *probe_node = NULL;
+	struct ndm_xml_node_t *request_node =
+		__ndm_core_request_document_init(&request,
+			request_buffer, sizeof(request_buffer),
+			core->agent);
+
+	*found = false;
+
+	if (request_node != NULL &&
+		(probe_node = ndm_xml_node_append_child_str(
+			request_node, "probe", NULL)) != NULL &&
+		ndm_xml_node_append_attr_str(probe_node, "name", command) != NULL)
+	{
+		struct ndm_core_response_t *response = __ndm_core_do_request(
+			core, NDM_CORE_MODE_NO_CACHE, true, request_node, NULL);
+
+		if (response != NULL) {
+			const struct ndm_xml_node_t *response_node =
+				ndm_core_response_root(response);
+			const struct ndm_xml_node_t *probe_resp_node =
+				ndm_xml_node_first_child(response_node, "probe");
+			struct ndm_xml_attr_t *found_attr = NULL;
+
+			if ( probe_resp_node == NULL ||
+				(found_attr = ndm_xml_node_first_attr(
+					probe_resp_node, "found")) == NULL)
+			{
+				errno = EBADMSG;
+			} else {
+				const char *const found_val = ndm_xml_attr_value(found_attr);
+
+				if (strcasecmp(found_val, "yes") == 0) {
+					done = true;
+					*found = true;
+				} else
+				if (strcasecmp(found_val, "no") == 0) {
+					done = true;
+				} else {
+					errno = EBADMSG;
+				}
+			}
+
+			ndm_core_response_free(&response);
+		}
+	}
+
+	ndm_xml_document_clear(&request);
+
+	return done;
+}
+
 static struct ndm_core_response_t *__ndm_core_request(
 		struct ndm_core_t *core,
 		const enum ndm_core_request_type_t request_type,

@@ -311,6 +311,22 @@ bool ndm_core_authenticate(
 		bool *authenticated) NDM_ATTR_WUR;
 
 /**
+ * Check that a specified NDM command exists.
+ *
+ * @param core Pointer to the core connection instance.
+ * @param command The command name to check.
+ * @param found A pointer to a variable that contains a search result.
+ *
+ * @returns @c true if completed successfully and @a found contains
+ * the search result, @c false — otherwise (@a errno contains an error code).
+ */
+
+bool ndm_core_find_command(
+		struct ndm_core_t *core,
+		const char *const command,
+		bool* found) NDM_ATTR_WUR;
+
+/**
  * Send request to the core.
  *
  * @param core Pointer to the core connection instance.
