@@ -132,12 +132,13 @@ void ndm_vlog(
 
 		fprintf(
 			(level == LERROR || level == LCRITICAL) ? stderr : stdout,
-			"[%c] %s % 2i %02i:%02i:%02i %s: %s%s%s%s%s\n",
+			"[%c] %s %s%i %02i:%02i:%02i %s: %s%s%s%s%s\n",
 			((level == LINFO)  ?	'I' :
 			 (level == LWARNING) ?	'W' :
 			 (level == LERROR) ?	'E' :
 			 (level == LCRITICAL) ?	'C' : '-'),
 			MONTHS[((unsigned long) t.tm_mon) % NDM_ARRAY_SIZE(MONTHS)],
+			t.tm_mday < 10 ? " " : "",
 			t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec,
 			__ident,
 			source_empty ? "" : "\"",
