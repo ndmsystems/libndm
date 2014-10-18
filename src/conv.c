@@ -103,6 +103,8 @@
 #include <ndm/macro.h>
 #include <ndm/endian.h>
 
+#ifdef LIBNDM_SBCS_SUPPORT
+
 #include "./charset/8859_1.h"
 #include "./charset/8859_2.h"
 #include "./charset/8859_3.h"
@@ -168,6 +170,8 @@
 #include "./charset/roman.h"
 #include "./charset/romanian.h"
 #include "./charset/turkish.h"
+
+#endif	/* LIBNDM_SBCS_SUPPORT */
 
 #define NDM_CONV_INVALID_					-1
 
@@ -602,6 +606,8 @@ static const struct ndm_conv_pair_t_ {
 	{"utf-32le",			conv_utf32_le_to_uni_,	conv_uni_to_utf32_le_  },
 	{"utf-32be",			conv_utf32_be_to_uni_,	conv_uni_to_utf32_be_  },
 
+#ifdef LIBNDM_SBCS_SUPPORT
+
 	/* ISO-8859-1 and aliases */
 	{"iso-8859-1",			conv_8859_1_to_uni_,	conv_uni_to_8859_1_	   },
 	{"iso-ir-100",			conv_8859_1_to_uni_,	conv_uni_to_8859_1_	   },
@@ -956,6 +962,9 @@ static const struct ndm_conv_pair_t_ {
 	/* UKRAINIAN and aliases (MacUkrainian) */
 	{"mac-ukrainian",		conv_cyrillic_to_uni_,	conv_uni_to_cyrillic_  },
 	{"x-mac-ukrainian",		conv_cyrillic_to_uni_,	conv_uni_to_cyrillic_  }
+
+#endif /* LIBNDM_SBCS_SUPPORT */
+
 };
 static const size_t NDM_CONV_COUNT_ = NDM_ARRAY_SIZE(NDM_CONV_PAIRS_);
 
