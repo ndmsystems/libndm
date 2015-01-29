@@ -2,3 +2,8 @@
 *.o
 *.so
 doc
+.built*
+.configured_*
+.dep_files
+.prepared_*
+ipkg-*

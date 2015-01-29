@@ -65,5 +65,27 @@ bool ndm_feedback(
 		const char *const env_format,
 		...) NDM_ATTR_WUR NDM_ATTR_PRINTF(3, 4);
 
+/**
+ * Calls the external application and checks the result of its launch.
+ * Application is a special program (or a symbolic link to it), which is able
+ * to send its arguments and environment variables to the NDM core.
+ *
+ * @param timeout_msec The maximum time allowed to run, in milliseconds.
+ * @param argv An array of environment variables for the application to run. It must contain
+ * at least one entry with a pointer to the name of the caller, as well as
+ * an optional set of additional arguments. The list must be terminated with
+ * @c NULL.
+ * @param env_argv An array of strings, conventionally of the form key=value,
+ * which are passed as environment to the new program. The array must be terminated with
+ * @c NULL.
+ *
+ * @returns @c true if launch and sending of arguments and environment variables
+ * are successful, @c false — otherwise, @a errno stores an error code.
+ */
+bool ndm_feedback_ve(
+		const int64_t timeout_msec,
+		const char *const argv[],
+		const char *const env_argv[]) NDM_ATTR_WUR;
+
 #endif	/* __NDM_FEEDBACK_H__ */
 
