@@ -302,19 +302,18 @@ static void __exit()
 {
 	/* Does not need a lock. */
 	struct chunk_t *c = __head.next;
-	size_t leaked = 0;
 	const char *s = NULL;
-	const char *p = NULL;
 
 	if (c != &__head) {
-		leaked = 0;
+		size_t leaked = 0;
+
 		fprintf(stderr, "\n");
 
 		do {
 			s = ((const char *) c) + sizeof(*c);
 
 			if (s[c->size - 1] == '\0') {
-				p = s;
+				const char *p = s;
 
 				while (isprint(*p)) {
 					++p;
