@@ -129,7 +129,6 @@ pid_t ndm_spawn_process(
 			_exit(EXIT_FAILURE);
 		} else {
 			int error = 0;
-			int local_error = 0;
 			ssize_t n;
 			ssize_t left = sizeof(error);
 
@@ -144,6 +143,8 @@ pid_t ndm_spawn_process(
 			close(fb_fd[0]);
 
 			if (n != 0) {
+				int local_error = 0;
+
 				if (left != 0) {
 					local_error = errno;
 				}
