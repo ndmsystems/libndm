@@ -39,8 +39,8 @@ bool ndm_net_is_domain_name(const char *const name)
 				const size_t s = i - 1;
 
 				while (
-					(isalnum(name[i]) || name[i] == '-') &&
-					i < name_size)
+					i < name_size &&
+					(isalnum(name[i]) || name[i] == '-'))
 				{
 					++i;
 				}
