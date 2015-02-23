@@ -86,7 +86,7 @@ bool ndm_stracc_append(
 		size = ndm_vasprintf(&s, format, ap);
 		va_end(ap);
 
-		if (s == NULL || s < 0) {
+		if (s == NULL || size < 0) {
 			__ndm_stracc_invalidate(acc);
 		} else
 		if (size > 0) {
