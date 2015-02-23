@@ -686,12 +686,12 @@ bool ndm_core_event_connection_has_events(
 struct ndm_core_event_t *ndm_core_event_connection_get(
 		struct ndm_core_event_connection_t *connection)
 {
-	bool done = false;
 	struct ndm_core_event_t *event = malloc(sizeof(*event));
 
 	if (event == NULL) {
 		errno = ENOMEM;
 	} else {
+		bool done = false;
 		struct timespec deadline;
 		struct ndm_xml_node_t *root = NULL;
 
@@ -1510,8 +1510,6 @@ static struct ndm_core_response_t *__ndm_core_request(
 		va_end(aq);
 
 		if (command != NULL) {
-			struct ndm_xml_node_t *command_node = NULL;
-
 			if (request_type != NDM_CORE_REQUEST_CONFIG  &&
 				request_type != NDM_CORE_REQUEST_EXECUTE &&
 				request_type != NDM_CORE_REQUEST_PARSE)
@@ -1519,6 +1517,7 @@ static struct ndm_core_response_t *__ndm_core_request(
 				errno = EINVAL;
 			} else {
 				bool has_args = false;
+				struct ndm_xml_node_t *command_node = NULL;
 
 				command_node = ndm_xml_node_append_child_str(
 					request_node,
