@@ -342,14 +342,14 @@ static void __exit()
 		} while (c != &__head);
 
 		fprintf(stderr,
-			"\nTotal leaked            : %lu byte(s).\n", leaked);
+			"\nTotal leaked            : %zu byte(s).\n", leaked);
 	}
 
 	fprintf(stdout,
 		"\n" \
 		"Blocks totally allocated: %lu.\n" \
-		"Maximum usage           : %lu bytes.\n" \
-		"Maximum chunk size      : %lu bytes.\n\n",
+		"Maximum usage           : %zu bytes.\n" \
+		"Maximum chunk size      : %zu bytes.\n\n",
 		__id, __max_usage, __max_chunk_size);
 }
 
