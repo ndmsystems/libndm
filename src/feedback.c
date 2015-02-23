@@ -28,6 +28,7 @@ bool ndm_feedback(
 
 	va_start(ap, env_format);
 	ret = ndm_vasprintf(&env, env_fmt, ap);
+	va_end(ap);
 
 	if (ret < 0)
 		return false;
@@ -72,6 +73,7 @@ bool ndm_feedback(
 		} else	{
 			answ = ndm_feedback_ve(timeout_msec, args, env_argv);
 		}
+
 		free(env_argv);
 	}
 
