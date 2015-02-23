@@ -55,11 +55,12 @@ NDM_INT_PARSE_(int, INT_MIN, INT_MAX, UINT_MAX)
 bool ndm_int_parse_long(const char *const str, long *value)
 {
 	char *e;
-	long v;
 
 	if (!isdigit(*str) && *str != '-') {
 		errno = EINVAL;
 	} else {
+		long v;
+
 		errno = 0;
 		v = strtol(str, &e, 10);
 
@@ -76,11 +77,12 @@ bool ndm_int_parse_long(const char *const str, long *value)
 bool ndm_int_parse_ulong(const char *const str, unsigned long *value)
 {
 	char *e;
-	unsigned long v;
 
 	if (!isdigit(*str)) {
 		errno = EINVAL;
 	} else {
+		unsigned long v;
+
 		errno = 0;
 		v = strtoul(str, &e, 10);
 
@@ -97,11 +99,12 @@ bool ndm_int_parse_ulong(const char *const str, unsigned long *value)
 bool ndm_int_parse_llong(const char *const str, long long *value)
 {
 	char *e;
-	long long v;
 
 	if (!isdigit(*str) && *str != '-') {
 		errno = EINVAL;
 	} else {
+		long long v;
+
 		errno = 0;
 		v = strtoll(str, &e, 10);
 
@@ -118,11 +121,12 @@ bool ndm_int_parse_llong(const char *const str, long long *value)
 bool ndm_int_parse_ullong(const char *const str, unsigned long long *value)
 {
 	char *e;
-	unsigned long long v;
 
 	if (!isdigit(*str)) {
 		errno = EINVAL;
 	} else {
+		unsigned long long v;
+
 		errno = 0;
 		v = strtoull(str, &e, 10);
 
