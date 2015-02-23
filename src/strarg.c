@@ -128,7 +128,6 @@ bool ndm_strarg_parse(
 		const char *const command,
 		struct ndm_strvec_t *args)
 {
-	unsigned int argc = 0;
 	char **argv = (char **) malloc(sizeof(char *));
 	char *s = ndm_string_dup(command);
 	int error = errno;
@@ -137,6 +136,7 @@ bool ndm_strarg_parse(
 		/* not enough memory */
 		error = ENOMEM;
 	} else {
+		unsigned int argc = 0;
 		char *p = s;
 
 		argv[0] = NULL;
