@@ -50,7 +50,7 @@ bool ndm_ptrvec_insert(
 			v->data_,
 			(v->size_ + NDM_PTRVEC_BLOCK_SIZE_) * sizeof(*v));
 
-		if (v == NULL) {
+		if (data == NULL) {
 			return false;
 		}
 
