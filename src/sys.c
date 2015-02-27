@@ -112,8 +112,9 @@ const char *ndm_sys_strerror(const int error)
 				sizeof(SYS_DOTS_), "%s", SYS_DOTS_);
 		}
 
-		if (!isupper(__error_message[1])) {
-			/* ignore abbreviations */
+		if (islower(__error_message[1]) ||
+			isspace(__error_message[1]))
+		{
 			*__error_message = (char) tolower(*__error_message);
 		}
 	}
