@@ -33,6 +33,8 @@ bool ndm_log_init(
 		const bool console_mode,
 		const bool daemon_mode) NDM_ATTR_WUR;
 
+void ndm_log_close();
+
 void ndm_log(
 		const enum level_t level,
 		const char *const format,

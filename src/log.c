@@ -47,6 +47,11 @@ bool ndm_log_init(
 	return console_mode ? ndm_time_init() : true;
 }
 
+void ndm_log_close()
+{
+	closelog();
+}
+
 void ndm_log(
 		const enum level_t level,
 		const char *const format,
