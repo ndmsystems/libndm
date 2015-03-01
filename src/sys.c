@@ -101,7 +101,7 @@ const char *ndm_sys_strerror(const int error)
 	if (message == NULL) {
 		snprintf(
 			__error_message, sizeof(__error_message),
-			"error %i occured", error);
+			"error %i occurred", error);
 	} else {
 		snprintf(__error_message, sizeof(__error_message), "%s", message);
 

@@ -64,7 +64,7 @@ enum ndm_core_response_type_t
 
 enum ndm_core_response_error_t
 {
-	NDM_CORE_RESPONSE_ERROR_OK,				//!< No errors occured
+	NDM_CORE_RESPONSE_ERROR_OK,				//!< No errors occurred
 	NDM_CORE_RESPONSE_ERROR_SYNTAX,			//!< Invalid path node syntax
 	NDM_CORE_RESPONSE_ERROR_FORMAT,			//!< Invalid node value format
 	NDM_CORE_RESPONSE_ERROR_NOT_FOUND,		//!< Node or attribute is not found

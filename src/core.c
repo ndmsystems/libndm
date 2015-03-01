@@ -1245,7 +1245,7 @@ static struct ndm_core_response_t *__ndm_core_do_request(
 	if (__ndm_core_request_store(
 			request, buffer, request_size) != request_size)
 	{
-		/* internal error occured */
+		/* internal error occurred */
 		errno = EILSEQ;
 	} else {
 		/* a request sequence is ready */
