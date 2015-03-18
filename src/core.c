@@ -922,12 +922,12 @@ static bool __ndm_core_cache_get(
 		if (copy_cached_response) {
 			*response = __ndm_core_response_copy(e->response);
 
-			if (response == NULL) {
+			if (*response == NULL) {
 				error = true;
 			}
 
 			if (response_copied != NULL) {
-				*response_copied = (response != NULL);
+				*response_copied = (*response != NULL);
 			}
 		} else {
 			/* no real response copy */
