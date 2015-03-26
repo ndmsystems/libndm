@@ -28,7 +28,7 @@ CFLAGS?=\
 	-Wredundant-decls -Wstack-protector -ftabstop=4 -Wshadow \
 	-Wpointer-arith -I$(PWD)/include/
 #	-Wempty-body -Wclobbered -Waddress -Wvla -Wtype-limits
-LDFLAGS=-lc #-Wl,--gc-sections,--relax
+LDFLAGS+=-lc #-Wl,--gc-sections,--relax
 ifneq ($(UNAME),Darwin)
 LDFLAGS+=-lrt
 endif
