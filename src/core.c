@@ -8,6 +8,7 @@
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <ndm/sys.h>
 #include <ndm/xml.h>
 #include <ndm/core.h>
@@ -20,9 +21,8 @@
 #include <ndm/string.h>
 #include <ndm/ip_sockaddr.h>
 
-#define NDM_CORE_PORT_									41230
-#define NDM_CORE_EVENT_PORT_							41232
-#define NDM_CORE_ADDRESS_								"127.0.0.1"
+#define NDM_CORE_SOCKET_								"/var/run/ndm.core.socket"
+#define NDM_CORE_EVENT_SOCKET_							"/var/run/ndm.event.socket"
 
 /**
  * A default agent name should be an empty string
@@ -622,25 +622,33 @@ struct ndm_core_event_connection_t *ndm_core_event_connection_open(
 	} else {
 		bool connected = false;
 
-		if ((connection->fd =
-				socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
+		if ((connection->fd = socket(PF_UNIX, SOCK_STREAM, 0)) < 0)
 		{
-			/* failed to open a new TCP socket */
+			/* failed to open a new UNIX domain socket */
+
 		} else {
-			struct ndm_ip_sockaddr_t sa = NDM_IP_SOCKADDR_ANY;
+			struct sockaddr_un sa;
+			int len = 0;
 
-			ndm_ip_sockaddr_set_port(&sa, NDM_CORE_EVENT_PORT_);
+			sa.sun_family = AF_UNIX;
+			len = snprintf(sa.sun_path, sizeof(sa.sun_path), "%s",
+				NDM_CORE_EVENT_SOCKET_);
 
-			if (ndm_ip_sockaddr_pton(NDM_CORE_ADDRESS_, &sa) &&
-				connect(connection->fd,
+			if (len < 0 || len >= sizeof(sa.sun_path)) {
+				errno = ENOBUFS;
+			} else {
+				len += (int)offsetof(struct sockaddr_un, sun_path) + 1;
+
+				if (connect(connection->fd,
 					(struct sockaddr *) &sa,
-					(socklen_t) ndm_ip_sockaddr_size(&sa)) == 0)
-			{
-				connected = true;
-				connection->timeout = timeout;
-				__ndm_core_buffer_init(&connection->buffer,
-					connection->buffer_storage,
-					sizeof(connection->buffer_storage));
+					(socklen_t)len) == 0)
+				{
+					connected = true;
+					connection->timeout = timeout;
+					__ndm_core_buffer_init(&connection->buffer,
+						connection->buffer_storage,
+						sizeof(connection->buffer_storage));
+				}
 			}
 		}
 
@@ -1016,26 +1024,36 @@ struct ndm_core_t *ndm_core_open(
 
 		if ((core->agent = ndm_string_dup(current_agent)) == NULL) {
 			errno = ENOMEM;
-		} else
-		if ((core->fd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
-			/* failed to open a new TCP socket */
 		} else {
-			struct ndm_ip_sockaddr_t sa = NDM_IP_SOCKADDR_ANY;
-
-			ndm_ip_sockaddr_set_port(&sa, NDM_CORE_PORT_);
-
-			if (!ndm_ip_sockaddr_pton(NDM_CORE_ADDRESS_, &sa) ||
-				connect(core->fd,
-					(struct sockaddr *) &sa,
-					(socklen_t) ndm_ip_sockaddr_size(&sa)) != 0)
-			{
-				/* failed to parse a defined core address or connect */
-				close(core->fd);
-				core->fd = -1;
+			if ((core->fd = socket(PF_UNIX, SOCK_STREAM, 0)) < 0) {
+				/* failed to open a new UNIX stream socket */
 			} else {
-				connected = true;
-				core->timeout = NDM_CORE_DEFAULT_TIMEOUT;
-				core->response_id = NDM_CORE_RESPONSE_ID_INITIALIZER_;
+				struct sockaddr_un sa;
+				int len = 0;
+
+				sa.sun_family = AF_UNIX;
+				len = snprintf(sa.sun_path, sizeof(sa.sun_path), "%s",
+					NDM_CORE_SOCKET_);
+
+				if (len < 0 || len >= sizeof(sa.sun_path)) {
+					errno = ENOBUFS;
+					close(core->fd);
+					core->fd = -1;
+				} else {
+					len += (int)offsetof(struct sockaddr_un, sun_path) + 1;
+
+					if (connect(core->fd,
+						(struct sockaddr *) &sa,
+						(socklen_t)len) != 0) {
+						/* failed to parse a defined core address or connect */
+						close(core->fd);
+						core->fd = -1;
+					} else {
+						connected = true;
+						core->timeout = NDM_CORE_DEFAULT_TIMEOUT;
+						core->response_id = NDM_CORE_RESPONSE_ID_INITIALIZER_;
+					}
+				}
 			}
 		}
 

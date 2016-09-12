@@ -18,7 +18,7 @@
 #define NDM_TO_STRING(s)				NDM_STRINGIFY(s)
 
 #define NDM_BUILD_ASSERT(name, expr)	\
-enum { name = 1/(!!expr) }
+enum { name = 1/(!!(expr)) }
 
 #ifndef NDEBUG
 #ifndef NDM_HEX_DUMP_WIDTH
