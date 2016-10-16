@@ -51,9 +51,7 @@
  */
 
 #define NDM_INT_MAX_STRLEN(t)							\
-	(((sizeof(t)*CHAR_BIT -								\
-	   (NDM_INT_IS_SIGNED(t) ? 1 : 0))*151)/500 +		\
-	 (NDM_INT_IS_SIGNED(t) ? 1 : 0) + 1)
+	((sizeof(t)*CHAR_BIT*151)/500 + 1 + 1)
 
 /**
  * Size of buffer, enough to store the maximum value of @a t.
