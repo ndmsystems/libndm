@@ -1,5 +1,6 @@
 #include <errno.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ndm/regex.h>
@@ -110,6 +111,13 @@ bool ndm_regex_matcher_find(
 		const int eflags)
 {
 	const size_t nmatch = (size_t) re->reg.re_nsub + 1;
+
+	if (nmatch > SIZE_MAX / sizeof(regmatch_t)) {
+		errno = ENOMEM;
+
+		return false;
+	}
+
 	regmatch_t* match = malloc(sizeof(regmatch_t) * nmatch);
 
 	if (match == NULL) {
