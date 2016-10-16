@@ -1,6 +1,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <signal.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -121,7 +122,8 @@ pid_t ndm_spawn_process(
 
 			while (n >= 0 && left > 0) {
 				n = write(fb_fd[1],
-					&error + sizeof(error) - left, (size_t) left);
+					((uint8_t *) &error) + sizeof(error) - left,
+					(size_t) left);
 				left -= n;
 			}
 
@@ -136,7 +138,8 @@ pid_t ndm_spawn_process(
 
 			do {
 				n = read(fb_fd[0],
-					&error + sizeof(error) - left, (size_t) left);
+					((uint8_t *) &error) + sizeof(error) - left,
+					(size_t) left);
 				left -= n;
 			} while (n > 0 && left > 0);
 
