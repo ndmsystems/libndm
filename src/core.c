@@ -1126,9 +1126,8 @@ static inline size_t __ndm_core_request_store_ctrl(
 			size = 0;
 			*p = NULL;
 		} else {
-			*((ndm_core_ctrl_t *) *p) =
-				((ndm_core_ctrl_t) (ctrl << 6)) |
-				((ndm_core_ctrl_t) node_type);
+			*((ndm_core_ctrl_t *) *p) = (ndm_core_ctrl_t)
+				((ctrl << 6) | ((ndm_core_ctrl_t) node_type));
 			(*p)++;
 		}
 	}
