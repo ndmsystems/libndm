@@ -48,7 +48,7 @@ bool ndm_ptrvec_insert(
 	if (do_realloc) {
 		void **data = (void **) realloc(
 			v->data_,
-			(v->size_ + NDM_PTRVEC_BLOCK_SIZE_) * sizeof(*v));
+			(v->size_ + NDM_PTRVEC_BLOCK_SIZE_) * sizeof(*data));
 
 		if (data == NULL) {
 			return false;
