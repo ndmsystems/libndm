@@ -43,7 +43,14 @@ bool ndm_feedback(
 		}
 	}
 
-	if ((env_argv = malloc((env_count + 1)*sizeof(char *))) != NULL) {
+	++env_count; /* NULL terminator */
+
+	if (env_count > SIZE_MAX / sizeof(char *)) {
+		/* too many environment variables */
+		env_argv = NULL;
+		errno = ENOMEM;
+	} else
+	if ((env_argv = malloc(env_count * sizeof(char *))) != NULL) {
 		int env_index = 0;
 		char *env_start = env;
 		bool valid_format = true;
