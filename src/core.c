@@ -2323,7 +2323,7 @@ enum ndm_core_response_error_t ndm_core_request_first_str_buffer_cf(
 					*value_size = (size_t) size;
 				}
 
-				if (size >= value_buffer_size) {
+				if (size >= (int) value_buffer_size) {
 					/* a buffer contains truncated content;
 					 * *value_size is a real content length */
 					e = NDM_CORE_RESPONSE_ERROR_BUFFER_SIZE;
@@ -2554,7 +2554,7 @@ enum ndm_core_response_error_t ndm_core_request_first_str_buffer_pf(
 					*value_size = (size_t) size;
 				}
 
-				if (size >= value_buffer_size) {
+				if (size >= (int) value_buffer_size) {
 					/* a buffer contains truncated content;
 					 * *value_size is a real content length */
 					e = NDM_CORE_RESPONSE_ERROR_BUFFER_SIZE;
