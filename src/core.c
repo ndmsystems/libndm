@@ -1360,10 +1360,10 @@ static struct ndm_core_response_t *__ndm_core_do_request(
 		if (response != NULL) {
 			__ndm_core_message_update(&core->last_message, response);
 		}
+	}
 
-		if (buffer != request_static_buffer) {
-			free(buffer);
-		}
+	if (buffer != request_static_buffer) {
+		free(buffer);
 	}
 
 	return response;
