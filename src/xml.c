@@ -1327,7 +1327,7 @@ __ndm_xml_parser_parse_and_append_data(
 			 * so just trim 1 char off the end.
 			 **/
 
-			if (*(end - 1) == ' ') {
+			if (end > text && *(end - 1) == ' ') {
 				--end;
 			}
 		} else {
@@ -1335,7 +1335,10 @@ __ndm_xml_parser_parse_and_append_data(
 			 * Backup until non-whitespace character is found.
 			 **/
 
-			while (__ndm_xml_parser_whitespace_pred(*(end - 1))) {
+			while (
+				end > text &&
+				__ndm_xml_parser_whitespace_pred(*(end - 1)))
+			{
 				--end;
 			}
 		}
