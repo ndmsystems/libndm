@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <ndm/sys.h>
+#include <ndm/int.h>
 #include <ndm/time.h>
 #include "test.h"
 
@@ -157,7 +158,7 @@ int main()
 	ndm_time_get_min(&min);
 	ndm_time_get_max(&max);
 
-	NDM_TEST(min.tv_sec - 1 == max.tv_sec);
+	NDM_TEST(NDM_INT_IS_TWOS_COMPLEMENT(time_t));
 	NDM_TEST(llabs(min.tv_nsec) < NDM_TIME_PREC);
 	NDM_TEST(llabs(max.tv_nsec) < NDM_TIME_PREC);
 
