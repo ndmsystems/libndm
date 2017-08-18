@@ -15,7 +15,7 @@ ifeq ($(STRIP),)
 	STRIP=strip
 endif
 
-.PHONY: all static sanitize memory_debug tests install clean distclean
+.PHONY: all static sanitize memory_debug tests install clean valgrind distclean
 
 STRIPFLAGS  = -s -R.comment -R.note -R.eh_frame -R.eh_frame_hdr
 
@@ -45,6 +45,11 @@ LDFLAGS    += -pthread
 ifeq ($(filter sanitize,$(MAKECMDGOALS)),sanitize)
 CFLAGS     += -fsanitize=address -fsanitize=leak -fsanitize=undefined
 LDFLAGS    += -fsanitize=address -fsanitize=leak -fsanitize=undefined
+endif
+
+ifeq ($(filter valgrind,$(MAKECMDGOALS)),valgrind)
+VG_TOOL    := `which valgrind`
+VG         := $(if $(VG_TOOL),$(VG_TOOL),$(error "No valgrind executable found"))
 endif
 
 LIB_BASE   := libndm
@@ -88,7 +93,7 @@ $(MEMDBG_OBJ): $(TEST_DIR)/memchk.c
 	@$(CC) $< $(CPPFLAGS) $(CFLAGS) -c -o $@ >/dev/null
 endif
 
-static sanitize all: $(LIB)
+static all: $(LIB)
 
 $(LIB_SHARED): Makefile $(HEADERS) $(OBJS)
 	@echo LD $@
@@ -106,8 +111,8 @@ EXEC_TESTS = $(filter-out $(addprefix \
 	$(TEST_DIR)/$(TEST_PREFIX),$(TEST_NO_AUTOEXEC)),$(EXEC_TESTS_ALL))
 EXEC_EXAMPLES_ALL = $(shell find $(EXAMPLE_DIR) -perm -u=x -type f)
 
-check: tests
-	-@vg=`which valgrind`; for t in $(EXEC_TESTS); do echo; echo "Running $$t..."; $$vg $$t; done
+sanitize valgrind check: tests
+	-@for t in $(EXEC_TESTS); do echo; echo "Running $$t..."; $(VG) $$t; done
 
 tests: $(LIB) $(TESTS)
 
