@@ -2,6 +2,10 @@
 
 #define __MIN__(a, b)			(((a) < (b)) ? (a) : (b))
 
+#define WORD_ALIGN_MASK			(sizeof(void *) - 1)
+#define WORD_ALIGN(n)			\
+	(((n) + WORD_ALIGN_MASK) & ~WORD_ALIGN_MASK)
+
 #if defined _MEMORY_OVERFLOW_DEBUG || defined _MEMORY_UNDERFLOW_DEBUG
 
 /* The local @c malloc, @c calloc, @c free, and @c realloc
@@ -66,6 +70,11 @@ static void __abort(const char* const format, ...)
 
 #if defined _MEMORY_OVERFLOW_DEBUG || defined _MEMORY_UNDERFLOW_DEBUG
 
+#undef calloc
+#undef malloc
+#undef free
+#undef realloc
+
 /* @c ps should be a power of 2. */
 
 #define __PAGE_ALIGN__(s, ps)         \
@@ -113,7 +122,8 @@ void *calloc(size_t nmemb, size_t size)
 
 void *malloc(size_t size)
 {
-	const size_t s = size + SIZE_SIZE_;
+	const size_t aligned_size = WORD_ALIGN(size);
+	const size_t s = aligned_size + SIZE_SIZE_;
 	const size_t aligned = __PAGE_ALIGN__(s, PAGE_SIZE_) + PAGE_SIZE_;
 	int fd = open("/dev/zero", O_RDWR);
 	char *p = NULL;
@@ -131,8 +141,8 @@ void *malloc(size_t size)
 
 		if (p != MAP_FAILED) {
 			__protect_page(ptr, PROT_NONE);
-			p = ptr - size;
-			*((size_t *) (p - SIZE_SIZE_)) = size;
+			p = ptr - aligned_size;
+			*((size_t *) (p - SIZE_SIZE_)) = aligned_size;
 		}
 	}
 
@@ -257,7 +267,7 @@ void *realloc(void *p, size_t size)
 	return ptr;
 }
 
-#endif 	/* _MEMORY_OVERFLOW_DEBUG */
+#endif	/* _MEMORY_OVERFLOW_DEBUG */
 
 // }	/* extern "C" */
 
@@ -280,7 +290,7 @@ struct chunk_t
 {
 	uint32_t gstart;
 	unsigned long id;
-	char* file;
+	char *file;
 	unsigned long line;
 	size_t size;
 	time_t time;
@@ -310,7 +320,7 @@ static void __exit()
 		fprintf(stderr, "\n");
 
 		do {
-			s = ((const char *) c) + sizeof(*c);
+			s = ((const char *) c) + WORD_ALIGN(sizeof(*c));
 
 			if (s[c->size - 1] == '\0') {
 				const char *p = s;
@@ -329,8 +339,8 @@ static void __exit()
 
 			fprintf(stderr,
 				"MEMORY LEAK: block %lu %p " \
-				"allocated at %02i:%02i:%02i (%s:%lu), %zu byte(s)%s%s%s.\n",
-				c->id, ((char *) c) + sizeof(*c),
+				"allocated %02i:%02i:%02i (%s:%lu), %zu byte(s)%s%s%s.\n",
+				c->id, ((char *) c) + WORD_ALIGN(sizeof(*c)),
 				t->tm_hour, t->tm_min, t->tm_sec,
 				c->file, c->line, c->size,
 				s == NULL ? "" : " [\"",
@@ -354,7 +364,7 @@ static void __exit()
 
 static void __check_chunk(const struct chunk_t *c, int array)
 {
-	char *p = ((char *) c) + sizeof(*c);
+	char *p = ((char *) c) + WORD_ALIGN(sizeof(*c));
 
 	if (c->gstart == BLOCK_GSTART_DELETED && c->gend == BLOCK_GEND_DELETED) {
 		__abort(
@@ -383,7 +393,8 @@ static void __check_chunk(const struct chunk_t *c, int array)
 
 static struct chunk_t *__get_chunk(void *p, const int array)
 {
-	struct chunk_t *c = (struct chunk_t *) (((char *) p) - sizeof(*c));
+	struct chunk_t *c = (struct chunk_t *)
+		(((char *) p) - WORD_ALIGN(sizeof(*c)));
 
 	__check_chunk(c, array);
 
@@ -413,8 +424,8 @@ void *__debug_malloc__(
 	/* @c file name should be copied since a library
 	 * with the name constant can be removed. */
 
-	const size_t name_size = strlen(file) + 1;
-	char *p = malloc(size + name_size + sizeof(struct chunk_t));
+	const size_t name_size = WORD_ALIGN(strlen(file) + 1);
+	char *p = malloc(name_size + WORD_ALIGN(sizeof(struct chunk_t)) + size);
 
 	if (p != NULL) {
 		struct chunk_t *c = (struct chunk_t *) (p + name_size);
@@ -440,7 +451,7 @@ void *__debug_malloc__(
 		}
 
 		if (p != NULL) {
-			p = ((char * ) p) + name_size + sizeof(struct chunk_t);
+			p = ((char *) p) + name_size + WORD_ALIGN(sizeof(*c));
 
 			c->id = ++__id;
 			c->next = &__head;
