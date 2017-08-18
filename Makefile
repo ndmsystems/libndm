@@ -102,7 +102,7 @@ EXEC_TESTS = $(filter-out $(addprefix \
 EXEC_EXAMPLES_ALL = $(shell find $(EXAMPLE_DIR) -perm -u=x -type f)
 
 check: tests
-	-@for t in $(EXEC_TESTS); do echo; echo "Running $$t..."; $$t; done
+	-@vg=`which valgrind`; for t in $(EXEC_TESTS); do echo; echo "Running $$t..."; $$vg $$t; done
 
 tests: $(LIB) $(TESTS)
 
