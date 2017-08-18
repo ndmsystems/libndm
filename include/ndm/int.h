@@ -2,6 +2,7 @@
 #define __NDM_INT_H__
 
 #include <limits.h>
+#include <stdint.h>
 #include <stdbool.h>
 #include "attr.h"
 
@@ -32,7 +33,7 @@
 
 #define NDM_INT_MIN(t)									\
 	((t) (NDM_INT_IS_SIGNED(t) ?						\
-		~((t) 0) << (sizeof(t)*CHAR_BIT - 1) : (t) 0))
+		((t) (((uintmax_t) 1U) << (sizeof(t)*CHAR_BIT - 1))) : (t) 0))
 
 /**
  * The maximum numeric value of @a t.
