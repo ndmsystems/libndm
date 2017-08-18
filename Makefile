@@ -15,7 +15,7 @@ ifeq ($(STRIP),)
 	STRIP=strip
 endif
 
-.PHONY: all static memory_debug tests install clean distclean
+.PHONY: all static sanitize memory_debug tests install clean distclean
 
 STRIPFLAGS  = -s -R.comment -R.note -R.eh_frame -R.eh_frame_hdr
 
@@ -41,6 +41,11 @@ endif
 
 CFLAGS     += -pthread
 LDFLAGS    += -pthread
+
+ifeq ($(filter sanitize,$(MAKECMDGOALS)),sanitize)
+CFLAGS     += -fsanitize=address -fsanitize=leak -fsanitize=undefined
+LDFLAGS    += -fsanitize=address -fsanitize=leak -fsanitize=undefined
+endif
 
 LIB_BASE   := libndm
 
@@ -83,7 +88,7 @@ $(MEMDBG_OBJ): $(TEST_DIR)/memchk.c
 	@$(CC) $< $(CPPFLAGS) $(CFLAGS) -c -o $@ >/dev/null
 endif
 
-static all: $(LIB)
+static sanitize all: $(LIB)
 
 $(LIB_SHARED): Makefile $(HEADERS) $(OBJS)
 	@echo LD $@
