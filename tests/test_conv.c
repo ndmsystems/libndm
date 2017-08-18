@@ -779,7 +779,9 @@ static bool charset_do_test_(
 							break;
 						}
 
-						if (map->to > CHARSET_UNICODE_MAX_) {
+						if (code_count > 1 &&
+							map->to > CHARSET_UNICODE_MAX_)
+						{
 							fprintf(stderr,
 								"\"%s\": a result codepoint value "
 								"is out of range "
