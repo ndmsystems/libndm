@@ -130,7 +130,7 @@ bool ndm_strarg_parse(
 {
 	char **argv = (char **) malloc(sizeof(char *));
 	char *s = ndm_string_dup(command);
-	int error = errno;
+	int error = 0;
 
 	if (!argv || !s) {
 		/* not enough memory */
@@ -191,7 +191,9 @@ bool ndm_strarg_parse(
 	free(argv);
 	free(s);
 
-	errno = error;
+	if (error != 0) {
+		errno = error;
+	}
 
 	return (error == 0) ? true : false;
 }
