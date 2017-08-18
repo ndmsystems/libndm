@@ -1248,6 +1248,7 @@ static struct ndm_core_response_t *__ndm_core_do_request(
 	uint8_t *buffer = request_static_buffer;
 	struct ndm_core_response_t *response = NULL;
 
+	request_static_buffer[0] = 0;
 	ndm_time_get_monotonic_plus_msec(&deadline, core->timeout);
 
 	if (request_size == 0) {
