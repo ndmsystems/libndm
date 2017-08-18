@@ -15,68 +15,91 @@ ifeq ($(STRIP),)
 	STRIP=strip
 endif
 
-.PHONY: all tests install clean distclean
+.PHONY: all static memory_debug tests install clean distclean
 
-STRIPFLAGS=-s -R.comment -R.note -R.eh_frame -R.eh_frame_hdr
-CFLAGS?=\
-	-g3 -pipe -fPIC -std=c99 \
-	-D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 \
-	-D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE -DLIBNDM_SBCS_SUPPORT \
-	-ffunction-sections -fdata-sections -fstack-protector-all \
-	-Wall -Winit-self -Wswitch-enum -Wundef \
-	-Wmissing-field-initializers -Wconversion \
-	-Wredundant-decls -Wstack-protector -ftabstop=4 -Wshadow \
-	-Wpointer-arith -I$(PWD)/include/
-#	-Wempty-body -Wclobbered -Waddress -Wvla -Wtype-limits
-LDFLAGS+=-lc #-Wl,--gc-sections,--relax
+STRIPFLAGS  = -s -R.comment -R.note -R.eh_frame -R.eh_frame_hdr
+
+CPPFLAGS   ?= -D_LARGEFILE_SOURCE \
+			  -D_LARGEFILE64_SOURCE \
+			  -D_FILE_OFFSET_BITS=64 \
+			  -D_POSIX_C_SOURCE=200809L \
+			  -D_DEFAULT_SOURCE \
+			  -D_BSD_SOURCE \
+			  -DLIBNDM_SBCS_SUPPORT
+
+CFLAGS     ?= -g3 -pipe -fPIC -std=c99 \
+			  -ffunction-sections -fdata-sections -fstack-protector-all \
+			  -Wall -Winit-self -Wswitch-enum -Wundef \
+			  -Wmissing-field-initializers -Wconversion \
+			  -Wredundant-decls -Wstack-protector -ftabstop=4 -Wshadow \
+			  -Wpointer-arith -I$(PWD)/include/ \
+			  -Wempty-body -Wclobbered -Waddress -Wvla -Wtype-limits
+
 ifneq ($(UNAME),Darwin)
-LDFLAGS+=-lrt
+LDFLAGS    += -lrt
 endif
-LIB=libndm.so
 
-PREFIX=/usr
-EXEC_PREFIX=$(PREFIX)
-LIB_DIR=$(EXEC_PREFIX)/lib
-INCLUDE_DIR=$(PREFIX)/include
+CFLAGS     += -pthread
+LDFLAGS    += -pthread
 
-OBJS=$(patsubst %.c,%.o,$(wildcard src/*.c))
-HEADERS=$(wildcard include/ndm/*.h)
+LIB_BASE   := libndm
 
-TEST_DIR=tests
-TEST_PREFIX=test_
-TESTS=$(patsubst %.c,%,$(wildcard $(TEST_DIR)/$(TEST_PREFIX)*.c))
-TEST_OBJ=$(TEST_DIR)/test.o
+LIB_STATIC := $(LIB_BASE).a
+LIB_SHARED := $(LIB_BASE).so
+
+ifeq ($(filter static,$(MAKECMDGOALS)),static)
+LIB        := $(LIB_STATIC)
+else
+CFLAGS     += -fPIC
+LIB        := $(LIB_SHARED)
+endif
+
+PREFIX      = /usr
+EXEC_PREFIX = $(PREFIX)
+LIB_DIR     = $(EXEC_PREFIX)/lib
+INCLUDE_DIR = $(PREFIX)/include
+
+OBJS        = $(patsubst %.c,%.o,$(wildcard src/*.c))
+HEADERS     = $(wildcard include/ndm/*.h)
+
+TEST_DIR    = tests
+TEST_PREFIX = test_
+TESTS       = $(patsubst %.c,%,$(wildcard $(TEST_DIR)/$(TEST_PREFIX)*.c))
+TEST_OBJ    = $(TEST_DIR)/test.o
 TEST_NO_AUTOEXEC=core core_event
 
-EXAMPLE_DIR=examples
-EXAMPLES=$(patsubst %.c,%,$(wildcard $(EXAMPLE_DIR)/*.c))
+EXAMPLE_DIR = examples
+EXAMPLES    = $(patsubst %.c,%,$(wildcard $(EXAMPLE_DIR)/*.c))
 
 ifeq ($(filter memory_debug,$(MAKECMDGOALS)),memory_debug)
-MEM_DEBUG_OBJ:=$(TEST_DIR)/memchk.o
-MEM_DEBUG_DEFS:=-D_MEMORY_LEAK_DEBUG -D_MEMORY_OVERFLOW_DEBUG -pthread
-MEM_DEBUG_CFLAGS:=$(CFLAGS) $(MEM_DEBUG_DEFS)
+MEMDBG_OBJ := $(TEST_DIR)/memchk.o
 
-CFLAGS+=$(MEM_DEBUG_DEFS) -include tests/memchk.h
-OBJS+=$(MEM_DEBUG_OBJ)
+CPPFLAGS   += -D_MEMORY_LEAK_DEBUG -D_MEMORY_OVERFLOW_DEBUG
+CFLAGS     += -include tests/memchk.h
+OBJS       += $(MEMDBG_OBJ)
 
-$(MEM_DEBUG_OBJ): $(TEST_DIR)/memchk.c
+$(MEMDBG_OBJ): $(TEST_DIR)/memchk.c
 	@echo "CC $<"
-	@$(CC) $< $(MEM_DEBUG_CFLAGS) -c -o $@ >/dev/null
+	@$(CC) $< $(CPPFLAGS) $(CFLAGS) -c -o $@ >/dev/null
 endif
 
-all: $(LIB)
+static all: $(LIB)
 
-$(LIB): Makefile $(HEADERS) $(OBJS)
-	@echo LD $(LIB)
+$(LIB_SHARED): Makefile $(HEADERS) $(OBJS)
+	@echo LD $@
 	@$(CC) -shared -o $@ $(OBJS) $(LDFLAGS)
-#	$(STRIP) $(STRIPFLAGS) $@
-	-@ls -k -1s $(LIB)
+	-@ls -k -1s $@
 
-EXEC_TESTS_ALL=\
+$(LIB_STATIC): Makefile $(HEADERS) $(OBJS)
+	@echo AR $@
+	@$(AR) rcs $@ $(OBJS)
+	-@ls -k -1s $@
+
+EXEC_TESTS_ALL = \
 	$(shell find $(TEST_DIR) -name "$(TEST_PREFIX)*" -perm -u=x -type f)
-EXEC_TESTS=$(filter-out $(addprefix \
+EXEC_TESTS = $(filter-out $(addprefix \
 	$(TEST_DIR)/$(TEST_PREFIX),$(TEST_NO_AUTOEXEC)),$(EXEC_TESTS_ALL))
-EXEC_EXAMPLES_ALL=$(shell find $(EXAMPLE_DIR) -perm -u=x -type f)
+EXEC_EXAMPLES_ALL = $(shell find $(EXAMPLE_DIR) -perm -u=x -type f)
 
 check: tests
 	-@for t in $(EXEC_TESTS); do echo; echo "Running $$t..."; $$t; done
@@ -99,22 +122,22 @@ install: $(LIB)
 
 $(TEST_OBJ): $(TEST_DIR)/test.c $(LIB)
 	@echo "CC $<"
-	@$(CC) $< $(CFLAGS) -c -o $@ >/dev/null
+	@$(CC) $< $(CPPFLAGS) $(CFLAGS) -c -o $@ >/dev/null
 
 $(TEST_DIR)/$(TEST_PREFIX)%: $(TEST_DIR)/$(TEST_PREFIX)%.c $(TEST_OBJ) $(LIB)
 	@echo "CC $<"
-	@$(CC) $< $(CFLAGS) $(TEST_OBJ) $(OBJS) $(LDFLAGS) -o $@ >/dev/null
+	@$(CC) $< $(CPPFLAGS) $(CFLAGS) $(TEST_OBJ) $(OBJS) $(LDFLAGS) -o $@ >/dev/null
 
 $(EXAMPLE_DIR)/%: $(EXAMPLE_DIR)/%.c $(LIB)
 	@echo "CC $<"
-	@$(CC) $< $(CFLAGS) $(OBJS) $(LDFLAGS) -o $@ >/dev/null
+	@$(CC) $< $(CPPFLAGS) $(CFLAGS) $(OBJS) $(LDFLAGS) -o $@ >/dev/null
 
 %.o: %.c ../include/ndm/%.h
 	@echo "CC $<"
-	@$(CC) $< $(CFLAGS) -c -o $@ >/dev/null
+	@$(CC) $< $(CPPFLAGS) $(CFLAGS) -c -o $@ >/dev/null
 
 clean:
-	rm -f src/*.o *~ *.so *.o $(LIB) $(TEST_DIR)/*.o $(EXAMPLE_DIR)/*.o
+	rm -f src/*.o *~ *.so *.o $(LIB_STATIC) $(LIB_SHARED) $(TEST_DIR)/*.o $(EXAMPLE_DIR)/*.o
 	rm -f $(EXEC_TESTS_ALL)
 	rm -f $(EXEC_EXAMPLES_ALL)
 
