@@ -34,22 +34,24 @@ void *ndm_pool_malloc(
 		const size_t size)
 {
 	void *p = NULL;
+	const size_t aligned_size = NDM_POOL_ALIGN_(size);
 
 	if (!ndm_pool_is_valid(pool)) {
 		errno = ENOMEM;
 	} else
-	if (pool->__available >= size) {
+	if (pool->__available >= aligned_size) {
 		uint8_t *block_end = (pool->__dynamic_block == NULL) ?
 			((uint8_t *) pool->__static_block) + pool->__static_block_size :
 			((uint8_t *) pool->__dynamic_block) + pool->__dynamic_block_size;
 
 		p = block_end - pool->__available;
-		pool->__available -= size;
+		pool->__available -= aligned_size;
 		pool->__total_allocated += size;
 	} else {
 		/* new dynamic block allocation */
-		const size_t need = NDM_POOL_ALIGN_(
-			size + sizeof(struct ndm_pool_block_t));
+		const size_t need =
+			NDM_POOL_ALIGN_(sizeof(struct ndm_pool_block_t)) +
+			aligned_size;
 		const size_t alloc_size =
 			need < pool->__dynamic_block_size ?
 			pool->__dynamic_block_size : need;
