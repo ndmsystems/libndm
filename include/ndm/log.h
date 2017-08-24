@@ -45,6 +45,8 @@ bool ndm_log_debug(
 		const char *const format,
 		...) NDM_ATTR_PRINTF(2, 3);
 
+int ndm_log_get_debug();
+
 void ndm_log_set_debug(
 		const enum debug_level_t debug_level);
 

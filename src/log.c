@@ -82,6 +82,11 @@ bool ndm_log_debug(
 	return false;
 }
 
+int ndm_log_get_debug()
+{
+	return __debug_level;
+}
+
 void ndm_log_set_debug(
 		const enum debug_level_t debug_level)
 {
