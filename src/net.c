@@ -70,6 +70,10 @@ bool ndm_net_is_domain_name(const char *const name)
 int ndm_getaddrinfo(const char *node, const char *service,
 		const struct addrinfo *hints, struct addrinfo **res)
 {
+	if (res == NULL) {
+		return EAI_SYSTEM;
+	}
+
 	*res = NULL;
 
 	struct ndm_ip_sockaddr_t sa = NDM_IP_SOCKADDR_ANY;
