@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <ctype.h>
 #include <stdint.h>
 #include <stddef.h>
@@ -8,6 +9,7 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <netdb.h>
 #include <ndm/net.h>
 #include <ndm/ip_sockaddr.h>
 #include <ndm/poll.h>
@@ -17,8 +19,8 @@
 
 #define NDM_NET_SUBDOMAIN_MAX_LEN_		63
 
-#define NDN_RPC_PORT_					54321
-#define NDN_RPC_TIMEOUT_				5000 // ms
+#define NDM_NET_NDN_RPC_PORT_			54321
+#define NDM_NET_NDN_RPC_TIMEOUT_		5000 // ms
 
 bool ndm_net_is_domain_name(const char *const name)
 {
@@ -67,59 +69,80 @@ bool ndm_net_is_domain_name(const char *const name)
 	return valid;
 }
 
-int ndm_getaddrinfo(const char *node, const char *service,
-		const struct addrinfo *hints, struct addrinfo **res)
+static int ndm_net_fill_addrinfo_(
+		const char *node,
+		struct addrinfo *prev,
+		struct addrinfo **res)
+{
+	struct ndm_ip_sockaddr_t sa = NDM_IP_SOCKADDR_ANY;
+
+	if (node == NULL ||
+		!ndm_ip_sockaddr_pton(node, &sa) ||
+		ndm_ip_sockaddr_is_equal(&sa, &NDM_IP_SOCKADDR_ANY))
+	{
+		return EAI_NONAME;
+	}
+
+	struct addrinfo *r = (struct addrinfo *)malloc(sizeof(*r));
+
+	if (r == NULL) {
+		return EAI_MEMORY;
+	}
+
+	memset(r, 0, sizeof(*r));
+
+	r->ai_family = ndm_ip_sockaddr_family(&sa);
+	r->ai_addrlen =
+		r->ai_family == PF_INET ?
+			sizeof(struct sockaddr_in) :
+			sizeof(struct sockaddr_in6);
+
+	struct sockaddr *s = (struct sockaddr *)malloc(sizeof(*s));
+
+	if (s == NULL)
+	{
+		free(r);
+		return EAI_MEMORY;
+	}
+
+	memset(s, 0, sizeof(*s));
+	memcpy(s, &sa, r->ai_addrlen);
+
+	r->ai_addr = s;
+	r->ai_next = prev;
+	*res = r;
+
+	return 0;
+}
+
+int ndm_net_getaddrinfo(
+		const char *node,
+		const char *service,
+		const struct addrinfo *hints,
+		struct addrinfo **res)
 {
 	if (res == NULL) {
+		errno = EFAULT;
 		return EAI_SYSTEM;
 	}
 
 	*res = NULL;
 
-	struct ndm_ip_sockaddr_t sa = NDM_IP_SOCKADDR_ANY;
-
 	if (node != NULL &&
-		ndm_ip_sockaddr_pton(node, &sa) &&
-		!ndm_ip_sockaddr_is_equal(&sa, &NDM_IP_SOCKADDR_ANY)) {
-
-		struct addrinfo *r = (struct addrinfo *)malloc(sizeof(struct addrinfo));
-
-		if (r == NULL) {
-			return EAI_MEMORY;
-		}
-
-		memset(r, 0, sizeof(*r));
-
-		r->ai_family = ndm_ip_sockaddr_family(&sa);
-		r->ai_addrlen =
-			r->ai_family == PF_INET ?
-				sizeof(struct sockaddr_in) :
-				sizeof(struct sockaddr_in6);
-
-		struct sockaddr *s = (struct sockaddr *)malloc(sizeof(struct sockaddr));
-
-		if (s == NULL) {
-			free(r);
-			return EAI_MEMORY;
-		}
-
-		memset(s, 0, sizeof(*s));
-		memcpy(s, &sa, r->ai_addrlen);
-
-		r->ai_addr = s;
-		*res = r;
-
+		ndm_net_fill_addrinfo_(node, NULL, res) == 0)
+	{
 		return 0;
 	}
 
 	if (node == NULL ||
-		!ndm_net_is_domain_name(node) ||
-		res == NULL) {
-		return EAI_SYSTEM;
+		!ndm_net_is_domain_name(node))
+	{
+		return EAI_NONAME;
 	}
 
 	if (hints != NULL &&
-		!(hints->ai_family == PF_UNSPEC || hints->ai_family == PF_INET)) {
+		!(hints->ai_family == PF_UNSPEC || hints->ai_family == PF_INET))
+	{
 		return EAI_FAMILY;
 	}
 
@@ -144,13 +167,19 @@ int ndm_getaddrinfo(const char *node, const char *service,
 
 	int flags = 0;
 
-	if ((flags = fcntl(sockfd, F_GETFL, 0)) == -1) {
+	if ((flags = fcntl(sockfd, F_GETFL, 0)) == -1)
+	{
+		const int err = errno;
 		close(sockfd);
+		errno = err;
 		return EAI_SYSTEM;
 	}
 
-	if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK) == -1) {
+	if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK) == -1) 
+	{
+		const int err = errno;
 		close(sockfd);
+		errno = err;
 		return EAI_SYSTEM;
 	}
 
@@ -159,12 +188,15 @@ int ndm_getaddrinfo(const char *node, const char *service,
 	memset(&ndnp_addr, 0, sizeof(ndnp_addr));
 
 	ndnp_addr.sin_family = AF_INET;
-	ndnp_addr.sin_addr.s_addr = htonl(0x7F000001); // loopback
-	ndnp_addr.sin_port = htons(NDN_RPC_PORT_);
+	ndnp_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK); // loopback
+	ndnp_addr.sin_port = htons(NDM_NET_NDN_RPC_PORT_);
 
 	if (sendto(sockfd, &buffer, (size_t)req_size, 0,
-			(const struct sockaddr *)&ndnp_addr, sizeof(ndnp_addr)) < 0) {
+			(const struct sockaddr *)&ndnp_addr, sizeof(ndnp_addr)) < 0)
+	{
+		const int err = errno;
 		close(sockfd);
+		errno = err;
 		return EAI_SYSTEM;
 	}
 
@@ -175,10 +207,24 @@ int ndm_getaddrinfo(const char *node, const char *service,
 		.revents = 0
 	};
 
-	const ssize_t n = ndm_poll(&pfd, 1, NDN_RPC_TIMEOUT_);
+	const ssize_t n = ndm_poll(&pfd, 1, NDM_NET_NDN_RPC_TIMEOUT_);
+	const int err_poll = errno;
 
-	if (n <= 0 || !(pfd.events & POLLIN)) {
+	if (n < 0) {
 		close(sockfd);
+		errno = err_poll;
+		return EAI_SYSTEM;
+	}
+
+	if (n == 0) {
+		close(sockfd);
+		errno = EAI_AGAIN;
+		return EAI_SYSTEM;
+	}
+
+	if (!(pfd.events & POLLIN)) {
+		close(sockfd);
+		errno = EAI_AGAIN;
 		return EAI_SYSTEM;
 	}
 
@@ -188,14 +234,17 @@ int ndm_getaddrinfo(const char *node, const char *service,
 
 	const ssize_t answ = recvfrom(sockfd, &buffer, sizeof(buffer) - 1, 0,
 			(struct sockaddr *)&ndnp_addr, &ndnp_addr_len);
+	const int err_answ = errno;
 
 	close(sockfd);
 
 	if (ndnp_addr_len != sizeof(ndnp_addr)) {
+		errno = EIO;
 		return EAI_SYSTEM;
 	}
 
 	if (answ < 1) {
+		errno = err_answ;
 		return EAI_SYSTEM;
 	}
 
@@ -218,73 +267,40 @@ int ndm_getaddrinfo(const char *node, const char *service,
 	/* Third answer is a list of "<fqdn> <a> <address>" */
 
 	char *sptr = NULL;
-	char *token = strtok_r(buffer, " ", &sptr);
+	char *token = NULL;
 	unsigned int step = 0;
 
-	while (token != NULL) {
-		if (step % 3 == 2) {
-			char ab[NDM_IP_SOCKADDR_LEN];
-			char *pab = ab;
-			char *pt = token;
-
-			memset(ab, 0, sizeof(ab));
-
-			/* strtok_r() often leaves delimiters, so strip it */
-
-			while (*pt != '\0') {
-				if (!isspace(*pt) && (pab < ab + NDM_IP_SOCKADDR_LEN)) {
-					*pab = *pt;
-					++pab;
-				}
-				++pt;
-			}
-
-			sa = NDM_IP_SOCKADDR_ANY;
-
-			if (ndm_ip_sockaddr_pton(ab, &sa) &&
-				!ndm_ip_sockaddr_is_equal(&sa, &NDM_IP_SOCKADDR_ANY)) {
-
-				struct addrinfo *r = (struct addrinfo *)malloc(
-					sizeof(struct addrinfo));
-
-				if (r == NULL) {
-					goto next_step;
-				}
-
-				memset(r, 0, sizeof(*r));
-
-				r->ai_family = ndm_ip_sockaddr_family(&sa);
-				r->ai_addrlen =
-					r->ai_family == PF_INET ?
-						sizeof(struct sockaddr_in) :
-						sizeof(struct sockaddr_in6);
-
-				struct sockaddr *s = (struct sockaddr *)malloc(
-						sizeof(struct sockaddr));
-
-				if (s == NULL) {
-					free(r);
-					goto next_step;
-				}
-
-				memset(s, 0, sizeof(*s));
-				memcpy(s, &sa, r->ai_addrlen);
-
-				r->ai_addr = s;
-				r->ai_next = *res; 
-				*res = r;
-			}
+	for (token = strtok_r(buffer, " ", &sptr), step = 0;
+		 token != NULL;
+		 ++step, token = strtok_r(NULL, " ", &sptr))
+	{
+		if (step % 3 != 2) {
+			continue;
 		}
 
-next_step:
-		++step;
-		token = strtok_r(NULL, " ", &sptr);
+		char ab[NDM_IP_SOCKADDR_LEN];
+		char *pab = ab;
+		char *pt = token;
+
+		memset(ab, 0, sizeof(ab));
+
+		/* strtok_r() often leaves delimiters, so strip it */
+
+		while (*pt != '\0') {
+			if (!isspace(*pt) && (pab < ab + NDM_IP_SOCKADDR_LEN)) {
+				*pab = *pt;
+				++pab;
+			}
+			++pt;
+		}
+
+		ndm_net_fill_addrinfo_(ab, *res, res);
 	}
 
 	return 0;
 }
 
-void ndm_freeaddrinfo(struct addrinfo *res)
+void ndm_net_freeaddrinfo(struct addrinfo *res)
 {
 	while (res != NULL) {
 		struct addrinfo *curr = res;
@@ -294,4 +310,9 @@ void ndm_freeaddrinfo(struct addrinfo *res)
 		free(curr->ai_addr);
 		free(curr);
 	}
+}
+
+const char *ndm_net_gai_strerror(int errcode)
+{
+	return gai_strerror(errcode);
 }
