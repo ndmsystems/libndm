@@ -231,7 +231,6 @@ int ndm_net_getaddrinfo(
 	memset(buffer, 0, sizeof(buffer));
 
 	socklen_t ndnp_addr_len = 0;
-
 	const ssize_t answ = recvfrom(sockfd, &buffer, sizeof(buffer) - 1, 0,
 			(struct sockaddr *)&ndnp_addr, &ndnp_addr_len);
 	const int err_answ = errno;
@@ -294,7 +293,17 @@ int ndm_net_getaddrinfo(
 			++pt;
 		}
 
-		ndm_net_fill_addrinfo_(ab, *res, res);
+		const int exit_code = ndm_net_fill_addrinfo_(ab, *res, res);
+
+		if (exit_code == 0) {
+			continue;
+		}
+
+		ndm_net_freeaddrinfo(*res);
+
+		*res = NULL;
+
+		return exit_code;
 	}
 
 	return 0;
