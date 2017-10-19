@@ -22,6 +22,9 @@
 #define NDM_NET_NDN_RPC_PORT_			54321
 #define NDM_NET_NDN_RPC_TIMEOUT_		5000 // ms
 
+#define NDM_NET_ANSWER_NOT_RES_			"not resolved"
+#define NDM_NET_ANSWER_POLL_			"poll "
+
 bool ndm_net_is_domain_name(const char *const name)
 {
 	// ^([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.) ->
@@ -83,7 +86,7 @@ static int ndm_net_fill_addrinfo_(
 		return EAI_NONAME;
 	}
 
-	struct addrinfo *r = (struct addrinfo *)malloc(sizeof(*r));
+	struct addrinfo *r = (struct addrinfo *) malloc(sizeof(*r));
 
 	if (r == NULL) {
 		return EAI_MEMORY;
@@ -97,7 +100,7 @@ static int ndm_net_fill_addrinfo_(
 			sizeof(struct sockaddr_in) :
 			sizeof(struct sockaddr_in6);
 
-	struct sockaddr *s = (struct sockaddr *)malloc(sizeof(*s));
+	struct sockaddr *s = (struct sockaddr *) malloc(sizeof(*s));
 
 	if (s == NULL)
 	{
@@ -123,20 +126,60 @@ int ndm_net_getaddrinfo(
 {
 	if (res == NULL) {
 		errno = EFAULT;
+
 		return EAI_SYSTEM;
 	}
 
 	*res = NULL;
 
-	if (node != NULL &&
-		ndm_net_fill_addrinfo_(node, NULL, res) == 0)
-	{
-		return 0;
+	struct addrinfo dh;
+
+	if (node != NULL && node[0] == '*' && node[1] == '\0') {
+		node = NULL;
 	}
 
-	if (node == NULL ||
-		!ndm_net_is_domain_name(node))
-	{
+	if (service != NULL && service[0] == '*' && service[1] == '\0') {
+		service = NULL;
+	}
+
+	if (node == NULL && service == NULL) {
+		return EAI_NONAME;
+	}
+
+	if (hints == NULL) {
+		memset(&dh, 0, sizeof(dh));
+		if (PF_UNSPEC != 0) {
+			dh.ai_family = PF_UNSPEC;
+		}
+		hints = &dh;
+	}
+
+	if (hints->ai_flags & ~(AI_PASSIVE|AI_CANONNAME|AI_NUMERICHOST|
+			AI_ADDRCONFIG|AI_V4MAPPED|AI_NUMERICSERV|AI_ALL)) {
+		return EAI_BADFLAGS;
+	}
+
+	if ((hints->ai_flags & AI_CANONNAME) && node == NULL) {
+		return EAI_BADFLAGS;
+	}
+
+	if (service != NULL) {
+		return getaddrinfo(node, service, hints, res);
+	}
+
+	if (node != NULL) {
+		const int exit_code = ndm_net_fill_addrinfo_(node, NULL, res);
+
+		if (exit_code == 0) {
+			return 0;
+		}
+
+		if (exit_code != EAI_NONAME) {
+			return exit_code;
+		}
+	}
+
+	if (node == NULL || !ndm_net_is_domain_name(node)) {
 		return EAI_NONAME;
 	}
 
@@ -148,14 +191,18 @@ int ndm_net_getaddrinfo(
 
 	char buffer[16 * 1024];
 
-	memset(buffer, 0, sizeof(buffer));
-
 	/* request is "resolv-conf a <fqdn>" */
 
-	const int req_size = snprintf(buffer, sizeof(buffer) - 1,
+	const int req_size = snprintf(buffer, sizeof(buffer),
 			"resolv-conf a %s", node);
 
 	if (req_size < 0) {
+		return EAI_SYSTEM;
+	}
+
+	if (req_size > (sizeof(buffer) - 1)) {
+		errno = ENOMEM;
+
 		return EAI_SYSTEM;
 	}
 
@@ -167,19 +214,21 @@ int ndm_net_getaddrinfo(
 
 	int flags = 0;
 
-	if ((flags = fcntl(sockfd, F_GETFL, 0)) == -1)
-	{
+	if ((flags = fcntl(sockfd, F_GETFL, 0)) == -1) {
 		const int err = errno;
+
 		close(sockfd);
 		errno = err;
+
 		return EAI_SYSTEM;
 	}
 
-	if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK) == -1) 
-	{
+	if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK) == -1) {
 		const int err = errno;
+
 		close(sockfd);
 		errno = err;
+
 		return EAI_SYSTEM;
 	}
 
@@ -195,15 +244,17 @@ int ndm_net_getaddrinfo(
 			(const struct sockaddr *)&ndnp_addr, sizeof(ndnp_addr)) < 0)
 	{
 		const int err = errno;
+
 		close(sockfd);
 		errno = err;
+
 		return EAI_SYSTEM;
 	}
 
 	struct pollfd pfd =
 	{
 		.fd = sockfd,
-		.events = POLLIN | POLLERR | POLLHUP | POLLNVAL,
+		.events = POLLIN,
 		.revents = 0
 	};
 
@@ -213,22 +264,37 @@ int ndm_net_getaddrinfo(
 	if (n < 0) {
 		close(sockfd);
 		errno = err_poll;
+
 		return EAI_SYSTEM;
 	}
 
 	if (n == 0) {
 		close(sockfd);
-		errno = EAI_AGAIN;
+		errno = ETIMEDOUT;
+
 		return EAI_SYSTEM;
 	}
 
-	if (!(pfd.events & POLLIN)) {
+	if (!(pfd.revents & POLLIN)) {
 		close(sockfd);
-		errno = EAI_AGAIN;
+		errno = ETIMEDOUT;
+
 		return EAI_SYSTEM;
 	}
 
-	memset(buffer, 0, sizeof(buffer));
+	if (pfd.revents & POLLHUP || pfd.revents & POLLERR) {
+		close(sockfd);
+		errno = ECONNRESET;
+
+		return EAI_SYSTEM;
+	}
+
+	if (pfd.revents & POLLNVAL) {
+		close(sockfd);
+		errno = EBADF;
+
+		return EAI_SYSTEM;
+	}
 
 	socklen_t ndnp_addr_len = 0;
 	const ssize_t answ = recvfrom(sockfd, &buffer, sizeof(buffer) - 1, 0,
@@ -239,27 +305,33 @@ int ndm_net_getaddrinfo(
 
 	if (ndnp_addr_len != sizeof(ndnp_addr)) {
 		errno = EIO;
+
 		return EAI_SYSTEM;
 	}
 
-	if (answ < 1) {
+	if (answ < 0) {
 		errno = err_answ;
+
 		return EAI_SYSTEM;
 	}
+
+	if (answ == 0) {
+		errno = EIO;
+
+		return EAI_SYSTEM;
+	}
+
+	buffer[answ] = '\0';
 
 	/* One of three answers can be "not resolved" */
 
-	const size_t not_res_len = strlen("not resolved");
-
-	if (answ >= not_res_len && !memcmp(buffer, "not resolved", not_res_len)) {
+	if (!strncmp(buffer, NDM_NET_ANSWER_NOT_RES_, (size_t)answ)) {
 		return EAI_NONAME;
 	}
 
 	/* Second answer can be "poll <hex-token>" */
 
-	const size_t tok_len = strlen("poll ");
-
-	if (answ >= tok_len && !memcmp(buffer, "poll ", tok_len)) {
+	if (!strncmp(buffer, NDM_NET_ANSWER_POLL_, (size_t)answ)) {
 		return EAI_AGAIN;
 	}
 
@@ -306,7 +378,7 @@ int ndm_net_getaddrinfo(
 		return exit_code;
 	}
 
-	return 0;
+	return *res == NULL ? EAI_NONAME : 0;
 }
 
 void ndm_net_freeaddrinfo(struct addrinfo *res)
