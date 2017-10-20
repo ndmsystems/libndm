@@ -11,8 +11,9 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <ndm/net.h>
-#include <ndm/ip_sockaddr.h>
+#include <ndm/int.h>
 #include <ndm/poll.h>
+#include <ndm/ip_sockaddr.h>
 
 #define NDM_NET_DOMAIN_MIN_LEN_			1
 #define NDM_NET_DOMAIN_MAX_LEN_			253
@@ -24,6 +25,17 @@
 
 #define NDM_NET_ANSWER_NOT_RES_			"not resolved"
 #define NDM_NET_ANSWER_POLL_			"poll "
+
+#define NDM_NET_ANSWER_MAX_SIZE_		(16 * 1024)
+
+#define NDM_NET_AI_FLAGS_ANY_			\
+	(AI_PASSIVE		| \
+	 AI_CANONNAME	| \
+	 AI_NUMERICHOST | \
+	 AI_ADDRCONFIG	| \
+	 AI_V4MAPPED	| \
+	 AI_NUMERICSERV	| \
+	 AI_ALL)
 
 bool ndm_net_is_domain_name(const char *const name)
 {
@@ -72,51 +84,55 @@ bool ndm_net_is_domain_name(const char *const name)
 	return valid;
 }
 
-static int ndm_net_fill_addrinfo_(
-		const char *node,
+static int ndm_net_fill_addrinfo(
+		const char *const node,
 		struct addrinfo *prev,
 		struct addrinfo **res)
 {
 	struct ndm_ip_sockaddr_t sa = NDM_IP_SOCKADDR_ANY;
 
-	if (node == NULL ||
-		!ndm_ip_sockaddr_pton(node, &sa) ||
-		ndm_ip_sockaddr_is_equal(&sa, &NDM_IP_SOCKADDR_ANY))
-	{
+	if (!ndm_ip_sockaddr_pton(node, &sa)) {
 		return EAI_NONAME;
 	}
 
-	struct addrinfo *r = (struct addrinfo *) malloc(sizeof(*r));
+	struct addrinfo *r;
+	const size_t info_size = NDM_INT_ALIGN(sizeof(*r), sizeof(void *));
+	const socklen_t addrlen = ndm_ip_sockaddr_size(&sa);
+
+	r = (struct addrinfo *) calloc(1, info_size + addrlen);
 
 	if (r == NULL) {
 		return EAI_MEMORY;
 	}
 
-	memset(r, 0, sizeof(*r));
-
 	r->ai_family = ndm_ip_sockaddr_family(&sa);
-	r->ai_addrlen =
-		r->ai_family == PF_INET ?
-			sizeof(struct sockaddr_in) :
-			sizeof(struct sockaddr_in6);
-
-	struct sockaddr *s = (struct sockaddr *) malloc(sizeof(*s));
-
-	if (s == NULL)
-	{
-		free(r);
-
-		return EAI_MEMORY;
-	}
-
-	memset(s, 0, sizeof(*s));
-	memcpy(s, &sa, r->ai_addrlen);
-
-	r->ai_addr = s;
+	r->ai_addrlen = addrlen;
+	r->ai_addr = (struct sockaddr *) (((uint8_t *) r) + info_size);
 	r->ai_next = prev;
+
+	memcpy(r->ai_addr, &sa, addrlen);
+
 	*res = r;
 
 	return 0;
+}
+
+static inline void ndm_net_skip_spaces(char **p)
+{
+	while (isspace(**p)) {
+		(*p)++;
+	}
+}
+
+static void ndm_net_skip_nonspaces(char **p)
+{
+	char *ptr = *p;
+
+	while (!isspace(*ptr) && *ptr != '\0') {
+		ptr++;
+	}
+
+	*p = ptr;
 }
 
 int ndm_net_getaddrinfo(
@@ -125,6 +141,12 @@ int ndm_net_getaddrinfo(
 		const struct addrinfo *hints,
 		struct addrinfo **res)
 {
+	if (service != NULL) {
+		errno = EINVAL;
+
+		return EAI_SYSTEM;
+	}
+
 	if (res == NULL) {
 		errno = EFAULT;
 
@@ -133,75 +155,63 @@ int ndm_net_getaddrinfo(
 
 	*res = NULL;
 
-	struct addrinfo dh;
-
-	if (node != NULL && node[0] == '*' && node[1] == '\0') {
-		node = NULL;
-	}
-
-	if (service != NULL && service[0] == '*' && service[1] == '\0') {
-		service = NULL;
-	}
-
-	if (node == NULL && service == NULL) {
+	if (node == NULL) {
 		return EAI_NONAME;
 	}
+
+	struct addrinfo dh;
 
 	if (hints == NULL) {
 		memset(&dh, 0, sizeof(dh));
+
 		if (PF_UNSPEC != 0) {
 			dh.ai_family = PF_UNSPEC;
 		}
+
 		hints = &dh;
 	}
 
-	if (hints->ai_flags & ~(AI_PASSIVE|AI_CANONNAME|AI_NUMERICHOST|
-			AI_ADDRCONFIG|AI_V4MAPPED|AI_NUMERICSERV|AI_ALL)) {
+	if (hints->ai_flags & ~NDM_NET_AI_FLAGS_ANY_) {
 		return EAI_BADFLAGS;
 	}
 
-	if ((hints->ai_flags & AI_CANONNAME) && node == NULL) {
+	if (hints->ai_flags & AI_CANONNAME) {
 		return EAI_BADFLAGS;
 	}
 
-	if (service != NULL) {
-		return getaddrinfo(node, service, hints, res);
+	int exit_code = ndm_net_fill_addrinfo(node, NULL, res);
+
+	if (exit_code == 0) {
+		return 0;
 	}
 
-	if (node != NULL) {
-		const int exit_code = ndm_net_fill_addrinfo_(node, NULL, res);
-
-		if (exit_code == 0) {
-			return 0;
-		}
-
-		if (exit_code != EAI_NONAME) {
-			return exit_code;
-		}
+	if (exit_code != EAI_NONAME) {
+		return exit_code;
 	}
 
-	if (node == NULL || !ndm_net_is_domain_name(node)) {
+	if (hints->ai_flags & AI_NUMERICHOST) {
 		return EAI_NONAME;
 	}
 
-	if (hints != NULL &&
-		!(hints->ai_family == PF_UNSPEC || hints->ai_family == PF_INET))
-	{
+	if (!ndm_net_is_domain_name(node)) {
+		return EAI_NONAME;
+	}
+
+	if (!(hints->ai_family == PF_UNSPEC || hints->ai_family == PF_INET)) {
 		return EAI_FAMILY;
 	}
 
-	char buffer[16 * 1024];
+	char buf[NDM_NET_ANSWER_MAX_SIZE_];
 
 	/* request is "resolv-conf a <fqdn>" */
 
-	const int req_size = snprintf(buffer, sizeof(buffer),
-			"resolv-conf a %s", node);
+	const int req_len = snprintf(buf, sizeof(buf), "resolv-conf a %s", node);
 
-	if (req_size < 0) {
+	if (req_len < 0) {
 		return EAI_SYSTEM;
 	}
 
-	if (req_size > (sizeof(buffer) - 1)) {
+	if (req_len >= sizeof(buf)) {
 		errno = ENOMEM;
 
 		return EAI_SYSTEM;
@@ -213,9 +223,9 @@ int ndm_net_getaddrinfo(
 		return EAI_SYSTEM;
 	}
 
-	int flags = 0;
+	const int flags = fcntl(sockfd, F_GETFL, 0);
 
-	if ((flags = fcntl(sockfd, F_GETFL, 0)) == -1) {
+	if (flags == -1) {
 		const int err = errno;
 
 		close(sockfd);
@@ -233,16 +243,15 @@ int ndm_net_getaddrinfo(
 		return EAI_SYSTEM;
 	}
 
-	struct sockaddr_in ndnp_addr;
+	struct sockaddr_in ndnp_addr =
+	{
+		.sin_family = AF_INET,
+		.sin_port = htons(NDM_NET_NDN_RPC_PORT_),
+		.sin_addr.s_addr = htonl(INADDR_LOOPBACK)
+	};
 
-	memset(&ndnp_addr, 0, sizeof(ndnp_addr));
-
-	ndnp_addr.sin_family = AF_INET;
-	ndnp_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK); // loopback
-	ndnp_addr.sin_port = htons(NDM_NET_NDN_RPC_PORT_);
-
-	if (sendto(sockfd, &buffer, (size_t)req_size, 0,
-			(const struct sockaddr *)&ndnp_addr, sizeof(ndnp_addr)) < 0)
+	if (sendto(sockfd, buf, (size_t) req_len, 0,
+			(const struct sockaddr *) &ndnp_addr, sizeof(ndnp_addr)) < 0)
 	{
 		const int err = errno;
 
@@ -258,7 +267,6 @@ int ndm_net_getaddrinfo(
 		.events = POLLIN,
 		.revents = 0
 	};
-
 	const ssize_t n = ndm_poll(&pfd, 1, NDM_NET_NDN_RPC_TIMEOUT_);
 	const int err_poll = errno;
 
@@ -276,14 +284,7 @@ int ndm_net_getaddrinfo(
 		return EAI_SYSTEM;
 	}
 
-	if (!(pfd.revents & POLLIN)) {
-		close(sockfd);
-		errno = ETIMEDOUT;
-
-		return EAI_SYSTEM;
-	}
-
-	if (pfd.revents & POLLHUP || pfd.revents & POLLERR) {
+	if (pfd.revents & (POLLHUP | POLLERR)) {
 		close(sockfd);
 		errno = ECONNRESET;
 
@@ -297,9 +298,16 @@ int ndm_net_getaddrinfo(
 		return EAI_SYSTEM;
 	}
 
+	if (!(pfd.revents & POLLIN)) {
+		close(sockfd);
+		errno = ETIMEDOUT;
+
+		return EAI_SYSTEM;
+	}
+
 	socklen_t ndnp_addr_len = 0;
-	const ssize_t answ = recvfrom(sockfd, &buffer, sizeof(buffer) - 1, 0,
-			(struct sockaddr *)&ndnp_addr, &ndnp_addr_len);
+	const ssize_t answ = recvfrom(sockfd, buf, sizeof(buf) - 1, 0,
+			(struct sockaddr *) &ndnp_addr, &ndnp_addr_len);
 	const int err_answ = errno;
 
 	close(sockfd);
@@ -322,68 +330,50 @@ int ndm_net_getaddrinfo(
 		return EAI_SYSTEM;
 	}
 
-	buffer[answ] = '\0';
+	buf[answ] = '\0';
 
 	/* One of three answers can be "not resolved" */
 
-	if (!strncmp(buffer, NDM_NET_ANSWER_NOT_RES_, (size_t)answ)) {
+	if (strncmp(buf, NDM_NET_ANSWER_NOT_RES_, (size_t) answ) == 0) {
 		return EAI_NONAME;
 	}
 
 	/* Second answer can be "poll <hex-token>" */
 
-	if (!strncmp(buffer, NDM_NET_ANSWER_POLL_, (size_t)answ)) {
+	if (strncmp(buf, NDM_NET_ANSWER_POLL_, (size_t) answ) == 0) {
 		return EAI_AGAIN;
 	}
 
-	/* Third answer is a list of "<fqdn> <a> <address>" */
+	/* Third answer is a list of "<fqdn> <a> <address> " */
 
-	char *sptr = NULL;
-	char *token = NULL;
-	unsigned int step = 0;
-	unsigned int pos = 0;
+	char *p = buf;
 
-	for( pos = 0; buffer[pos] != '\0'; ++pos ) {
-		if( buffer[pos] == '\r' || buffer[pos] == '\n' ) {
-			buffer[pos] = ' ';
-		}
-	}
+	ndm_net_skip_spaces(&p);
 
-	for (token = strtok_r(buffer, " ", &sptr), step = 0;
-		 token != NULL;
-		 ++step, token = strtok_r(NULL, " ", &sptr))
-	{
-		if (step % 3 != 2) {
-			continue;
-		}
+	while (*p != '\0') {
+		ndm_net_skip_nonspaces(&p); /* skip FQDN */
+		ndm_net_skip_spaces(&p);
+		ndm_net_skip_nonspaces(&p); /* skip address type */
+		ndm_net_skip_spaces(&p);
 
-		char ab[NDM_IP_SOCKADDR_LEN];
-		char *pab = ab;
-		char *pt = token;
+		const char *const addr = p;
 
-		memset(ab, 0, sizeof(ab));
+		ndm_net_skip_nonspaces(&p);
 
-		/* strtok_r() often leaves delimiters, so strip it */
+		const char ch = *p;
 
-		while (*pt != '\0') {
-			if (!isspace(*pt) && (pab < ab + NDM_IP_SOCKADDR_LEN)) {
-				*pab = *pt;
-				++pab;
-			}
-			++pt;
+		*p = '\0';
+		exit_code = ndm_net_fill_addrinfo(addr, *res, res);
+
+		if (exit_code != 0) {
+			ndm_net_freeaddrinfo(*res);
+			*res = NULL;
+
+			return exit_code;
 		}
 
-		const int exit_code = ndm_net_fill_addrinfo_(ab, *res, res);
-
-		if (exit_code == 0) {
-			continue;
-		}
-
-		ndm_net_freeaddrinfo(*res);
-
-		*res = NULL;
-
-		return exit_code;
+		*p = ch;
+		ndm_net_skip_spaces(&p);
 	}
 
 	return *res == NULL ? EAI_NONAME : 0;
@@ -392,12 +382,10 @@ int ndm_net_getaddrinfo(
 void ndm_net_freeaddrinfo(struct addrinfo *res)
 {
 	while (res != NULL) {
-		struct addrinfo *curr = res;
+		struct addrinfo *ai = res;
 
 		res = res->ai_next;
-
-		free(curr->ai_addr);
-		free(curr);
+		free(ai);
 	}
 }
 
