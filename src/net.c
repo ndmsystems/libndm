@@ -105,6 +105,7 @@ static int ndm_net_fill_addrinfo_(
 	if (s == NULL)
 	{
 		free(r);
+
 		return EAI_MEMORY;
 	}
 
@@ -340,6 +341,13 @@ int ndm_net_getaddrinfo(
 	char *sptr = NULL;
 	char *token = NULL;
 	unsigned int step = 0;
+	unsigned int pos = 0;
+
+	for( pos = 0; buffer[pos] != '\0'; ++pos ) {
+		if( buffer[pos] == '\r' || buffer[pos] == '\n' ) {
+			buffer[pos] = ' ';
+		}
+	}
 
 	for (token = strtok_r(buffer, " ", &sptr), step = 0;
 		 token != NULL;
