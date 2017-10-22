@@ -668,9 +668,9 @@ bool ndm_core_event_connection_close(
 	int n = 0;
 
 	if (connection != NULL && *connection != NULL) {
-		do {
-			n = close((*connection)->fd);
-		} while (n != 0 && errno == EINTR);
+		if (close((*connection)->fd) != 0 && errno != EINTR) {
+			n = errno;
+		}
 
 		free(*connection);
 		*connection = NULL;
