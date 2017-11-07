@@ -46,7 +46,7 @@ struct ndm_ip_sockaddr_t
  * on all network interfaces. It is equal to <tt>0.0.0.0</tt>.
  */
 
-extern const struct ndm_ip_sockaddr_t const NDM_IP_SOCKADDR_ANY;
+extern const struct ndm_ip_sockaddr_t NDM_IP_SOCKADDR_ANY;
 
 /**
  * IPv6 address that indicates that the server must listen for client
@@ -54,7 +54,7 @@ extern const struct ndm_ip_sockaddr_t const NDM_IP_SOCKADDR_ANY;
  * @c #NDM_IP_SOCKADDR_ANY.
  */
 
-extern const struct ndm_ip_sockaddr_t const NDM_IP_SOCKADDR_ANY6;
+extern const struct ndm_ip_sockaddr_t NDM_IP_SOCKADDR_ANY6;
 
 /**
  * Get the address family for @a sa.
