@@ -1362,6 +1362,10 @@ static struct ndm_core_response_t *__ndm_core_do_request(
 		}
 	}
 
+	if (response == NULL) {
+		__ndm_core_message_init(&core->last_message);
+	}
+
 	if (buffer != request_static_buffer) {
 		free(buffer);
 	}
