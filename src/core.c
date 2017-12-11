@@ -1074,9 +1074,9 @@ bool ndm_core_close(
 		struct ndm_core_t *c = *core;
 
 		if (c->fd >= 0) {
-			do {
-				n = close(c->fd);
-			} while (n != 0 && errno == EINTR);
+			if (close(c->fd) != 0 && errno != EINTR) {
+				n = errno;
+			}
 		}
 
 		ndm_core_cache_clear(c, true);
