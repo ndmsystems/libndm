@@ -185,41 +185,72 @@ static void __ndm_core_message_printf(
 	}
 }
 
+static const struct ndm_xml_node_t *__ndm_core_response_message_node(
+		const struct ndm_core_response_t *response,
+		enum ndm_core_response_type_t *type)
+{
+	const struct ndm_xml_node_t *message_node = NULL;
+	const struct ndm_xml_node_t *response_node =
+		ndm_core_response_root(response);
+
+	/* info level by default */
+	*type = NDM_CORE_INFO;
+
+	if (response_node != NULL) {
+		message_node = ndm_xml_node_first_child(response_node, "message");
+
+		if (message_node != NULL) {
+			struct ndm_xml_attr_t *warning =
+				ndm_xml_node_first_attr(message_node, "warning");
+
+			if (warning == NULL) {
+				message_node = NULL;
+			} else
+			if (strcasecmp(ndm_xml_attr_value(warning), "yes") == 0) {
+				*type = NDM_CORE_WARNING;
+			} else
+			if (strcasecmp(ndm_xml_attr_value(warning), "no") == 0) {
+				*type = NDM_CORE_INFO;
+			} else {
+				message_node = NULL;
+			}
+		} else {
+			message_node = ndm_xml_node_first_child(response_node, "error");
+
+			if (message_node != NULL) {
+				struct ndm_xml_attr_t *critical =
+					ndm_xml_node_first_attr(message_node, "critical");
+
+				if (critical == NULL) {
+					message_node = NULL;
+				} else
+				if (strcasecmp(ndm_xml_attr_value(critical), "yes") == 0) {
+					*type = NDM_CORE_CRITICAL;
+				} else
+				if (strcasecmp(ndm_xml_attr_value(critical), "no") == 0) {
+					*type = NDM_CORE_ERROR;
+				} else {
+					message_node = NULL;
+				}
+			}
+		}
+	}
+
+	return message_node;
+}
+
 static void __ndm_core_message_update(
 		struct ndm_core_message_t *message,
-		struct ndm_core_response_t *response)
+		const struct ndm_core_response_t *response)
 {
-	if (response->id != message->response_id) {
-		const struct ndm_xml_node_t *response_node =
-			ndm_core_response_root(response);
-		const struct ndm_xml_node_t *message_node = NULL;
+	if (!message->received ||
+		 message->response_id != response->id)
+	{
+		enum ndm_core_response_type_t message_type = NDM_CORE_INFO;
+		const struct ndm_xml_node_t *message_node =
+			__ndm_core_response_message_node(response, &message_type);
 
 		__ndm_core_message_init(message);
-
-		message->response_id = response->id;
-
-		if ((message_node = ndm_xml_node_first_child(
-				response_node, "info")) != NULL ||
-			(message_node = ndm_xml_node_first_child(
-				response_node, "message")) != NULL)
-		{
-			message->type = NDM_CORE_INFO;
-		} else
-		if ((message_node = ndm_xml_node_first_child(
-				response_node, "warning")) != NULL)
-		{
-			message->type = NDM_CORE_WARNING;
-		} else
-		if ((message_node = ndm_xml_node_first_child(
-				response_node, "error")) != NULL)
-		{
-			message->type = NDM_CORE_ERROR;
-		} else
-		if ((message_node = ndm_xml_node_first_child(
-				response_node, "critical")) != NULL)
-		{
-			message->type = NDM_CORE_CRITICAL;
-		}
 
 		if (message_node != NULL) {
 			char *p = message->string;
@@ -233,6 +264,8 @@ static void __ndm_core_message_update(
 				ndm_xml_node_first_attr(message_node, "source");
 
 			message->received = true;
+			message->response_id = response->id;
+			message->type = message_type;
 
 			__ndm_core_message_printf(
 				message->ident, sizeof(message->ident),
@@ -252,6 +285,21 @@ static void __ndm_core_message_update(
 				{
 					/* failed to parse a message code */
 					message->code = 0;
+				} else {
+					const ndm_code_t group = NDM_CODEGROUP(message->code);
+					const ndm_code_t local = NDM_CODELOCAL(message->code);
+
+					if (message_type == NDM_CORE_WARNING) {
+						message->code = NDM_CODE_W(group, local);
+					} else
+					if (message_type == NDM_CORE_ERROR) {
+						message->code = NDM_CODE_E(group, local);
+					} else
+					if (message_type == NDM_CORE_CRITICAL) {
+						message->code = NDM_CODE_C(group, local);
+					} else {
+						message->code = NDM_CODE_I(group, local);
+					}
 				}
 			}
 
@@ -1788,21 +1836,13 @@ bool ndm_core_response_is_ok(
 enum ndm_core_response_type_t ndm_core_response_type(
 		const struct ndm_core_response_t *response)
 {
-	enum ndm_core_response_type_t type = NDM_CORE_INFO;
+	enum ndm_core_response_type_t message_type = NDM_CORE_INFO;
 
-	if (ndm_xml_node_first_child(response->root, "error") != NULL) {
-		type = NDM_CORE_ERROR;
-	} else
-	if (ndm_xml_node_first_child(response->root, "critical") != NULL) {
-		type = NDM_CORE_CRITICAL;
-	} else
-	if (ndm_xml_node_first_child(response->root, "warning") != NULL) {
-		type = NDM_CORE_WARNING;
-	} else {
-		/* NDM_CORE_INFO */
+	if (__ndm_core_response_message_node(response, &message_type) == NULL) {
+		message_type = NDM_CORE_INFO;
 	}
 
-	return type;
+	return message_type;
 }
 
 bool ndm_core_response_is_continued(

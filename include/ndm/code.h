@@ -163,4 +163,12 @@ typedef uint32_t ndm_code_t;
 
 #define NDM_CODEGROUP(code)			(((code) & 0x0fff0000) >> 16)
 
+/**
+ * Macro is used to get number of a local code by returned value.
+ *
+ * @param code Code of returned value.
+ */
+
+#define NDM_CODELOCAL(code)			(((code) & 0x0000ffff) >>  0)
+
 #endif	/* __NDM_CODE_H__ */

@@ -352,7 +352,7 @@ int main()
 		NDM_TEST(strcmp(
 			ndm_core_last_message_string(core),
 			"no such command: aaa") == 0);
-		NDM_TEST(ndm_core_last_message_code(core) == 7405600);
+		NDM_TEST(ndm_core_last_message_code(core) == 0x80710020);
 		NDM_TEST(*ndm_core_last_message_source(core) == '\0');
 		NDM_TEST(strcmp(
 			ndm_core_last_message_ident(core),
