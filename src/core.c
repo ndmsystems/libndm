@@ -1449,7 +1449,6 @@ bool ndm_core_authenticate(
 		struct ndm_core_t *core,
 		const char *const user,
 		const char *const password,
-		const char *const realm,
 		const char *const tag,
 		bool *authenticated)
 {
@@ -1468,7 +1467,6 @@ bool ndm_core_authenticate(
 		(hello_node = ndm_xml_node_append_child_str(
 			request_node, "hello", password)) != NULL &&
 		ndm_xml_node_append_attr_str(hello_node, "name", user) != NULL &&
-		ndm_xml_node_append_attr_str(hello_node, "realm", realm) != NULL &&
 		ndm_xml_node_append_attr_str(hello_node, "tag", tag) != NULL)
 	{
 		struct ndm_core_response_t *response = __ndm_core_do_request(

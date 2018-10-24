@@ -293,7 +293,6 @@ const char *ndm_core_agent(
  * @param core Pointer to the core connection instance.
  * @param user The specified user name.
  * @param password The specified password.
- * @param realm Realm name of the account.
  * @param tag Tag, which a user must have for authentication success.
  * @param authenticated A pointer to a variable that contains the authentication
  * result.
@@ -306,7 +305,6 @@ bool ndm_core_authenticate(
 		struct ndm_core_t *core,
 		const char *const user,
 		const char *const password,
-		const char *const realm,
 		const char *const tag,
 		bool *authenticated) NDM_ATTR_WUR;
 

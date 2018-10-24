@@ -37,13 +37,11 @@ int main()
 	}
 
 	NDM_TEST(ndm_core_authenticate(
-		core, "admin", "1",
-		"Undefined realm", "cli", &authenticated));
+		core, "admin", "1", "cli", &authenticated));
 	NDM_TEST(!authenticated);
 
 	NDM_TEST(ndm_core_authenticate(
-		core, "admin", "",
-		"Undefined realm", "cli", &authenticated));
+		core, "admin", "", "cli", &authenticated));
 	NDM_TEST(authenticated);
 
 	r = ndm_core_get_help(core, NDM_CORE_MODE_NO_CACHE, "no service ht");
