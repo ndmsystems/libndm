@@ -9,8 +9,10 @@
 #include <mach/mach.h>
 #include <mach/clock.h>
 
-#define CLOCK_MONOTONIC		SYSTEM_CLOCK
-#define CLOCK_REALTIME		CALENDAR_CLOCK
+#ifndef CLOCK_REALTIME
+
+#define CLOCK_MONOTONIC     SYSTEM_CLOCK
+#define CLOCK_REALTIME      CALENDAR_CLOCK
 
 static int clock_gettime(
 		const clock_id_t type,
@@ -34,7 +36,7 @@ static int clock_gettime(
 
 	return ret;
 }
-
+#endif // !CLOCK_REALTIME
 #else  // __MACH__
 
 #if !defined (_POSIX_TIMERS) || (_POSIX_TIMERS <= 0) ||	\

@@ -27,13 +27,17 @@ CPPFLAGS   ?= -D_LARGEFILE_SOURCE \
 			  -D_BSD_SOURCE \
 			  -DLIBNDM_SBCS_SUPPORT
 
+ifeq ($(UNAME),Darwin)
+CPPFLAGS   += -D_DARWIN_C_SOURCE
+endif
+
 CFLAGS     ?= -g3 -pipe -fPIC -std=c99 \
 			  -ffunction-sections -fdata-sections -fstack-protector-all \
 			  -Wall -Winit-self -Wswitch-enum -Wundef \
 			  -Wmissing-field-initializers -Wconversion \
 			  -Wredundant-decls -Wstack-protector -ftabstop=4 -Wshadow \
 			  -Wpointer-arith -I$(PWD)/include/ \
-			  -Wempty-body -Wclobbered -Waddress -Wvla -Wtype-limits
+			  -Wempty-body -Waddress -Wvla -Wtype-limits
 
 ifneq ($(UNAME),Darwin)
 LDFLAGS    += -lrt
@@ -43,13 +47,17 @@ CFLAGS     += -pthread
 LDFLAGS    += -pthread
 
 ifeq ($(filter sanitize,$(MAKECMDGOALS)),sanitize)
-CFLAGS     += -fsanitize=address -fsanitize=leak -fsanitize=undefined
-LDFLAGS    += -fsanitize=address -fsanitize=leak -fsanitize=undefined
+CFLAGS     += -fsanitize=address -fsanitize=undefined
+LDFLAGS    += -fsanitize=address -fsanitize=undefined
+ifneq ($(UNAME),Darwin)
+CFLAGS     += -fsanitize=leak
+LDFLAGS    += -fsanitize=leak
+endif
 endif
 
 ifeq ($(filter valgrind,$(MAKECMDGOALS)),valgrind)
-VG_TOOL    := `which valgrind`
-VG         := $(if $(VG_TOOL),$(VG_TOOL),$(error "No valgrind executable found"))
+VG_TOOL    := $(shell which valgrind)
+VG         := $(if $(VG_TOOL),,$(error "No valgrind executable found"))
 endif
 
 LIB_BASE   := libndm
@@ -64,7 +72,7 @@ CFLAGS     += -fPIC
 LIB        := $(LIB_SHARED)
 endif
 
-PREFIX      = /usr
+PREFIX      = /usr/local
 EXEC_PREFIX = $(PREFIX)
 LIB_DIR     = $(EXEC_PREFIX)/lib
 INCLUDE_DIR = $(PREFIX)/include

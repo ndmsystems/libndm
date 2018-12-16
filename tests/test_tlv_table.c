@@ -237,7 +237,7 @@ int main()
 		&v, NDM_TLV_TABLE_MAGIC_, NDM_TLV_TABLE_IMG_MAX_,
 		ndm_tlv_table_img_ptr(t),
 		ndm_tlv_table_img_len(t)) != 0);
-	NDM_TEST(errno == ENOTUNIQ);
+	NDM_TEST(errno == EEXIST);
 	ndm_tlv_table_free(&v);
 
 	tlv_set_tag_(t, offs, 0);
@@ -287,7 +287,7 @@ int main()
 		&v, NDM_TLV_TABLE_MAGIC_, NDM_TLV_TABLE_IMG_MAX_,
 		ndm_tlv_table_img_ptr(t),
 		ndm_tlv_table_img_len(t)) != 0);
-	NDM_TEST(errno == ENOTUNIQ);
+	NDM_TEST(errno == EEXIST);
 	ndm_tlv_table_free(&v);
 
 	tlv_set_tag_(t, offs, 3);

@@ -670,7 +670,7 @@ struct ndm_core_event_connection_t *ndm_core_event_connection_open(
 	} else {
 		bool connected = false;
 
-		if ((connection->fd = socket(PF_UNIX, SOCK_STREAM, 0)) < 0)
+		if ((connection->fd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
 		{
 			/* failed to open a new UNIX domain socket */
 
@@ -1073,7 +1073,7 @@ struct ndm_core_t *ndm_core_open(
 		if ((core->agent = ndm_string_dup(current_agent)) == NULL) {
 			errno = ENOMEM;
 		} else {
-			if ((core->fd = socket(PF_UNIX, SOCK_STREAM, 0)) < 0) {
+			if ((core->fd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0) {
 				/* failed to open a new UNIX stream socket */
 			} else {
 				struct sockaddr_un sa;

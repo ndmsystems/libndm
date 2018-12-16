@@ -29,7 +29,7 @@ const struct ndm_ip_sockaddr_t NDM_IP_SOCKADDR_ANY6 =
 		.in6 =
 		{
 #ifdef SIN6_LEN
-			.sin6_len = sizeof(struct sockaddr_in6);
+			.sin6_len = sizeof(struct sockaddr_in6),
 #endif	/* SIN6_LEN */
 			.sin6_family = AF_INET6,
 			.sin6_flowinfo = 0,

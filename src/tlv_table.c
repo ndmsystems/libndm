@@ -288,7 +288,7 @@ ndm_tlv_table_parse_img(
 
 		while (next != tlv_end) {
 			if (tlv->tag == next->tag) {
-				errno = ENOTUNIQ;
+				errno = EEXIST;
 				return -1;
 			}
 

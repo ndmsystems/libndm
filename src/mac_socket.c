@@ -7,7 +7,28 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <ndm/mac_socket.h>
+
+#ifdef __MACH__
+#include <net/if_dl.h>
+
+#define sockaddr_ll							sockaddr_dl
+#define sll_family							sdl_family
+#define sll_protocol						sdl_type
+#define sll_ifindex							sdl_index
+#define sll_halen							sdl_alen
+#define sll_addr							sdl_data
+
+#define sll_iface_t							u_short
+#define sll_protocol_t						u_char
+
+#define PF_PACKET							PF_LINK
+#define AF_PACKET							PF_PACKET
+#else
 #include <netpacket/packet.h>
+
+#define sll_iface_t							int
+#define sll_protocol_t						uint16_t
+#endif
 
 bool ndm_mac_socket_open(
 		struct ndm_mac_socket_t *s,
@@ -17,7 +38,7 @@ bool ndm_mac_socket_open(
 {
 	bool opened = false;
 
-	s->__protocol = (uint16_t) htons(protocol);
+	s->__protocol = (sll_protocol_t) htons(protocol);
 
 	if ((s->__fd = socket(PF_PACKET, SOCK_RAW, s->__protocol)) < 0) {
 		/* failed to open a socket */
@@ -32,8 +53,8 @@ bool ndm_mac_socket_open(
 		memset(&sa, 0, sizeof(sa));
 
 		sa.sll_family = AF_PACKET;
-		sa.sll_protocol = s->__protocol;
-		sa.sll_ifindex = (int) *iface_index;
+		sa.sll_protocol = (sll_protocol_t) s->__protocol;
+		sa.sll_ifindex = (sll_iface_t) *iface_index;
 
 		if (bind(s->__fd, (struct sockaddr *) &sa, sizeof(sa)) < 0) {
 			/* failed to bind */
@@ -96,7 +117,7 @@ ssize_t ndm_mac_socket_send(
 
 	sa.sll_halen = NDM_MAC_SIZE;
 	sa.sll_family = AF_PACKET;
-	sa.sll_ifindex = (int) iface_index;
+	sa.sll_ifindex = (sll_iface_t) iface_index;
 
 	memcpy(sa.sll_addr, dst->sa.sa_data, sa.sll_halen);
 
