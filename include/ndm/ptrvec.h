@@ -97,7 +97,7 @@ static inline bool ndm_ptrvec_push_front(
 static inline void ndm_ptrvec_pop_back(
 		struct ndm_ptrvec_t *v)
 {
-	return ndm_ptrvec_remove(v, v->size_ - 1);
+	ndm_ptrvec_remove(v, v->size_ - 1);
 }
 
 static inline void ndm_ptrvec_pop_front(
