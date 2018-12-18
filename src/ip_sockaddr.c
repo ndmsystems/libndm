@@ -61,7 +61,7 @@ const char *ndm_ip_sockaddr_ntop(
 
 bool ndm_ip_sockaddr_pton(
 		const char *const src,
-		struct ndm_ip_sockaddr_t *sa)
+		struct ndm_ip_sockaddr_t *const sa)
 {
 	const sa_family_t family = ndm_ip_sockaddr_family(sa);
 
