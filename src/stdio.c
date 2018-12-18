@@ -23,7 +23,7 @@ static int __ndm_vabsprintf(
 		*strp = NULL;
 		errno = EINVAL;
 	} else
-	if (size >= buffer_size) {
+	if ((size_t) size >= buffer_size) {
 		*strp = malloc((size_t) size + 1);
 
 		if (*strp == NULL) {
