@@ -1,5 +1,5 @@
+#include <ndm/endian.h>
 #include <ndm/ip_checksum.h>
-#include <arpa/inet.h>
 
 uint32_t ndm_ip_checksum_get(
 		const void *data,
@@ -22,7 +22,7 @@ uint32_t ndm_ip_checksum_get(
 	if (i == 1) {
 		const uint16_t b = *((uint8_t *) words);
 
-		s += htons((uint16_t) (b << 8));
+		s += ndm_endian_htobe16((uint16_t) (b << 8));
 	}
 
 	return s;
