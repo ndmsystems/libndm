@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
+#include <inttypes.h>
 #include <arpa/inet.h>
-// #include <sys/param.h>
 #include <ndm/md5.h>
 #include <ndm/endian.h>
 
@@ -213,11 +213,12 @@ const char* ndm_md5_text_digest(
 
 	ndm_md5_digest(md5, (unsigned char *) bdigest);
 	snprintf(
-		digest, NDM_MD5_TEXT_BUFFER_SIZE, "%08x%08x%08x%08x",
-		(unsigned int) (htonl(bdigest[0])),
-		(unsigned int) (htonl(bdigest[1])),
-		(unsigned int) (htonl(bdigest[2])),
-		(unsigned int) (htonl(bdigest[3])));
+		digest, NDM_MD5_TEXT_BUFFER_SIZE,
+		"%08" PRIx32 "%08" PRIx32 "%08" PRIx32 "%08" PRIx32,
+		(uint32_t) (ndm_endian_htobe32(bdigest[0])),
+		(uint32_t) (ndm_endian_htobe32(bdigest[1])),
+		(uint32_t) (ndm_endian_htobe32(bdigest[2])),
+		(uint32_t) (ndm_endian_htobe32(bdigest[3])));
 
 	return digest;
 }
