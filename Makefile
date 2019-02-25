@@ -77,7 +77,7 @@ EXEC_PREFIX = $(PREFIX)
 LIB_DIR     = $(EXEC_PREFIX)/lib
 INCLUDE_DIR = $(PREFIX)/include
 
-OBJS        = $(patsubst %.c,%.o,$(wildcard src/*.c))
+OBJS        = $(patsubst %.c,%.o,$(sort $(wildcard src/*.c)))
 HEADERS     = $(wildcard include/ndm/*.h)
 
 TEST_DIR    = tests
