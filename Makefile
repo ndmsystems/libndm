@@ -105,7 +105,7 @@ static all: $(LIB)
 
 $(LIB_SHARED): Makefile $(HEADERS) $(OBJS)
 	@echo LD $@
-	@$(CC) -shared -o $@ $(OBJS) $(LDFLAGS)
+	@$(CC) -shared -Wl,-soname,$(LIB_SHARED) -o $@ $(OBJS) $(LDFLAGS)
 	-@ls -k -1s $@
 
 $(LIB_STATIC): Makefile $(HEADERS) $(OBJS)
