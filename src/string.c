@@ -8,7 +8,7 @@ char *ndm_string_dup(const char *const s)
 	char *s_copy = malloc(buf_size);
 
 	if (s_copy != NULL) {
-		strncpy(s_copy, s, buf_size);
+		memcpy(s_copy, s, buf_size);
 	}
 
 	return s_copy;
