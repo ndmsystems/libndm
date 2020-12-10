@@ -132,6 +132,7 @@ bool ndm_feedback_ve(
 				if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
 					/* the process stopped abnormally */
 					error = EIO;
+					pid = 0;
 				} else {
 					ret = 0;
 				}
@@ -145,8 +146,10 @@ bool ndm_feedback_ve(
 			error == 0);
 
 		if (ret != 0) {
-			kill(pid, SIGKILL);
-			waitpid(pid, NULL, 0);
+			if (pid != 0) {
+				kill(pid, SIGKILL);
+				waitpid(pid, NULL, 0);
+			}
 
 			errno =
 				error != 0 ? error :
