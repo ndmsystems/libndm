@@ -15,12 +15,13 @@
 bool ndm_spawn_default_at_exec(
 		const char *const argv[],
 		const char *const envp[],
+		const int fd_max,
 		const int control_fd,
 		void *user_data)
 {
 	/* make sure all opened descriptors are closed, except STDIO
 	 * ones and console_fd which will be closed automatically. */
-	int fd = (int) sysconf(_SC_OPEN_MAX) - 1;
+	int fd = fd_max;
 	sigset_t set;
 
 	while (fd > STDERR_FILENO) {
@@ -53,6 +54,7 @@ pid_t ndm_spawn_process(
 		bool (*at_exec)(
 			const char *const argv[],
 			const char *const envp[],
+			const int fd_max,
 			const int control_fd,
 			void *user_data))
 {
@@ -62,6 +64,10 @@ pid_t ndm_spawn_process(
 	if (pipe(fb_fd) != 0) {
 		/* can't create an execution feedback pipe */
 	} else {
+		/* call @c sysconf() before a fork(); after the @c fork()
+		 * in a child process only async-signal-safe functions
+		 * can be used (see "man 7 signal" for a list) */
+		const int fd_max = (int) sysconf(_SC_OPEN_MAX) - 1;
 		int flags;
 
 		if (((flags = fcntl(fb_fd[1], F_GETFD)) == -1) ||
@@ -114,7 +120,7 @@ pid_t ndm_spawn_process(
 				/* failed to setup environment variables */
 			} else
 			if (at_exec != NULL &&
-				!at_exec(argv, envp, fb_fd[1], user_data))
+				!at_exec(argv, envp, fd_max, fb_fd[1], user_data))
 			{
 				/* at_exec() returned an error in the "errno" variable */
 			} else {
