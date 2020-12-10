@@ -1,4 +1,5 @@
 #include <fcntl.h>
+#include <stdio.h>
 #include <errno.h>
 #include <signal.h>
 #include <stdint.h>
@@ -67,6 +68,11 @@ pid_t ndm_spawn_process(
 			(fcntl(fb_fd[1], F_SETFD, flags | FD_CLOEXEC) == -1))
 		{
 			/* can't initialize a feedback pipe */
+		} else
+		/* flush all opened I/O streams before @c fork(); after a fork
+		 * in a child process no stream writes are allowed */
+		if (fflush(NULL) == EOF) {
+			/* failed to flush */
 		} else
 		if ((pid = fork()) < 0) {
 			/* can't fork a process */
