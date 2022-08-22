@@ -10,6 +10,28 @@
 #define ARPHRD_ETHER									1
 #endif
 
+#define MAC_ADDR_PATTERN_								"00:00:00:00:00:00"
+#define NH_												UINT8_MAX
+
+static const uint8_t HEX_DIGITS_[256] = {
+	NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,
+	NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,
+	NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,
+	  0,  1,  2,  3,  4,  5,  6,  7,  8,  9,NH_,NH_,NH_,NH_,NH_,NH_,
+	NH_, 10, 11, 12, 13, 14, 15,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,
+	NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,
+	NH_, 10, 11, 12, 13, 14, 15,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,
+	NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,
+	NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,
+	NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,
+	NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,
+	NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,
+	NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,
+	NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,
+	NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,
+	NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_,NH_
+};
+
 const struct ndm_mac_addr_t NDM_MAC_ADDR_ZERO = {
 	.sa =
 	{
@@ -91,22 +113,36 @@ bool ndm_mac_addr_parse(
 		const char *const str_addr,
 		struct ndm_mac_addr_t *addr)
 {
-	uint8_t octets[NDM_MAC_SIZE];
+	const size_t size = strlen(str_addr);
 
-	if (strlen(str_addr) != sizeof(addr->str) - 1 ||
-		sscanf(str_addr,
-			 "%02" SCNx8 ":%02" SCNx8 ":%02" SCNx8
-			":%02" SCNx8 ":%02" SCNx8 ":%02" SCNx8,
-			&octets[0], &octets[1], &octets[2],
-			&octets[3], &octets[4], &octets[5]) != NDM_MAC_SIZE)
-	{
-		errno = EINVAL;
-
+	if (size != sizeof(MAC_ADDR_PATTERN_) - 1) {
 		return false;
 	}
 
+	uint8_t octets[sizeof(addr->sa.sa_data)] = {0};
+	uint8_t offs = 0;
+
+	for (size_t i = 0; i < size; i++) {
+		const uint8_t p = (uint8_t) MAC_ADDR_PATTERN_[i];
+		const uint8_t c = (uint8_t) str_addr[i];
+		const uint8_t d = HEX_DIGITS_[c];
+
+		if (d != NH_) {
+			const uint8_t o = offs >> 1;
+
+			if (o >= sizeof(octets)) {
+				return false;
+			}
+
+			offs++;
+			octets[o] |= (uint8_t) (d << ((offs & 0x01) << 2));
+		} else if (p != c) {
+			return false;
+		}
+	}
+
 	addr->sa.sa_family = ARPHRD_ETHER;
-	memcpy(addr->sa.sa_data, octets, NDM_MAC_SIZE);
+	memcpy(addr->sa.sa_data, octets, sizeof(addr->sa.sa_data));
 
 	return true;
 }
