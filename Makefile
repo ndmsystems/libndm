@@ -39,7 +39,10 @@ CFLAGS     ?= -g3 -pipe -fPIC -std=c99 \
 			  -Wpointer-arith -I$(PWD)/include/ \
 			  -Wempty-body -Waddress -Wvla -Wtype-limits
 
-ifneq ($(UNAME),Darwin)
+ifeq ($(UNAME),Darwin)
+SONAME     := -install_name
+else
+SONAME     := -soname
 LDFLAGS    += -lrt
 endif
 
@@ -105,7 +108,7 @@ static all: $(LIB)
 
 $(LIB_SHARED): Makefile $(HEADERS) $(OBJS)
 	@echo LD $@
-	@$(CC) -shared -Wl,-soname,$(LIB_SHARED) -o $@ $(OBJS) $(LDFLAGS)
+	@$(CC) -shared -Wl,$(SONAME),$(LIB_SHARED) -o $@ $(OBJS) $(LDFLAGS)
 	-@ls -k -1s $@
 
 $(LIB_STATIC): Makefile $(HEADERS) $(OBJS)
