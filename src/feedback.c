@@ -3,14 +3,10 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
-#include <signal.h>
-#include <sys/wait.h>
-#include <sys/types.h>
-#include <ndm/sys.h>
 #include <ndm/time.h>
 #include <ndm/stdio.h>
-#include <ndm/spawn.h>
 #include <ndm/feedback.h>
+#include "core.h"
 
 #define NDM_FEEDBACK_WAIT_SLEEP_MSEC_				100		/* 0.1 sec. */
 
@@ -94,68 +90,5 @@ bool ndm_feedback_ve(
 		const char *const argv[],
 		const char *const env_argv[])
 {
-	int ret = -1;
-	pid_t pid;
-	struct timespec end;
-
-	ndm_time_get_monotonic(&end);
-	ndm_time_add_msec(&end, timeout_msec);
-
-	if ((pid = ndm_spawn(argv, env_argv)) != NDM_SPAWN_INVALID_PID) {
-		bool timedout = false;
-		int error = 0;
-
-		do {
-			int status;
-			const pid_t p = waitpid(pid, &status, WNOHANG);
-
-			if (p == 0) {
-				/* wait for a pid */
-				struct timespec now;
-
-				ndm_time_get_monotonic(&now);
-				timedout = ndm_time_greater_or_equal(&now, &end);
-
-				if (!timedout) {
-					struct timespec t = end;
-					int64_t msec;
-
-					ndm_time_sub(&t, &now);
-					msec = ndm_time_to_msec(&t);
-
-					ndm_sys_sleep_msec(
-						msec <= NDM_FEEDBACK_WAIT_SLEEP_MSEC_ ?
-						msec :  NDM_FEEDBACK_WAIT_SLEEP_MSEC_);
-				}
-			} else if (p == pid) {
-				/* the process terminated */
-				if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
-					/* the process stopped abnormally */
-					error = EIO;
-					pid = 0;
-				} else {
-					ret = 0;
-				}
-			} else {
-				error = errno;
-			}
-		} while (
-			ret != 0 &&
-			!ndm_sys_is_interrupted() &&
-			!timedout &&
-			error == 0);
-
-		if (ret != 0) {
-			if (pid != 0) {
-				kill(pid, SIGKILL);
-				waitpid(pid, NULL, 0);
-			}
-
-			errno =
-				error != 0 ? error :
-				timedout ? ETIMEDOUT : EINTR;
-		}
-	}
-
-	return (ret == 0) ? true : false;
+	return ndm_core_feedback_ve(timeout_msec, argv, env_argv);
 }

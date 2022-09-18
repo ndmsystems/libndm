@@ -1,5 +1,7 @@
+#include <poll.h>
 #include <errno.h>
 #include <stdio.h>
+#include <signal.h>
 #include <unistd.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -19,16 +21,26 @@
 #include <ndm/macro.h>
 #include <ndm/stdio.h>
 #include <ndm/string.h>
+#include <ndm/visibility.h>
 #include <ndm/ip_sockaddr.h>
 
 #define NDM_CORE_SOCKET_								"/var/run/ndm.core.socket"
 #define NDM_CORE_EVENT_SOCKET_							"/var/run/ndm.event.socket"
+#define NDM_CORE_FEEDBACK_SOCKET_						"/var/run/ndm.feedback.socket"
 
 /**
  * A default agent name should be an empty string
  * to prevent NDM agent changing.
  **/
 #define NDM_CORE_DEFAULT_AGENT_							""
+
+/**
+ * During first @c NDM_CORE_INTBLOCK_TIMEOUT_ milliseconds
+ * any core I/O operation always is in a non-interruptible state.
+ * This allows to send requests or feedbacks while some short period
+ * even when a process is in an interrupted state.
+ **/
+#define NDM_CORE_INTBLOCK_TIMEOUT_						1000
 
 #define NDM_CORE_STATIC_BUFFER_SIZE_					1024
 
@@ -54,6 +66,16 @@
 #define NDM_CORE_EVENT_CONNECTION_BUFFER_SIZE_			4096
 #define NDM_CORE_EVENT_INITIAL_BUFFER_SIZE_				1024
 #define NDM_CORE_EVENT_DYNAMIC_BLOCK_SIZE_				1024
+
+#define NDM_CORE_FEEDBACK_DYNAMIC_BUFFER_SIZE_			1024
+#define NDM_CORE_FEEDBACK_BUFFER_SIZE_					256
+
+#define NDM_CORE_FEEDBACK_NODE_FEEDBACK_				"feedback"
+#define NDM_CORE_FEEDBACK_NODE_FROM_					"from"
+#define NDM_CORE_FEEDBACK_NODE_INPUT_					"input"
+#define NDM_CORE_FEEDBACK_NODE_ENVIRONMENT_				"environment"
+#define NDM_CORE_FEEDBACK_NODE_ITEM_					"item"
+#define NDM_CORE_FEEDBACK_NODE_EXIT_					"exit"
 
 #define NDM_CORE_MESSAGE_STRING_MAX_SIZE_				512
 #define NDM_CORE_MESSAGE_IDENT_MAX_SIZE_				128
@@ -381,72 +403,161 @@ static inline bool __ndm_core_buffer_is_empty(
 	return buffer->getp == buffer->putp;
 }
 
-static bool __ndm_core_buffer_read_all(
+static inline bool __ndm_core_buffer_send_all(
 		struct ndm_core_buffer_t *buffer,
 		const int fd,
+		const struct timespec *intblock,
+		const struct timespec *deadline)
+{
+	while (!__ndm_core_buffer_is_empty(buffer)) {
+		const int delay = (int) ndm_time_left_monotonic_msec(deadline);
+
+		if (delay <= 0) {
+			errno = ETIMEDOUT;
+
+			return false;
+		}
+
+		struct pollfd pfd =
+		{
+			.fd = fd,
+			.events = POLLOUT,
+			.revents = 0
+		};
+		const int ib_delay = (int) ndm_time_left_monotonic_msec(intblock);
+		const int n = (ib_delay == 0) ?
+			ndm_poll(&pfd, 1, delay) :
+			poll(&pfd, 1, NDM_MIN(delay, ib_delay));
+
+		if (n < 0) {
+			return false;
+		}
+
+		if (n == 0) {
+			continue;
+		}
+
+		if (pfd.revents & POLLHUP) {
+			errno = ECONNRESET;
+
+			return false;
+		}
+
+		if (pfd.revents & POLLNVAL) {
+			errno = EINVAL;
+
+			return false;
+		}
+
+		if (!(pfd.revents & POLLOUT)) {
+			errno = EIO;
+
+			return false;
+		}
+
+		const size_t size = (size_t) (buffer->putp - buffer->getp);
+		const ssize_t s = send(fd, buffer->getp, size, 0);
+
+		if (s < 0) {
+			return false;
+		}
+
+		if (s == 0) {
+			/* should not occur */
+			errno = EIO;
+
+			return false;
+		}
+
+		buffer->getp += (size_t) s;
+	}
+
+	return true;
+}
+
+static inline bool __ndm_core_buffer_recv_all(
+		struct ndm_core_buffer_t *buffer,
+		const int fd,
+		const struct timespec *intblock,
 		const struct timespec *deadline,
 		void *data,
 		const size_t data_size)
 {
-	uint8_t *p = data;
-	size_t s = data_size;
-	bool error = false;
+	size_t size = 0;
 
-	while (s != 0 && !error) {
+	while (size < data_size) {
 		if (__ndm_core_buffer_is_empty(buffer)) {
 			/* there is no data in a buffer */
+			buffer->putp = buffer->start;
+			buffer->getp = buffer->start;
+
 			const int delay = (int) ndm_time_left_monotonic_msec(deadline);
 
-			buffer->putp = buffer->getp = buffer->start;
-
-			if (delay < 0) {
-				error = true;
+			if (delay <= 0) {
 				errno = ETIMEDOUT;
-			} else {
-				struct pollfd pfd =
-				{
-					.fd = fd,
-					.events = POLLIN | POLLERR | POLLHUP | POLLNVAL,
-					.revents = 0
-				};
-				ssize_t n = ndm_poll(&pfd, 1, delay);
 
-				if (n > 0) {
-					n = recv(fd, buffer->putp,
-						(size_t) (buffer->bound - buffer->start), 0);
-
-					if (n > 0) {
-						/* NDM_HEX_DUMP(buffer->putp, n); */
-						buffer->putp += n;
-					} else
-					if (n == 0) {
-						error = true;
-						errno = ECONNRESET;
-					}
-				}
-
-				if (n < 0) {
-					error = true;
-				} else
-				if (ndm_sys_is_interrupted()) {
-					error = true;
-					errno = EINTR;
-				}
+				return false;
 			}
+
+			struct pollfd pfd =
+			{
+				.fd = fd,
+				.events = POLLIN,
+				.revents = 0
+			};
+			const int ib_delay =
+				(int) ndm_time_left_monotonic_msec(intblock);
+			const int n = (ib_delay == 0) ?
+				ndm_poll(&pfd, 1, delay) :
+				poll(&pfd, 1, NDM_MIN(delay, ib_delay));
+
+			if (n < 0) {
+				return false;
+			}
+
+			if (n == 0) {
+				continue;
+			}
+
+			if (pfd.revents & POLLNVAL) {
+				errno = EINVAL;
+
+				return false;
+			}
+
+			if (!(pfd.revents & (POLLIN | POLLHUP))) {
+				errno = EIO;
+
+				return false;
+			}
+
+			/* a hungup state should be detected by @c recv() call
+			 * after reading all locally buffered data */
+			const ssize_t s = recv(fd, buffer->putp,
+				(size_t) (buffer->bound - buffer->start), 0);
+
+			if (s < 0) {
+				return false;
+			}
+
+			if (s == 0) {
+				errno = ECONNRESET;
+
+				return false;
+			}
+
+			buffer->putp += s;
 		}
 
-		if (!error) {
-			const size_t copied = NDM_MIN(s,
-				(size_t) (buffer->putp - buffer->getp));
+		const size_t copied = NDM_MIN(data_size - size,
+			(size_t) (buffer->putp - buffer->getp));
 
-			memcpy(p, buffer->getp, copied);
-			p += copied;
-			s -= copied;
-			buffer->getp += copied;
-		}
+		memcpy(((uint8_t *) data) + size, buffer->getp, copied);
+		buffer->getp += copied;
+		size += copied;
 	}
 
-	return !error;
+	return true;
 }
 
 /**
@@ -456,6 +567,7 @@ static bool __ndm_core_buffer_read_all(
 static inline bool __ndm_core_read_ctrl(
 		struct ndm_core_buffer_t *buffer,
 		const int fd,
+		const struct timespec *intblock,
 		const struct timespec *deadline,
 		ndm_core_ctrl_t *ctrl,
 		enum ndm_xml_node_type_t *type)
@@ -463,8 +575,8 @@ static inline bool __ndm_core_read_ctrl(
 	uint8_t data;
 	bool done = false;
 
-	if (__ndm_core_buffer_read_all(
-			buffer, fd, deadline, &data, sizeof(data)))
+	if (__ndm_core_buffer_recv_all(
+			buffer, fd, intblock, deadline, &data, sizeof(data)))
 	{
 		*ctrl = (ndm_core_ctrl_t) ((data >> 6) & 0x03);
 		*type = (enum ndm_xml_node_type_t) (data & 0x3f);
@@ -482,6 +594,7 @@ static inline bool __ndm_core_read_ctrl(
 static bool __ndm_core_read_string(
 		struct ndm_core_buffer_t *buffer,
 		const int fd,
+		const struct timespec *intblock,
 		const struct timespec *deadline,
 		struct ndm_xml_document_t *doc,
 		const char **s)
@@ -489,8 +602,8 @@ static bool __ndm_core_read_string(
 	bool done = false;
 	ndm_core_size_t size = 0;
 
-	if (__ndm_core_buffer_read_all(
-			buffer, fd, deadline, &size, sizeof(size)))
+	if (__ndm_core_buffer_recv_all(
+			buffer, fd, intblock, deadline, &size, sizeof(size)))
 	{
 		size = ntohl(size);
 
@@ -501,8 +614,8 @@ static bool __ndm_core_read_string(
 			char *p = ndm_xml_document_alloc(doc, size + 1);
 
 			if (p != NULL &&
-				__ndm_core_buffer_read_all(
-					buffer, fd, deadline, p, size))
+				__ndm_core_buffer_recv_all(
+					buffer, fd, intblock, deadline, p, size))
 			{
 				p[size] = '\0';
 				*s = p;
@@ -517,6 +630,7 @@ static bool __ndm_core_read_string(
 static bool __ndm_core_read_xml_children(
 		const int fd,
 		struct ndm_core_buffer_t *buffer,
+		const struct timespec *intblock,
 		const struct timespec *deadline,
 		struct ndm_xml_node_t *root_parent)
 {
@@ -534,7 +648,8 @@ static bool __ndm_core_read_xml_children(
 
 		++ctrl_index;
 
-		if (!__ndm_core_read_ctrl(buffer, fd, deadline, &ctrl, &type)) {
+		if (!__ndm_core_read_ctrl(
+				buffer, fd, intblock, deadline, &ctrl, &type)) {
 			error = true;
 		} else
 		if (ctrl == NDM_CORE_CTRL_NODE_ || ctrl == NDM_CORE_CTRL_SIBL_) {
@@ -558,9 +673,9 @@ static bool __ndm_core_read_xml_children(
 					error = true;
 				} else
 				if (!__ndm_core_read_string(buffer,
-						fd, deadline, doc, &name) ||
+						fd, intblock, deadline, doc, &name) ||
 					!__ndm_core_read_string(buffer,
-						fd, deadline, doc, &value))
+						fd, intblock, deadline, doc, &value))
 				{
 					error = true;
 				} else {
@@ -573,8 +688,10 @@ static bool __ndm_core_read_xml_children(
 				errno = EBADMSG;
 				error = true;
 			} else
-			if (!__ndm_core_read_string(buffer, fd, deadline, doc, &name) ||
-				!__ndm_core_read_string(buffer, fd, deadline, doc, &value) ||
+			if (!__ndm_core_read_string(
+					buffer, fd, intblock, deadline, doc, &name) ||
+				!__ndm_core_read_string(
+					buffer, fd, intblock, deadline, doc, &value) ||
 				(new_node = ndm_xml_document_alloc_node(
 					doc, type, name, value)) == NULL)
 			{
@@ -625,9 +742,9 @@ static bool __ndm_core_read_xml_children(
 				const char *value;
 
 				if (!__ndm_core_read_string(
-						buffer, fd, deadline, doc, &name) ||
+						buffer, fd, intblock, deadline, doc, &name) ||
 					!__ndm_core_read_string(
-						buffer, fd, deadline, doc, &value) ||
+						buffer, fd, intblock, deadline, doc, &value) ||
 					(new_attr = ndm_xml_document_alloc_attr(
 						doc, name, value)) == NULL)
 				{
@@ -748,9 +865,12 @@ struct ndm_core_event_t *ndm_core_event_connection_get(
 		errno = ENOMEM;
 	} else {
 		bool done = false;
+		struct timespec intblock;
 		struct timespec deadline;
 		struct ndm_xml_node_t *root = NULL;
 
+		ndm_time_get_monotonic_plus_msec(
+			&intblock, NDM_CORE_INTBLOCK_TIMEOUT_);
 		ndm_time_get_monotonic_plus_msec(&deadline, connection->timeout);
 
 		ndm_xml_document_init(
@@ -761,7 +881,8 @@ struct ndm_core_event_t *ndm_core_event_connection_get(
 
 		if ((root = ndm_xml_document_alloc_root(&event->doc)) != NULL &&
 			__ndm_core_read_xml_children(
-				connection->fd, &connection->buffer, &deadline, root))
+				connection->fd, &connection->buffer,
+				&intblock, &deadline, root))
 		{
 			struct ndm_xml_attr_t *event_type;
 			struct ndm_xml_attr_t *raise_time;
@@ -1227,7 +1348,8 @@ static size_t __ndm_core_request_store_node(
 		const struct ndm_xml_node_t *node,
 		const ndm_core_ctrl_t node_ctrl,
 		uint8_t **p,
-		const uint8_t *end)
+		const uint8_t *end,
+		const size_t level)
 {
 	size_t size = __ndm_core_request_store_base(
 		p, end, node_ctrl, ndm_xml_node_type(node),
@@ -1249,11 +1371,11 @@ static size_t __ndm_core_request_store_node(
 		size += __ndm_core_request_store_node(child,
 			(ndm_core_ctrl_t) ((child == first_child) ?
 			NDM_CORE_CTRL_NODE_ : NDM_CORE_CTRL_SIBL_),
-			p, end);
+			p, end, level + 1);
 		child = ndm_xml_node_next_sibling(child, NULL);
 	}
 
-	if (ndm_xml_node_first_child(node, NULL) != NULL) {
+	if (first_child != NULL || level == 0) {
 		size += __ndm_core_request_store_ctrl(p, end, NDM_CORE_CTRL_END_, 0);
 	}
 
@@ -1272,7 +1394,7 @@ static size_t __ndm_core_request_store(
 	if (root != NULL) {
 		size = __ndm_core_request_store_node(
 			root, NDM_CORE_CTRL_NODE_,
-			p, start + buffer_size);
+			p, start + buffer_size, 0);
 
 		if (p != NULL && *p == NULL) {
 			/* internal error */
@@ -1290,6 +1412,7 @@ static struct ndm_core_response_t *__ndm_core_do_request(
 		struct ndm_xml_node_t *request,
 		bool *response_copied)
 {
+	struct timespec intblock;
 	struct timespec deadline;
 	const size_t request_size = __ndm_core_request_store(request, NULL, 0);
 	uint8_t request_static_buffer[NDM_CORE_REQUEST_BINARY_STATIC_SIZE_];
@@ -1297,6 +1420,7 @@ static struct ndm_core_response_t *__ndm_core_do_request(
 	struct ndm_core_response_t *response = NULL;
 
 	request_static_buffer[0] = 0;
+	ndm_time_get_monotonic_plus_msec(&intblock, NDM_CORE_INTBLOCK_TIMEOUT_);
 	ndm_time_get_monotonic_plus_msec(&deadline, core->timeout);
 
 	if (request_size == 0) {
@@ -1326,48 +1450,14 @@ static struct ndm_core_response_t *__ndm_core_do_request(
 		} else
 		if (response == NULL) {
 			/* cache miss or noncached mode */
+			struct ndm_core_buffer_t core_buffer;
 
-			ssize_t n = 0;
-			size_t offs = 0;
+			__ndm_core_buffer_init(&core_buffer, buffer, request_size);
+			core_buffer.putp = core_buffer.bound;
 
-			do {
-				const int delay = (int)
-					ndm_time_left_monotonic_msec(&deadline);
-
-				if (delay < 0) {
-					errno = ETIMEDOUT;
-					n = -1;
-				} else {
-					struct pollfd pfd =
-					{
-						.fd = core->fd,
-						.events = POLLOUT | POLLERR | POLLHUP | POLLNVAL,
-						.revents = 0
-					};
-
-					n = ndm_poll(&pfd, 1, delay);
-
-					if (n > 0) {
-						n = send(
-							core->fd, buffer + offs,
-							request_size - offs, 0);
-
-						if (n > 0) {
-							/* NDM_HEX_DUMP(
-								buffer + offs,
-								request_size - offs); */
-							offs += (size_t) n;
-						}
-					}
-
-					if (ndm_sys_is_interrupted()) {
-						errno = EINTR;
-						n = -1;
-					}
-				}
-			} while (offs != request_size && n >= 0);
-
-			if (offs == request_size) {
+			if (__ndm_core_buffer_send_all(
+					&core_buffer, core->fd, &intblock, &deadline))
+			{
 				/* the request sequence was sent */
 				if ((response = malloc(sizeof(*response))) == NULL) {
 					errno = ENOMEM;
@@ -1381,7 +1471,8 @@ static struct ndm_core_response_t *__ndm_core_do_request(
 					if ((root = ndm_xml_document_alloc_root(
 							&response->doc)) == NULL ||
 						!__ndm_core_read_xml_children(
-							core->fd, &core->buffer, &deadline, root) ||
+							core->fd, &core->buffer,
+							&intblock, &deadline, root) ||
 						(response->root = ndm_xml_node_first_child(
 							root, "response")) == NULL)
 					{
@@ -2728,5 +2819,228 @@ enum ndm_core_response_error_t ndm_core_request_first_bool_pf(
 	}
 
 	return e;
+}
+
+static inline bool __ndm_core_feedback_send(
+		const int fd,
+		const struct timespec *intblock,
+		const struct timespec *deadline,
+		const char *const argv[],
+		const char *const env_argv[])
+{
+	int error = 0;
+	bool done = false;
+	bool invalid_args = false;
+	char buffer[NDM_CORE_STATIC_BUFFER_SIZE_];
+	struct ndm_xml_document_t doc =
+		NDM_XML_DOCUMENT_INITIALIZER(
+			buffer, sizeof(buffer),
+			NDM_CORE_FEEDBACK_DYNAMIC_BUFFER_SIZE_);
+	struct ndm_xml_node_t *root = ndm_xml_document_alloc_root(&doc);
+
+	if (argv[0] == NULL) {
+		errno = EINVAL;
+	} else
+	if (root != NULL) {
+		struct ndm_xml_node_t *feedback =
+			ndm_xml_node_append_child_str(
+				root, NDM_CORE_FEEDBACK_NODE_FEEDBACK_, NULL);
+
+		if (feedback != NULL) {
+			struct ndm_xml_node_t *from =
+				ndm_xml_node_append_child_str(
+					feedback, NDM_CORE_FEEDBACK_NODE_FROM_, argv[0]);
+			struct ndm_xml_node_t *input =
+				ndm_xml_node_append_child_str(
+					feedback, NDM_CORE_FEEDBACK_NODE_INPUT_, NULL);
+			struct ndm_xml_node_t *environment =
+				ndm_xml_node_append_child_str(
+					feedback, NDM_CORE_FEEDBACK_NODE_ENVIRONMENT_, NULL);
+
+			if (from != NULL &&
+				input != NULL &&
+				environment != NULL)
+			{
+				for (size_t i = 1; argv[i] != NULL; i++) {
+					ndm_xml_node_append_child_str(
+						input, NDM_CORE_FEEDBACK_NODE_ITEM_, argv[i]);
+				}
+
+				for (size_t i = 0; env_argv[i] != NULL; i++) {
+					const char *const name = env_argv[i];
+					const char *const value = strchr(name, '=');
+
+					if (value == NULL) {
+						/* no '=' symbol in an environment entry */
+						invalid_args = true;
+					} else {
+						struct ndm_xml_node_t *env_node =
+							ndm_xml_document_alloc_node(
+								&doc, NDM_XML_NODE_TYPE_ELEMENT,
+								ndm_xml_document_alloc_strn(
+									&doc, name, (size_t) (value - name)),
+								ndm_xml_document_alloc_str(&doc, value + 1));
+
+						if (env_node != NULL) {
+							ndm_xml_node_append_child(environment, env_node);
+						}
+					}
+				}
+			}
+		}
+	}
+
+	if (invalid_args) {
+		errno = EINVAL;
+	} else
+	if (!ndm_xml_document_is_valid(&doc)) {
+		errno = ENOMEM;
+	} else {
+		const size_t size = __ndm_core_request_store(root, NULL, 0);
+		uint8_t static_buffer[NDM_CORE_REQUEST_BINARY_STATIC_SIZE_];
+		uint8_t *p = static_buffer;
+
+		if (size == 0) {
+			/* empty feedback */
+			errno = EBADMSG;
+		} else
+		if ((size > sizeof(static_buffer)) &&
+			(p = malloc(size)) == NULL)
+		{
+			errno = ENOMEM;
+		} else
+		if (__ndm_core_request_store(root, p, size) != size) {
+			/* internal error occurred */
+			errno = EILSEQ;
+		} else {
+			struct ndm_core_buffer_t core_buffer;
+
+			__ndm_core_buffer_init(&core_buffer, p, size);
+			core_buffer.putp = core_buffer.bound;
+
+			done = __ndm_core_buffer_send_all(
+				&core_buffer, fd, intblock, deadline);
+		}
+
+		if (p != static_buffer) {
+			error = errno;
+			free(p);
+			errno = error;
+		}
+	}
+
+	error = errno;
+	ndm_xml_document_clear(&doc);
+	errno = error;
+
+	return done;
+}
+
+static inline bool __ndm_core_feedback_recv(
+		const int fd,
+		const struct timespec *intblock,
+		const struct timespec *deadline)
+{
+	int error = 0;
+	bool done = false;
+	char buffer[NDM_CORE_STATIC_BUFFER_SIZE_];
+	struct ndm_xml_document_t doc =
+		NDM_XML_DOCUMENT_INITIALIZER(
+			buffer, sizeof(buffer),
+			NDM_CORE_FEEDBACK_DYNAMIC_BUFFER_SIZE_);
+	struct ndm_xml_node_t *root = ndm_xml_document_alloc_root(&doc);
+
+	if (root == NULL) {
+		errno = ENOMEM;
+	} else {
+		uint8_t buf[NDM_CORE_FEEDBACK_BUFFER_SIZE_];
+		struct ndm_core_buffer_t core_buffer;
+
+		__ndm_core_buffer_init(&core_buffer, buf, sizeof(buf));
+
+		if (__ndm_core_read_xml_children(
+				fd, &core_buffer, intblock, deadline, root)) {
+			const struct ndm_xml_node_t *feedback =
+				ndm_xml_node_first_child(
+					root, NDM_CORE_FEEDBACK_NODE_FEEDBACK_);
+
+			if (feedback == NULL) {
+				/* corrupted core response */
+				errno = EBADMSG;
+			} else {
+				const struct ndm_xml_node_t *exit =
+					ndm_xml_node_first_child(
+						feedback, NDM_CORE_FEEDBACK_NODE_EXIT_);
+				int exit_code = 0;
+
+				if (exit == NULL ||
+					!ndm_int_parse_int(
+						ndm_xml_node_value(exit), &exit_code))
+				{
+					/* corrupted core response */
+					errno = EBADMSG;
+				} else
+				if (exit_code != EXIT_SUCCESS) {
+					/* the NDM core failed to handle the request */
+					errno = EIO; /* EIO is for backward compatibility */
+				} else {
+					done = true;
+				}
+			}
+		}
+	}
+
+	error = errno;
+	ndm_xml_document_clear(&doc);
+	errno = error;
+
+	return done;
+}
+
+__NDM_VISIBILITY_HIDDEN__
+bool ndm_core_feedback_ve(
+		const int64_t timeout_msec,
+		const char *const argv[],
+		const char *const env_argv[])
+{
+	bool done = false;
+	int fd = socket(AF_UNIX, SOCK_STREAM, 0);
+
+	if (fd >= 0) {
+		int error = 0;
+		struct sockaddr_un sa;
+		const int n = snprintf(
+			sa.sun_path, sizeof(sa.sun_path),
+			"%s", NDM_CORE_FEEDBACK_SOCKET_);
+
+		if (n < 0 || n >= sizeof(sa.sun_path)) {
+			errno = ENOBUFS;
+		} else {
+			sa.sun_family = AF_UNIX;
+
+			if (connect(
+					fd, (struct sockaddr *) &sa,
+					(socklen_t) sizeof(sa)) == 0) {
+				struct timespec intblock;
+				struct timespec deadline;
+
+				ndm_time_get_monotonic_plus_msec(
+					&intblock, NDM_CORE_INTBLOCK_TIMEOUT_);
+				ndm_time_get_monotonic_plus_msec(
+					&deadline, NDM_CORE_DEFAULT_TIMEOUT);
+
+				done =
+					__ndm_core_feedback_send(
+						fd, &intblock, &deadline, argv, env_argv) &&
+					__ndm_core_feedback_recv(fd, &intblock, &deadline);
+			}
+		}
+
+		error = errno;
+		close(fd);
+		errno = error;
+	}
+
+	return done;
 }
 
