@@ -15,9 +15,9 @@ static bool __console_mode = false;
 static int __facility = LOG_USER;
 
 #ifndef NDEBUG
-static int __debug_level = LDEBUG_ALL;
+static enum debug_level_t __debug_level = LDEBUG_ALL;
 #else	/* NDEBUG */
-static int __debug_level = LDEBUG_OFF;
+static enum debug_level_t __debug_level = LDEBUG_OFF;
 #endif	/* NDEBUG */
 
 const char *ndm_log_get_ident(
@@ -82,7 +82,7 @@ bool ndm_log_debug(
 	return false;
 }
 
-int ndm_log_get_debug()
+enum debug_level_t ndm_log_get_debug()
 {
 	return __debug_level;
 }
